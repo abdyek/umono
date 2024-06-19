@@ -4,11 +4,18 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/umono-cms/umono/api"
+	"github.com/joho/godotenv"
+	"github.com/umono-cms/umono/controllers"
+	"github.com/umono-cms/umono/middlewares"
 	"github.com/umono-cms/umono/pages"
 )
 
 func main() {
+
+	if err := godotenv.Load(); err != nil {
+		panic("Error loading .env file!")
+	}
+
 	app := fiber.New()
 
 	app.Static("/public", "./static")
@@ -19,9 +26,14 @@ func main() {
 		})
 	})
 
+	// TODO: If the user logged already, redirect home page
 	app.Get("/login", pages.Login)
 
-	app.Post("/api/v1/login", api.Login)
+	adminPages := app.Group("/admin", middlewares.Authenticator())
+	adminPages.Get("/", pages.AdminHome)
+
+	api := app.Group("/api/v1")
+	api.Post("/login", controllers.Login)
 
 	log.Fatal(app.Listen(":8999"))
 }
