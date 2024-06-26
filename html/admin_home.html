@@ -1,9 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <meta charset="UTF-8">
-<title>Create Page</title>
+<title>Umono</title>
+<link rel="stylesheet" href="public/style.css">
+<link rel="stylesheet" href="public/loader.css">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<body>
-  Admin Home Page
+<body class="bg-slate-800 text-slate-50">
+  <div class="lg:container mx-auto">
+    <div class="flex justify-between">
+      <h1 class="text-6xl m-2">Umono</h1>
+      <!-- TODO: Complete logout button -->
+      <button class="p-4 m-2 bg-red-500 text-slate-50 rounded-lg">
+        Logout
+      </button>
+    </div>
+    <!-- TODO: Page list will be here to edit or delete -->
+    <div class="flex justify-center items-center h-72">
+      <span class="loader"></span>
+    </div>
+  </div>
 </body>
 </html> 
