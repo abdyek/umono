@@ -7,7 +7,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/umono/controllers"
 	"github.com/umono-cms/umono/middlewares"
-	"github.com/umono-cms/umono/pages"
 )
 
 func main() {
@@ -20,19 +19,9 @@ func main() {
 
 	app.Static("/public", "./static")
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "Hello, CMS users 👋!",
-		})
-	})
+	app.Get("/api/v1/me", controllers.Me)
 
-	// TODO: If the user logged already, redirect home page
-	app.Get("/login", pages.Login)
-
-	adminPages := app.Group("/admin", middlewares.Authenticator())
-	adminPages.Get("/", pages.AdminHome)
-
-	api := app.Group("/api/v1")
+	api := app.Group("/api/v1", middlewares.Guest())
 	api.Post("/login", controllers.Login)
 
 	log.Fatal(app.Listen(":8999"))
