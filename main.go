@@ -36,7 +36,7 @@ func main() {
 
 	api := app.Group("/api/v1", middlewares.Authenticator())
 
-	api.Post("/log-out", controllers.LogOut)
+	api.Post("/logout", controllers.Logout)
 
 	log.Fatal(app.Listen(":8999"))
 }
