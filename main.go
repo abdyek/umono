@@ -44,6 +44,7 @@ func main() {
 
 	api.Post("/logout", controllers.Logout)
 
+	api.Post("/pages", controllers.CreatePage)
 	api.Get("/pages", controllers.ReadAllPages)
 
 	log.Fatal(app.Listen(":8999"))
