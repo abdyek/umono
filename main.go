@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/umono/controllers"
+	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/middlewares"
 )
 
@@ -15,6 +16,11 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		panic("Error loading .env file!")
+	}
+
+	err := database.Init(os.Getenv("DSN"))
+	if err != nil {
+		panic(err.Error())
 	}
 
 	app := fiber.New()
@@ -37,6 +43,8 @@ func main() {
 	api := app.Group("/api/v1", middlewares.Authenticator())
 
 	api.Post("/logout", controllers.Logout)
+
+	api.Get("/pages", controllers.ReadAllPages)
 
 	log.Fatal(app.Listen(":8999"))
 }
