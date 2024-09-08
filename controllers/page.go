@@ -34,6 +34,8 @@ func CreatePage(c *fiber.Ctx) error {
 
 	db.Create(&saved)
 
+	// TODO: if published true, generate it
+
 	return c.JSON(fiber.Map{
 		"page": saved,
 	})
@@ -47,5 +49,46 @@ func ReadAllPages(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"pages": pages,
+	})
+}
+
+func UpdatePage(c *fiber.Ctx) error {
+	up := &reqbodies.UpdatePage{}
+
+	if err := c.BodyParser(up); err != nil {
+		return err
+	}
+
+	if err := validator.New().Struct(up); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("")
+	}
+
+	db := database.DB
+
+	var pageFromDB models.Page
+
+	db.First(&pageFromDB, up.Page.ID)
+
+	if pageFromDB.ID == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("")
+	}
+
+	now := time.Now()
+
+	updated := models.Page{
+		ID:             up.Page.ID,
+		Name:           up.Page.Name,
+		Slug:           up.Page.Slug,
+		Content:        up.Page.Content,
+		LastModifiedAt: &now,
+		Published:      up.Page.Published,
+	}
+
+	db.Model(&updated).Select("Name", "Slug", "Content", "LastModifiedAt", "Published").Updates(updated)
+
+	// TODO: if published true, regenerate it
+
+	return c.JSON(fiber.Map{
+		"page": updated,
 	})
 }

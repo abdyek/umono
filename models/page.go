@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type Page struct {
 	ID             uint       `gorm:"primaryKey" json:"id"`
