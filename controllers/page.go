@@ -42,6 +42,27 @@ func CreatePage(c *fiber.Ctx) error {
 	})
 }
 
+func ReadPage(c *fiber.Ctx) error {
+	u64, err := strconv.ParseUint(c.Params("ID"), 10, 64)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("")
+	}
+
+	db := database.DB
+
+	var pageFromDB models.Page
+	db.First(&pageFromDB, uint(u64))
+
+	if pageFromDB.ID == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("")
+	}
+
+	return c.JSON(fiber.Map{
+		"page": pageFromDB,
+	})
+}
+
 func ReadAllPages(c *fiber.Ctx) error {
 	db := database.DB
 
@@ -95,7 +116,6 @@ func UpdatePage(c *fiber.Ctx) error {
 }
 
 func DeletePage(c *fiber.Ctx) error {
-
 	u64, err := strconv.ParseUint(c.Params("ID"), 10, 64)
 
 	if err != nil {

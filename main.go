@@ -45,6 +45,7 @@ func main() {
 	api.Post("/logout", controllers.Logout)
 
 	api.Post("/pages", controllers.CreatePage)
+	api.Get("/pages/:ID", controllers.ReadPage)
 	api.Get("/pages", controllers.ReadAllPages)
 	api.Put("/pages", controllers.UpdatePage)
 	api.Delete("/pages/:ID", controllers.DeletePage)
