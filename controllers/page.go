@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -90,5 +91,29 @@ func UpdatePage(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"page": updated,
+	})
+}
+
+func DeletePage(c *fiber.Ctx) error {
+
+	u64, err := strconv.ParseUint(c.Params("ID"), 10, 64)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("")
+	}
+
+	db := database.DB
+
+	var pageFromDB models.Page
+	db.First(&pageFromDB, uint(u64))
+
+	if pageFromDB.ID == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("")
+	}
+
+	db.Delete(pageFromDB)
+
+	return c.JSON(fiber.Map{
+		"status": "OK",
 	})
 }

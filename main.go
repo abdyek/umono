@@ -47,6 +47,7 @@ func main() {
 	api.Post("/pages", controllers.CreatePage)
 	api.Get("/pages", controllers.ReadAllPages)
 	api.Put("/pages", controllers.UpdatePage)
+	api.Delete("/pages/:ID", controllers.DeletePage)
 
 	log.Fatal(app.Listen(":8999"))
 }
