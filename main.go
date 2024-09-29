@@ -10,6 +10,7 @@ import (
 	"github.com/umono-cms/umono/controllers"
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/middlewares"
+	"github.com/umono-cms/umono/validation"
 )
 
 func main() {
@@ -22,6 +23,8 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+
+	validation.Init()
 
 	app := fiber.New()
 

@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/models"
 	"github.com/umono-cms/umono/reqbodies"
+	"github.com/umono-cms/umono/validation"
 )
 
 func CreatePage(c *fiber.Ctx) error {
@@ -18,7 +18,7 @@ func CreatePage(c *fiber.Ctx) error {
 		return err
 	}
 
-	if err := validator.New().Struct(cp); err != nil {
+	if !validation.Validator.Validate(cp) {
 		return c.Status(fiber.StatusBadRequest).SendString("")
 	}
 
@@ -81,7 +81,7 @@ func UpdatePage(c *fiber.Ctx) error {
 		return err
 	}
 
-	if err := validator.New().Struct(up); err != nil {
+	if !validation.Validator.Validate(up) {
 		return c.Status(fiber.StatusBadRequest).SendString("")
 	}
 
