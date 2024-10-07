@@ -10,5 +10,5 @@ type Page struct {
 	Slug           string     `json:"slug" validate:"required,slug"`
 	Content        string     `json:"content"`
 	LastModifiedAt *time.Time `json:"last_modified_at"`
-	Published      bool       `json:"published"`
+	Enabled        bool       `json:"enabled"`
 }

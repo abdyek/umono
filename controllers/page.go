@@ -30,12 +30,13 @@ func CreatePage(c *fiber.Ctx) error {
 		Name:           cp.Page.Name,
 		Slug:           cp.Page.Slug,
 		Content:        cp.Page.Content,
+		Enabled:        cp.Page.Enabled,
 		LastModifiedAt: &now,
 	}
 
 	db.Create(&saved)
 
-	// TODO: if published true, generate it
+	// TODO: if enabled true, generate it
 
 	return c.JSON(fiber.Map{
 		"page": saved,
@@ -103,12 +104,12 @@ func UpdatePage(c *fiber.Ctx) error {
 		Slug:           up.Page.Slug,
 		Content:        up.Page.Content,
 		LastModifiedAt: &now,
-		Published:      up.Page.Published,
+		Enabled:        up.Page.Enabled,
 	}
 
-	db.Model(&updated).Select("Name", "Slug", "Content", "LastModifiedAt", "Published").Updates(updated)
+	db.Model(&updated).Select("Name", "Slug", "Content", "LastModifiedAt", "Enabled").Updates(updated)
 
-	// TODO: if published true, regenerate it
+	// TODO: if enabled true, regenerate it
 
 	return c.JSON(fiber.Map{
 		"page": updated,
