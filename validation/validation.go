@@ -18,7 +18,7 @@ func Init() {
 	}
 
 	Validator.val.RegisterValidation("slug", func(fl val.FieldLevel) bool {
-		return regexp.MustCompile(`^[a-z]+(-[a-z]+)*$`).MatchString(fl.Field().String())
+		return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`).MatchString(fl.Field().String())
 	})
 }
 
