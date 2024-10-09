@@ -53,5 +53,7 @@ func main() {
 	api.Put("/pages", controllers.UpdatePage)
 	api.Delete("/pages/:ID", controllers.DeletePage)
 
+	api.Post("/converter/markdown-to-html", controllers.MDToHTML)
+
 	log.Fatal(app.Listen(":8999"))
 }
