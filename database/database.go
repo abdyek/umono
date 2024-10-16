@@ -2,7 +2,7 @@ package database
 
 import (
 	"github.com/umono-cms/umono/models"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +21,7 @@ func Init(dsn string) error {
 
 func connect(dsn string) error {
 	var err error
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+	DB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		SkipDefaultTransaction:                   true,
 		PrepareStmt:                              true,
