@@ -1,15 +1,18 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/umono/controllers"
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/middlewares"
+	"github.com/umono-cms/umono/storage"
 	"github.com/umono-cms/umono/validation"
 )
 
@@ -26,7 +29,18 @@ func main() {
 
 	validation.Init()
 
-	app := fiber.New()
+	storage.InitPageStorage()
+	storage.Page.LoadAll(database.DB)
+
+	engine := html.New("./views", ".html")
+
+	engine.AddFunc("safe", func(s string) template.HTML {
+		return template.HTML(s)
+	})
+
+	app := fiber.New(fiber.Config{
+		Views: engine,
+	})
 
 	app.Static("/public", "./static")
 
@@ -41,6 +55,7 @@ func main() {
 	}
 
 	app.Post("/api/v1/login", middlewares.Guest(), controllers.Login)
+	app.Get("/:slug", controllers.ServePage)
 	app.Get("/api/v1/me", controllers.Me)
 
 	api := app.Group("/api/v1", middlewares.Authenticator())

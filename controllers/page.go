@@ -8,6 +8,7 @@ import (
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/models"
 	"github.com/umono-cms/umono/reqbodies"
+	"github.com/umono-cms/umono/storage"
 	"github.com/umono-cms/umono/validation"
 )
 
@@ -36,10 +37,24 @@ func CreatePage(c *fiber.Ctx) error {
 
 	db.Create(&saved)
 
-	// TODO: if enabled true, generate it
+	storage.Page.Load(saved)
 
 	return c.JSON(fiber.Map{
 		"page": saved,
+	})
+}
+
+func ServePage(c *fiber.Ctx) error {
+	slug := c.Params("slug")
+
+	page, available := storage.Page.GetPage(slug)
+	if !available {
+		return c.Status(fiber.StatusNotFound).SendString("")
+	}
+
+	return c.Render("page", fiber.Map{
+		"Title":   page.Name,
+		"Content": page.Content,
 	})
 }
 
@@ -109,7 +124,15 @@ func UpdatePage(c *fiber.Ctx) error {
 
 	db.Model(&updated).Select("Name", "Slug", "Content", "LastModifiedAt", "Enabled").Updates(updated)
 
-	// TODO: if enabled true, regenerate it
+	if up.Page.Slug != pageFromDB.Slug {
+		storage.Page.Remove(pageFromDB)
+	}
+
+	if up.Page.Enabled {
+		storage.Page.Load(updated)
+	} else {
+		storage.Page.Remove(updated)
+	}
 
 	return c.JSON(fiber.Map{
 		"page": updated,
@@ -133,6 +156,7 @@ func DeletePage(c *fiber.Ctx) error {
 	}
 
 	db.Delete(pageFromDB)
+	storage.Page.Remove(pageFromDB)
 
 	return c.JSON(fiber.Map{
 		"status": "OK",
