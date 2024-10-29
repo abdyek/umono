@@ -1,6 +1,8 @@
 # Umono
-
 Umono is a content management system written golang. It is under development. Wait for modern and intuitive features!!! 🥳
+
+## Demo
+You can demo it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#demo) repository.
 
 ## Development
 
@@ -11,30 +13,48 @@ Umono is a content management system written golang. It is under development. Wa
 ### Admin UI
 Umono has a admin UI written Vue.
 #### Clone
-```git clone https://github.com/umono-cms/admin-ui```
+```
+git clone https://github.com/umono-cms/admin-ui
+```
 
 #### Change directory
-```cd admin-ui```
+```
+cd admin-ui
+```
 
 #### Install packages
-```npm install```
+```
+npm install
+```
 
-#### Start the Tailwind CLI build process
+#### Start process for tailwindcss
+```
 npx tailwindcss -i ./input.css -o ./src/style.css --watch
+```
 
 #### Run
-```npm run dev```
+```
+npm run dev
+```
 
 ### Backend
 #### Clone
-```git clone https://github.com/umono-cms/umono```
+```
+git clone https://github.com/umono-cms/umono
+```
 
 #### Change directory
-```cd umono```
+```
+cd umono
+```
 
 #### .env file
 Copy .env file from .env-example and edit it
-```cp .env-example .env```
+```
+cp .env-example .env
+```
 
 #### Run server
-```go run .```
+```
+go run .
+```
