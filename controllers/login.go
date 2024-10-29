@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"encoding/base64"
+	"fmt"
 	"os"
 	"time"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/core"
 	"github.com/umono-cms/umono/reqbodies"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func Login(c *fiber.Ctx) error {
@@ -30,8 +33,19 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("")
 	}
 
-	// TODO: We need to change it for security before first release!
-	if ju.Username != os.Getenv("USERNAME") || ju.Password != os.Getenv("PASSWORD") {
+	hashedUsername, e := base64.StdEncoding.DecodeString(os.Getenv("HASHED_USERNAME"))
+	hashedPassword, e2 := base64.StdEncoding.DecodeString(os.Getenv("HASHED_PASSWORD"))
+
+	if e != nil {
+		fmt.Println(e.Error())
+	}
+
+	if e2 != nil {
+		fmt.Println(e2.Error())
+	}
+
+	if bcrypt.CompareHashAndPassword(hashedUsername, []byte(ju.Username)) != nil ||
+		bcrypt.CompareHashAndPassword(hashedPassword, []byte(ju.Password)) != nil {
 		return c.Status(fiber.StatusUnauthorized).SendString("")
 	}
 

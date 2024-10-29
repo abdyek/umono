@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/base64"
 	"html/template"
 	"log"
 	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/umono/controllers"
@@ -14,12 +16,20 @@ import (
 	"github.com/umono-cms/umono/middlewares"
 	"github.com/umono-cms/umono/storage"
 	"github.com/umono-cms/umono/validation"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
 
 	if err := godotenv.Load(); err != nil {
 		panic("Error loading .env file!")
+	}
+
+	if os.Getenv("USERNAME") != "" && os.Getenv("PASSWORD") != "" {
+		err := updateEnvFile()
+		if err != nil {
+			panic("Error updating .env file" + err.Error())
+		}
 	}
 
 	err := database.Init(os.Getenv("DSN"))
@@ -40,6 +50,14 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		Views: engine,
+	})
+
+	app.Use("/admin/*", func(c *fiber.Ctx) error {
+		return proxy.Do(c, "http://admin-ui:80"+c.OriginalURL())
+	})
+
+	app.Use("/assets/*", func(c *fiber.Ctx) error {
+		return proxy.Do(c, "http://admin-ui:80"+c.OriginalURL())
 	})
 
 	app.Static("/public", "./static")
@@ -71,4 +89,51 @@ func main() {
 	api.Post("/converter/markdown-to-html", controllers.MDToHTML)
 
 	log.Fatal(app.Listen(":8999"))
+}
+
+func updateEnvFile() error {
+
+	hashedUsername, err := hashData(os.Getenv("USERNAME"))
+	if err != nil {
+		return err
+	}
+
+	hashedPassword, err := hashData(os.Getenv("PASSWORD"))
+	if err != nil {
+		return err
+	}
+
+	content := ""
+
+	content += "DEV=" + os.Getenv("DEV") + "\n\n"
+	content += "USERNAME=\n"
+	content += "PASSWORD=\n\n"
+	content += "HASHED_USERNAME=" + base64.StdEncoding.EncodeToString([]byte(hashedUsername)) + "\n"
+	content += "HASHED_PASSWORD=" + base64.StdEncoding.EncodeToString([]byte(hashedPassword)) + "\n\n"
+	content += "DSN=" + os.Getenv("DSN")
+
+	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		return err
+	}
+
+	if err := godotenv.Overload(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func hashData(data string) (string, error) {
+	hashedData, err := bcrypt.GenerateFromPassword([]byte(data), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashedData), nil
 }
