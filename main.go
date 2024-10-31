@@ -73,7 +73,7 @@ func main() {
 	}
 
 	app.Post("/api/v1/login", middlewares.Guest(), controllers.Login)
-	app.Get("/:slug", controllers.ServePage)
+	app.Get("/:slug?", controllers.ServePage)
 	app.Get("/api/v1/me", controllers.Me)
 
 	api := app.Group("/api/v1", middlewares.Authenticator())
