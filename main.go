@@ -85,6 +85,7 @@ func main() {
 	api.Get("/pages", controllers.ReadAllPages)
 	api.Put("/pages", controllers.UpdatePage)
 	api.Delete("/pages/:ID", controllers.DeletePage)
+	api.Get("/slug/check-usable/:slug?", controllers.SlugCheckUsable)
 
 	api.Post("/converter/markdown-to-html", controllers.MDToHTML)
 

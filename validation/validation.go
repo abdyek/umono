@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	val "github.com/go-playground/validator"
+	"github.com/umono-cms/umono/utils/inarr"
 )
 
 var Validator *validator
@@ -20,6 +21,10 @@ func Init() {
 	Validator.val.RegisterValidation("slug", func(fl val.FieldLevel) bool {
 		if fl.Field().String() == "" {
 			return true
+		}
+
+		if inarr.String(fl.Field().String(), []string{"api", "admin"}) {
+			return false
 		}
 
 		return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`).MatchString(fl.Field().String())

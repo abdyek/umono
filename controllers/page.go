@@ -25,6 +25,15 @@ func CreatePage(c *fiber.Ctx) error {
 
 	db := database.DB
 
+	available := models.Page{
+		Slug: cp.Page.Slug,
+	}
+
+	(&available).FillBySlug(db)
+	if available.ID != 0 {
+		return c.Status(fiber.StatusConflict).SendString("")
+	}
+
 	now := time.Now()
 
 	saved := models.Page{
@@ -109,6 +118,15 @@ func UpdatePage(c *fiber.Ctx) error {
 
 	if pageFromDB.ID == 0 {
 		return c.Status(fiber.StatusNotFound).SendString("")
+	}
+
+	available := models.Page{
+		Slug: up.Page.Slug,
+	}
+
+	(&available).FillBySlug(db)
+	if available.ID != 0 && available.ID != pageFromDB.ID {
+		return c.Status(fiber.StatusConflict).SendString("")
 	}
 
 	now := time.Now()
