@@ -1,5 +1,8 @@
 # Umono
-Umono is a content management system written golang. It is under development. Wait for modern and intuitive features!!! 🥳
+Umono is a content management system written golang.
+
+## Production
+You can use it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#production) repository.
 
 ## Demo
 You can demo it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#demo) repository.
