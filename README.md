@@ -4,10 +4,8 @@ Umono is a content management system written golang.
 ### Features
 - CommonMark to HTML page creating
 
-### Roadmap
+### Next Feature
 - Theme agnostic responsive design
-- Themes
-- Applications (commonly known as plugins)
 
 ## Demo
 You can demo it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#demo) repository.
