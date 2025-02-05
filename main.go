@@ -15,6 +15,7 @@ import (
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/middlewares"
 	"github.com/umono-cms/umono/storage"
+	"github.com/umono-cms/umono/umono"
 	"github.com/umono-cms/umono/validation"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -36,6 +37,8 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+
+	umono.InitLang()
 
 	validation.Init()
 
@@ -87,7 +90,9 @@ func main() {
 	api.Delete("/pages/:ID", controllers.DeletePage)
 	api.Get("/slug/check-usable/:slug?", controllers.SlugCheckUsable)
 
+	// NOTE: Deprecated - Remove it for v1
 	api.Post("/converter/markdown-to-html", controllers.MDToHTML)
+	api.Post("/converter/umono-lang-to-html", controllers.UmonoLangToHTML)
 
 	log.Fatal(app.Listen(":8999"))
 }

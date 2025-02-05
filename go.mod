@@ -1,6 +1,6 @@
 module github.com/umono-cms/umono
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/go-playground/validator v9.31.0+incompatible
@@ -9,6 +9,7 @@ require (
 	github.com/gofiber/template/html/v2 v2.1.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/joho/godotenv v1.5.1
+	github.com/umono-cms/umono-lang v0.1.0
 	github.com/yuin/goldmark v1.7.8
 	golang.org/x/crypto v0.31.0
 	gorm.io/driver/sqlite v1.5.7
