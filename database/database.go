@@ -32,4 +32,5 @@ func connect(dsn string) error {
 
 func autoMigrate(db *gorm.DB) {
 	db.AutoMigrate(&models.Page{})
+	db.AutoMigrate(&models.Component{})
 }

@@ -39,6 +39,7 @@ func main() {
 	}
 
 	umono.InitLang()
+	umono.SetGlobalComponents(database.DB)
 
 	validation.Init()
 
@@ -93,6 +94,8 @@ func main() {
 	// NOTE: Deprecated - Remove it for v1
 	api.Post("/converter/markdown-to-html", controllers.MDToHTML)
 	api.Post("/converter/umono-lang-to-html", controllers.UmonoLangToHTML)
+
+	api.Post("/components", controllers.CreateComponent)
 
 	log.Fatal(app.Listen(":8999"))
 }
