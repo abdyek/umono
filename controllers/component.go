@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -53,6 +54,38 @@ func CreateComponent(c *fiber.Ctx) error {
 	})
 }
 
+func ReadComponent(c *fiber.Ctx) error {
+	u64, err := strconv.ParseUint(c.Params("ID"), 10, 64)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("")
+	}
+
+	db := database.DB
+
+	var fromDB models.Component
+	db.First(&fromDB, uint(u64))
+
+	if fromDB.ID == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("")
+	}
+
+	return c.JSON(fiber.Map{
+		"component": fromDB,
+	})
+}
+
+func ReadAllComponents(c *fiber.Ctx) error {
+	db := database.DB
+
+	var comps []models.Component
+	db.Find(&comps)
+
+	return c.JSON(fiber.Map{
+		"components": comps,
+	})
+}
+
 func UpdateComponent(c *fiber.Ctx) error {
 	uc := &reqbodies.UpdateComponent{}
 
@@ -99,5 +132,31 @@ func UpdateComponent(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"component": updated,
+	})
+}
+
+func DeleteComponent(c *fiber.Ctx) error {
+	u64, err := strconv.ParseUint(c.Params("ID"), 10, 64)
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("")
+	}
+
+	db := database.DB
+
+	var fromDB models.Component
+	db.First(&fromDB, uint(u64))
+
+	if fromDB.ID == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("")
+	}
+
+	db.Delete(fromDB)
+
+	umono.Lang.RemoveGlobalComponent(fromDB.Name)
+	// TODO: Reload pages that has the component
+
+	return c.JSON(fiber.Map{
+		"status": "OK",
 	})
 }
