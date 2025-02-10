@@ -96,6 +96,7 @@ func main() {
 	api.Post("/converter/umono-lang-to-html", controllers.UmonoLangToHTML)
 
 	api.Post("/components", controllers.CreateComponent)
+	api.Put("/components", controllers.UpdateComponent)
 
 	log.Fatal(app.Listen(":8999"))
 }
