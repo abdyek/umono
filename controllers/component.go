@@ -8,6 +8,7 @@ import (
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/models"
 	"github.com/umono-cms/umono/reqbodies"
+	"github.com/umono-cms/umono/storage"
 	"github.com/umono-cms/umono/umono"
 	"github.com/umono-cms/umono/validation"
 )
@@ -47,7 +48,9 @@ func CreateComponent(c *fiber.Ctx) error {
 	db.Create(&saved)
 
 	umono.Lang.SetGlobalComponent(saved.Name, saved.Content)
-	// TODO: Reload pages that has the component
+
+	// NOTE: Instead of the LoadAll function, you can write a function that loads pages that contain only the components that have changed.
+	storage.Page.LoadAll(db)
 
 	return c.JSON(fiber.Map{
 		"component": saved,
@@ -128,7 +131,9 @@ func UpdateComponent(c *fiber.Ctx) error {
 	db.Model(&updated).Select("*").Updates(updated)
 
 	umono.Lang.SetGlobalComponent(updated.Name, updated.Content)
-	// TODO: Reload pages that has the component
+
+	// NOTE: Instead of the LoadAll function, you can write a function that loads pages that contain only the components that have changed.
+	storage.Page.LoadAll(db)
 
 	return c.JSON(fiber.Map{
 		"component": updated,
@@ -154,7 +159,9 @@ func DeleteComponent(c *fiber.Ctx) error {
 	db.Delete(fromDB)
 
 	umono.Lang.RemoveGlobalComponent(fromDB.Name)
-	// TODO: Reload pages that has the component
+
+	// NOTE: Instead of the LoadAll function, you can write a function that loads pages that contain only the components that have changed.
+	storage.Page.LoadAll(db)
 
 	return c.JSON(fiber.Map{
 		"status": "OK",
