@@ -29,6 +29,11 @@ func Init() {
 
 		return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`).MatchString(fl.Field().String())
 	})
+
+	Validator.val.RegisterValidation("numeric-screaming-snake-case", func(fl val.FieldLevel) bool {
+		re := regexp.MustCompile(`^[A-Z0-9]+(?:_[A-Z0-9]+)*$`)
+		return re.MatchString(fl.Field().String())
+	})
 }
 
 func (v validator) Validate(data interface{}) bool {

@@ -1,10 +1,8 @@
 package storage
 
 import (
-	"bytes"
-
 	"github.com/umono-cms/umono/models"
-	"github.com/yuin/goldmark"
+	"github.com/umono-cms/umono/umono"
 	"gorm.io/gorm"
 )
 
@@ -29,11 +27,7 @@ func (p page) LoadAll(db *gorm.DB) {
 }
 
 func (p page) Load(pg models.Page) {
-
-	var buf bytes.Buffer
-	goldmark.Convert([]byte(pg.Content), &buf)
-
-	pg.Content = buf.String()
+	pg.Content = umono.Lang.Convert(pg.Content)
 	p.slugMap[pg.Slug] = pg
 }
 
