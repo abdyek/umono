@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"html/template"
 	"log"
 	"os"
@@ -24,6 +26,18 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		panic("Error loading .env file!")
+	}
+
+	if os.Getenv("SECRET") == "" {
+
+		bytes := make([]byte, 32)
+		_, err := rand.Read(bytes)
+
+		if err != nil {
+			panic("SECRET could not generate.")
+		}
+
+		os.Setenv("SECRET", hex.EncodeToString(bytes))
 	}
 
 	if os.Getenv("USERNAME") != "" && os.Getenv("PASSWORD") != "" {
