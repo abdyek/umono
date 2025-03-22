@@ -7,9 +7,9 @@ require (
 	github.com/go-playground/validator/v10 v10.25.0
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/gofiber/template/html/v2 v2.1.3
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/joho/godotenv v1.5.1
-	github.com/umono-cms/umono-lang v0.1.0
+	github.com/umono-cms/umono-lang v0.2.0
 	github.com/yuin/goldmark v1.7.8
 	golang.org/x/crypto v0.36.0
 	gorm.io/driver/sqlite v1.5.7
