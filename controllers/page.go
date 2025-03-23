@@ -58,7 +58,15 @@ func ServePage(c *fiber.Ctx) error {
 
 	page, available := cache.Page.GetPage(slug)
 	if !available {
-		return c.Status(fiber.StatusNotFound).SendString("")
+		c.Status(fiber.StatusNotFound)
+		page, available = cache.Page.GetPage("_404")
+		if !available {
+			return c.SendString("")
+		}
+		return c.Render("page", fiber.Map{
+			"Title":   page.Name,
+			"Content": page.Content,
+		})
 	}
 
 	return c.Render("page", fiber.Map{

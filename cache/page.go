@@ -24,6 +24,8 @@ func (p page) LoadAll(db *gorm.DB) {
 	for _, pg := range allPages {
 		p.Load(pg)
 	}
+
+	p.load404Page()
 }
 
 func (p page) Load(pg models.Page) {
@@ -38,4 +40,12 @@ func (p page) Remove(pg models.Page) {
 func (p page) GetPage(slug string) (models.Page, bool) {
 	pg, ok := p.slugMap[slug]
 	return pg, ok
+}
+
+func (p page) load404Page() {
+	p.slugMap["_404"] = models.Page{
+		// TODO: Name must be get from the built-in component as a parameter.
+		Name:    "Page Not Found",
+		Content: umono.Lang.Convert("{{ 404 }}"),
+	}
 }
