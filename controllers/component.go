@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/umono-cms/umono/cache"
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/models"
 	"github.com/umono-cms/umono/reqbodies"
-	"github.com/umono-cms/umono/storage"
 	"github.com/umono-cms/umono/umono"
 	"github.com/umono-cms/umono/validation"
 )
@@ -50,7 +50,7 @@ func CreateComponent(c *fiber.Ctx) error {
 	umono.Lang.SetGlobalComponent(saved.Name, saved.Content)
 
 	// NOTE: Instead of the LoadAll function, you can write a function that loads pages that contain only the components that have changed.
-	storage.Page.LoadAll(db)
+	cache.Page.LoadAll(db)
 
 	return c.JSON(fiber.Map{
 		"component": saved,
@@ -133,7 +133,7 @@ func UpdateComponent(c *fiber.Ctx) error {
 	umono.Lang.SetGlobalComponent(updated.Name, updated.Content)
 
 	// NOTE: Instead of the LoadAll function, you can write a function that loads pages that contain only the components that have changed.
-	storage.Page.LoadAll(db)
+	cache.Page.LoadAll(db)
 
 	return c.JSON(fiber.Map{
 		"component": updated,
@@ -161,7 +161,7 @@ func DeleteComponent(c *fiber.Ctx) error {
 	umono.Lang.RemoveGlobalComponent(fromDB.Name)
 
 	// NOTE: Instead of the LoadAll function, you can write a function that loads pages that contain only the components that have changed.
-	storage.Page.LoadAll(db)
+	cache.Page.LoadAll(db)
 
 	return c.JSON(fiber.Map{
 		"status": "OK",
