@@ -13,10 +13,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
+	"github.com/umono-cms/umono/cache"
 	"github.com/umono-cms/umono/controllers"
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/middlewares"
-	"github.com/umono-cms/umono/storage"
 	"github.com/umono-cms/umono/umono"
 	"github.com/umono-cms/umono/validation"
 	"golang.org/x/crypto/bcrypt"
@@ -57,8 +57,8 @@ func main() {
 
 	validation.Init()
 
-	storage.InitPageStorage()
-	storage.Page.LoadAll(database.DB)
+	cache.InitPageStorage()
+	cache.Page.LoadAll(database.DB)
 
 	engine := html.New("./views", ".html")
 

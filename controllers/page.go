@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/umono-cms/umono/cache"
 	"github.com/umono-cms/umono/database"
 	"github.com/umono-cms/umono/models"
 	"github.com/umono-cms/umono/reqbodies"
-	"github.com/umono-cms/umono/storage"
 	"github.com/umono-cms/umono/validation"
 )
 
@@ -46,7 +46,7 @@ func CreatePage(c *fiber.Ctx) error {
 
 	db.Create(&saved)
 
-	storage.Page.Load(saved)
+	cache.Page.Load(saved)
 
 	return c.JSON(fiber.Map{
 		"page": saved,
@@ -56,7 +56,7 @@ func CreatePage(c *fiber.Ctx) error {
 func ServePage(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 
-	page, available := storage.Page.GetPage(slug)
+	page, available := cache.Page.GetPage(slug)
 	if !available {
 		return c.Status(fiber.StatusNotFound).SendString("")
 	}
@@ -143,13 +143,13 @@ func UpdatePage(c *fiber.Ctx) error {
 	db.Model(&updated).Select("Name", "Slug", "Content", "LastModifiedAt", "Enabled").Updates(updated)
 
 	if up.Page.Slug != pageFromDB.Slug {
-		storage.Page.Remove(pageFromDB)
+		cache.Page.Remove(pageFromDB)
 	}
 
 	if up.Page.Enabled {
-		storage.Page.Load(updated)
+		cache.Page.Load(updated)
 	} else {
-		storage.Page.Remove(updated)
+		cache.Page.Remove(updated)
 	}
 
 	return c.JSON(fiber.Map{
@@ -174,7 +174,7 @@ func DeletePage(c *fiber.Ctx) error {
 	}
 
 	db.Delete(pageFromDB)
-	storage.Page.Remove(pageFromDB)
+	cache.Page.Remove(pageFromDB)
 
 	return c.JSON(fiber.Map{
 		"status": "OK",
