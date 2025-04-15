@@ -108,6 +108,7 @@ func main() {
 	// NOTE: Deprecated - Remove it for v1
 	api.Post("/converter/markdown-to-html", controllers.MDToHTML)
 	api.Post("/converter/umono-lang-to-html", controllers.UmonoLangToHTML)
+	api.Post("/converter/umono-lang-to-html-for-global-component", controllers.UmonoLangToHTMLForGlobalComp)
 
 	api.Post("/components", controllers.CreateComponent)
 	api.Get("/components/:ID", controllers.ReadComponent)

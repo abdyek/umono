@@ -40,3 +40,15 @@ func UmonoLangToHTML(c *fiber.Ctx) error {
 		"html": umono.Lang.Convert(umonoLangToHTML.UmonoLang),
 	})
 }
+
+func UmonoLangToHTMLForGlobalComp(c *fiber.Ctx) error {
+	req := &reqbodies.UmonoLangToHTMLForGlobalComp{}
+
+	if err := c.BodyParser(req); err != nil {
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"html": umono.Lang.ConvertGlobalComp(req.CompName, req.Content),
+	})
+}
