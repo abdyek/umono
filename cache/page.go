@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"github.com/umono-cms/umono-lang/interfaces"
 	"github.com/umono-cms/umono/models"
 	"github.com/umono-cms/umono/umono"
 	"gorm.io/gorm"
@@ -43,9 +44,30 @@ func (p page) GetPage(slug string) (models.Page, bool) {
 }
 
 func (p page) load404Page() {
+
+	name := "Page Not Found"
+
+	if g404 := umono.Lang.GetGlobalComponent("404"); g404 != nil {
+
+		var titleArg interfaces.Argument
+
+		for _, arg := range g404.Arguments() {
+			if arg.Name() == "title" {
+				titleArg = arg
+				break
+			}
+		}
+
+		if titleArg != nil && titleArg.Type() == "string" {
+			val, ok := titleArg.Default().(string)
+			if ok {
+				name = val
+			}
+		}
+	}
+
 	p.slugMap["_404"] = models.Page{
-		// TODO: Name must be get from the built-in component as a parameter.
-		Name:    "Page Not Found",
+		Name:    name,
 		Content: umono.Lang.Convert("{{ 404 }}"),
 	}
 }
