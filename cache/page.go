@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/umono-cms/umono-lang/interfaces"
+	ul "github.com/umono-cms/umono-lang"
 	"github.com/umono-cms/umono/models"
 	"github.com/umono-cms/umono/umono"
 	"gorm.io/gorm"
@@ -49,17 +49,10 @@ func (p page) load404Page() {
 
 	if g404 := umono.Lang.GetGlobalComponent("404"); g404 != nil {
 
-		var titleArg interfaces.Argument
+		titleParam := ul.ParameterByName(g404.Parameters(), "title")
 
-		for _, arg := range g404.Arguments() {
-			if arg.Name() == "title" {
-				titleArg = arg
-				break
-			}
-		}
-
-		if titleArg != nil && titleArg.Type() == "string" {
-			val, ok := titleArg.Default().(string)
+		if titleParam != nil && titleParam.Type() == "string" {
+			val, ok := titleParam.Default().(string)
 			if ok {
 				name = val
 			}
