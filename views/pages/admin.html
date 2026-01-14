@@ -1,0 +1,12 @@
+<div class="bg-white p-8 rounded-xl shadow-md text-center">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4">Welcome!</h1>
+    <button hx-post="/get-joy" 
+            hx-target="#test-area" 
+            hx-swap="innerHTML"
+            class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-full transition-all">
+      Run Test
+    </button>
+
+    <div id="test-area" class="mt-8 italic text-lg text-indigo-600">
+        </div>
+</div>
