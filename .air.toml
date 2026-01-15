@@ -1,0 +1,18 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/main ./cmd/umono"
+bin = "./tmp/main"
+include_ext = ["go", "html", "css"]
+exclude_dir = ["tmp", "bin", "public"]
+exclude_regex = ["_test\\.go"]
+delay = 300
+
+[misc]
+clean_on_exit = true
+
+[proxy]
+enabled = true
+proxy_port = 9000
+app_port = 8999

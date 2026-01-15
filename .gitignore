@@ -64,3 +64,4 @@ tags
 .env
 umono.db
 bin/tailwindcss
+tmp

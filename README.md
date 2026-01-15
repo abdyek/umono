@@ -26,4 +26,10 @@ chmod +x bin/tailwindcss
 ./bin/tailwindcss -i assets/input.css -o public/css/style.css --watch
 ```
 
+# Live Reload
+on 9000 port
+```
+air
+```
+
 **rewrite**
