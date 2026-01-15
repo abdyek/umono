@@ -10,7 +10,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
+	"github.com/umono-cms/umono/internal/config"
 	"github.com/umono-cms/umono/internal/handler"
+	"github.com/umono-cms/umono/internal/handler/middleware"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/service"
@@ -56,13 +58,26 @@ func main() {
 
 	engine := html.New("./views", ".html")
 
+	store := config.NewSessionStore()
+
+	loginHandler := handler.NewLoginHandler(store)
+
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
 
 	app.Static("/static", "./public")
 
-	app.Get("/admin", pageHandler.RenderAdmin)
+	admin := app.Group("/admin")
+
+	admin.Get("/login", middleware.Guest(store), pageHandler.RenderLogin)
+
+	adminProtected := admin.Group("/", middleware.Logged(store))
+
+	adminProtected.Get("/", pageHandler.RenderAdmin)
+
+	app.Post("/login", loginHandler.Login)
+
 	app.Post("/get-joy", pageHandler.GetJoy)
 	app.Get("/:slug?", pageHandler.RenderPage)
 

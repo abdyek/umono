@@ -19,6 +19,10 @@ func (h *PageHandler) RenderAdmin(c *fiber.Ctx) error {
 	return c.Render("pages/admin", fiber.Map{}, "layouts/admin")
 }
 
+func (h *PageHandler) RenderLogin(c *fiber.Ctx) error {
+	return c.Render("pages/login", fiber.Map{}, "layouts/admin")
+}
+
 func (h *PageHandler) RenderPage(c *fiber.Ctx) error {
 	page, err := h.pageService.GetBySlug(c.Params("slug"))
 	if err != nil {

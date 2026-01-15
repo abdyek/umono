@@ -7,6 +7,7 @@ bin = "./tmp/main"
 include_ext = ["go", "html", "css"]
 exclude_dir = ["tmp", "bin", "public"]
 exclude_regex = ["_test\\.go"]
+exclude_file = ["session_storage.db", "session_storage.db-journal"]
 delay = 300
 
 [misc]
