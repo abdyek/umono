@@ -12,6 +12,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/models"
+	"github.com/umono-cms/umono/internal/repository"
+	"github.com/umono-cms/umono/internal/service"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -48,9 +50,9 @@ func main() {
 
 	db.AutoMigrate(&models.Component{}, &models.Page{})
 
-	//compRepo := repository.NewComponentRepository(db)
-	// compService := service.NewComponentService(compRepo)
-	// compHandler := handler.NewComponentHandler(compService)
+	pageRepo := repository.NewPageRepository(db)
+	pageService := service.NewPageService(pageRepo)
+	pageHandler := handler.NewPageHandler(pageService)
 
 	engine := html.New("./views", ".html")
 
@@ -60,10 +62,9 @@ func main() {
 
 	app.Static("/static", "./public")
 
-	pageHandler := handler.NewPageHandler()
-
 	app.Get("/admin", pageHandler.RenderAdmin)
 	app.Post("/get-joy", pageHandler.GetJoy)
+	app.Get("/:slug?", pageHandler.RenderPage)
 
 	log.Fatal(app.Listen(":8999"))
 }

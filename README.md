@@ -11,63 +11,19 @@ Umono is a content management system written golang.
 > **Current stable version:** v0.4.x (use `main` branch)  
 > **Development version:** v0.5-dev (this branch)
 
-## Demo
-You can demo it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#demo) repository.
 
-## Production
-You can use it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#production) repository.
+# Tailwindcss Installation
 
-## Development
-
-### Requirements
-- Golang
-- Node.js
-
-### Admin UI
-Umono has a admin UI written Vue.
-#### Clone
-```
-git clone https://github.com/umono-cms/admin-ui
+```bash
+mkdir -p bin
+curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.18/tailwindcss-linux-x64
+mv tailwindcss-linux-x64 bin/tailwindcss
+chmod +x bin/tailwindcss
 ```
 
-#### Change directory
-```
-cd admin-ui
-```
-
-#### Install packages
-```
-npm install
+# Tailwindcss Watch
+```bash
+./bin/tailwindcss -i assets/input.css -o public/css/style.css --watch
 ```
 
-#### Start process for tailwindcss
-```
-npx tailwindcss -i ./input.css -o ./src/style.css --watch
-```
-
-#### Run
-```
-npm run dev
-```
-
-### Backend
-#### Clone
-```
-git clone https://github.com/umono-cms/umono
-```
-
-#### Change directory
-```
-cd umono
-```
-
-#### .env file
-Copy .env file from .env-example and edit it
-```
-cp .env-example .env
-```
-
-#### Run server
-```
-go run .
-```
+**rewrite**
