@@ -1,22 +1,46 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/service"
 )
 
 type PageHandler struct {
-	pageService service.PageService
+	sitePageService service.SitePageService
 }
 
-func NewPageHandler(ps service.PageService) *PageHandler {
+func NewPageHandler(sps service.SitePageService) *PageHandler {
 	return &PageHandler{
-		pageService: ps,
+		sitePageService: sps,
 	}
 }
 
 func (h *PageHandler) RenderAdmin(c *fiber.Ctx) error {
-	return c.Render("pages/admin", fiber.Map{}, "layouts/admin")
+	sitePages := h.sitePageService.GetAll()
+	return c.Render("pages/admin", fiber.Map{
+		"SitePageUl": BuildSitePageUl(sitePages, 0),
+	}, "layouts/admin")
+}
+
+func (h *PageHandler) RenderAdminSitePage(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		return c.SendStatus(400)
+	}
+
+	sitePage, err := h.sitePageService.GetByID(uint(id))
+	if err != nil {
+		return c.SendStatus(404)
+	}
+
+	sitePages := h.sitePageService.GetAll()
+
+	return c.Render("pages/admin", fiber.Map{
+		"SitePageUl": BuildSitePageUl(sitePages, sitePage.ID),
+	}, "layouts/admin")
 }
 
 func (h *PageHandler) RenderLogin(c *fiber.Ctx) error {
@@ -24,14 +48,14 @@ func (h *PageHandler) RenderLogin(c *fiber.Ctx) error {
 }
 
 func (h *PageHandler) RenderPage(c *fiber.Ctx) error {
-	page, err := h.pageService.GetBySlug(c.Params("slug"))
+	sitePage, err := h.sitePageService.GetBySlug(c.Params("slug"))
 	if err != nil {
 		// TODO: Here 404 page
 		return fiber.ErrNotFound
 	}
 	return c.Render("layouts/page", fiber.Map{
-		"Title":   page.Name,
-		"Content": page.Content,
+		"Title":   sitePage.Name,
+		"Content": sitePage.Content,
 	})
 }
 

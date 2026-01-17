@@ -50,11 +50,11 @@ func main() {
 		log.Fatal("db err", err)
 	}
 
-	db.AutoMigrate(&models.Component{}, &models.Page{})
+	db.AutoMigrate(&models.Component{}, &models.SitePage{})
 
-	pageRepo := repository.NewPageRepository(db)
-	pageService := service.NewPageService(pageRepo)
-	pageHandler := handler.NewPageHandler(pageService)
+	sitePageRepo := repository.NewSitePageRepository(db)
+	sitePageService := service.NewSitePageService(sitePageRepo)
+	pageHandler := handler.NewPageHandler(sitePageService)
 
 	engine := html.New("./views", ".html")
 
@@ -75,6 +75,7 @@ func main() {
 	adminProtected := admin.Group("/", middleware.Logged(store))
 
 	adminProtected.Get("/", pageHandler.RenderAdmin)
+	adminProtected.Get("/site-pages/:id", pageHandler.RenderAdminSitePage)
 
 	app.Post("/login", loginHandler.Login)
 
