@@ -1,8 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"errors"
 
+	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
@@ -18,11 +20,15 @@ type SitePageService interface {
 var ErrSitePageNotFound = errors.New("site page not found")
 
 type sitePageService struct {
-	repo *repository.SitePageRepository
+	repo    *repository.SitePageRepository
+	compono compono.Compono
 }
 
-func NewSitePageService(r *repository.SitePageRepository) SitePageService {
-	return &sitePageService{repo: r}
+func NewSitePageService(r *repository.SitePageRepository, comp compono.Compono) SitePageService {
+	return &sitePageService{
+		repo:    r,
+		compono: comp,
+	}
 }
 
 func (s *sitePageService) GetRenderedBySlug(slug string) (models.SitePage, error) {
@@ -31,8 +37,13 @@ func (s *sitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 	if err != nil {
 		return models.SitePage{}, nil
 	}
-	// TODO: Add Compono
-	sitePage.Content = "Here will be Compono rendered output"
+
+	var buf bytes.Buffer
+	if err := s.compono.Convert([]byte(sitePage.Content), &buf); err != nil {
+		return models.SitePage{}, err
+	}
+
+	sitePage.Content = buf.String()
 	return sitePage, nil
 }
 

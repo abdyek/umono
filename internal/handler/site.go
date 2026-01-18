@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"html/template"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/service"
 )
@@ -23,6 +25,6 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	}
 	return c.Render("layouts/page", fiber.Map{
 		"Title":   sitePage.Name,
-		"Content": sitePage.Content,
+		"Content": template.HTML(sitePage.Content),
 	})
 }

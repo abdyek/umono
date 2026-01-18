@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
+	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/config"
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/handler/middleware"
@@ -50,13 +51,16 @@ func main() {
 		log.Fatal("db err", err)
 	}
 
+	comp := compono.New()
+
 	db.AutoMigrate(&models.Component{}, &models.SitePage{})
 
 	sitePageRepo := repository.NewSitePageRepository(db)
-	sitePageService := service.NewSitePageService(sitePageRepo)
+	sitePageService := service.NewSitePageService(sitePageRepo, comp)
 
 	componentRepo := repository.NewComponentRepository(db)
-	componentService := service.NewComponentService(componentRepo)
+	componentService := service.NewComponentService(componentRepo, comp)
+	componentService.LoadAsGlobalComponent()
 
 	adminHandler := handler.NewAdminHandler(
 		sitePageService,
