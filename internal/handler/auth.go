@@ -9,17 +9,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type LoginHandler struct {
+type authHandler struct {
 	store *session.Store
 }
 
-func NewLoginHandler(store *session.Store) *LoginHandler {
-	return &LoginHandler{
+func NewAuthHandler(store *session.Store) *authHandler {
+	return &authHandler{
 		store: store,
 	}
 }
 
-func (h *LoginHandler) Login(c *fiber.Ctx) error {
+func (h *authHandler) RenderLogin(c *fiber.Ctx) error {
+	return c.Render("pages/login", fiber.Map{}, "layouts/admin")
+}
+
+func (h *authHandler) Login(c *fiber.Ctx) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
 
@@ -36,5 +40,10 @@ func (h *LoginHandler) Login(c *fiber.Ctx) error {
 	session.Save()
 
 	c.Set("HX-Redirect", "/admin")
+	return nil
+}
+
+func (h *authHandler) Logout(c *fiber.Ctx) error {
+	// TODO: Fill it
 	return nil
 }

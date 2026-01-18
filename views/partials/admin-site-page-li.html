@@ -1,10 +1,10 @@
 <li>
   <a 
-    href="{{.PageURL}}"
+    href="/admin/site-pages/{{.ID}}"
     class="flex items-center gap-3 px-3 py-2 rounded-xl {{ if .IsActive }}bg-purple-500/10 border border-purple-500/20 text-purple-300{{ else }}hover:bg-neutral-700/30 transition-colors {{end}}"
-    hx-get="{{.HxGet}}"
-    hx-target="{{.HxTarget}}"
-    hx-push-url="{{.HxPushURL}}"
+    hx-get="/admin/site-pages/{{.ID}}/editor"
+    hx-target="#editor-area"
+    hx-push-url="/admin/site-pages/{{.ID}}"
   >
   <span class="w-2 h-2 rounded-full{{ if .IsEnabled }} bg-emerald-400{{ end }}"></span>
     <span class="text-sm truncate">{{.Title}}</span>

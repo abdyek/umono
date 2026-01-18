@@ -7,6 +7,7 @@ import (
 	"github.com/umono-cms/umono/internal/repository"
 )
 
+// TODO: Remove interface
 type ComponentService interface {
 	GetByID(uint) (models.Component, error)
 	GetAll() []models.Component

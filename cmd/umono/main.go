@@ -58,16 +58,18 @@ func main() {
 	componentRepo := repository.NewComponentRepository(db)
 	componentService := service.NewComponentService(componentRepo)
 
-	pageHandler := handler.NewPageHandler(
+	adminHandler := handler.NewAdminHandler(
 		sitePageService,
 		componentService,
 	)
+
+	siteHandler := handler.NewSiteHandler(sitePageService)
 
 	engine := html.New("./views", ".html")
 
 	store := config.NewSessionStore()
 
-	loginHandler := handler.NewLoginHandler(store)
+	authHandler := handler.NewAuthHandler(store)
 
 	app := fiber.New(fiber.Config{
 		Views: engine,
@@ -78,28 +80,27 @@ func main() {
 	admin := app.Group("/admin")
 	admin.Use(middleware.HTMXContext())
 
-	admin.Get("/login", middleware.Guest(store), pageHandler.RenderLogin)
+	admin.Get("/login", middleware.Guest(store), authHandler.RenderLogin)
 
 	adminProtected := admin.Group("/", middleware.Logged(store))
 
-	adminProtected.Get("/", pageHandler.RenderAdmin)
+	adminProtected.Get("/", adminHandler.RenderAdmin)
 
-	adminProtected.Get("/site-pages/:id", pageHandler.RenderAdminSitePage)
+	adminProtected.Get("/site-pages/:id", adminHandler.RenderAdminSitePage)
 	adminProtected.Get("/site-pages/:id/editor",
 		middleware.OnlyHTMX(),
-		pageHandler.RenderAdminSitePageEditor,
+		adminHandler.RenderAdminSitePageEditor,
 	)
 
-	adminProtected.Get("/components/:id", pageHandler.RenderAdminComponent)
+	adminProtected.Get("/components/:id", adminHandler.RenderAdminComponent)
 	adminProtected.Get("/components/:id/editor",
 		middleware.OnlyHTMX(),
-		pageHandler.RenderAdminComponentEditor,
+		adminHandler.RenderAdminComponentEditor,
 	)
 
-	app.Post("/login", loginHandler.Login)
+	app.Post("/login", authHandler.Login)
 
-	app.Post("/get-joy", pageHandler.GetJoy)
-	app.Get("/:slug?", pageHandler.RenderPage)
+	app.Get("/:slug?", siteHandler.RenderSitePage)
 
 	log.Fatal(app.Listen(":8999"))
 }
