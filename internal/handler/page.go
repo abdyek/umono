@@ -39,14 +39,37 @@ func (h *PageHandler) RenderAdminSitePage(c *fiber.Ctx) error {
 	sitePages := h.sitePageService.GetAll()
 
 	return c.Render("pages/admin", fiber.Map{
-		"SitePageUl": BuildSitePageUl(sitePages, sitePage.ID),
+		"SitePageEditor": BuildSitePageEditor(sitePage),
+		"SitePageUl":     BuildSitePageUl(sitePages, sitePage.ID),
 	}, "layouts/admin")
+}
+
+func (h *PageHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
+
+	idStr := c.Params("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		return c.SendStatus(400)
+	}
+
+	sitePage, err := h.sitePageService.GetByID(uint(id))
+	if err != nil {
+		return c.SendStatus(404)
+	}
+
+	sitePages := h.sitePageService.GetAll()
+
+	return c.Render("partials/htmx/admin-site-page-editor", fiber.Map{
+		"SitePageEditor": BuildSitePageEditor(sitePage),
+		"SitePageUl":     BuildSitePageUl(sitePages, sitePage.ID),
+	})
 }
 
 func (h *PageHandler) RenderLogin(c *fiber.Ctx) error {
 	return c.Render("pages/login", fiber.Map{}, "layouts/admin")
 }
 
+// TODO: Change name RenderPage -> RenderSitePage
 func (h *PageHandler) RenderPage(c *fiber.Ctx) error {
 	sitePage, err := h.sitePageService.GetBySlug(c.Params("slug"))
 	if err != nil {

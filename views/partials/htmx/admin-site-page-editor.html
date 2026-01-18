@@ -1,0 +1,7 @@
+{{ template "partials/admin-site-page-editor" .SitePageEditor }}
+<ul id="site-page-ul" hx-swap-oob="outerHTML">
+  {{range .SitePageUl}}
+    {{template "partials/admin-site-page-li" . }}
+  {{end}}
+</ul>
+

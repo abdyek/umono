@@ -76,6 +76,10 @@ func main() {
 
 	adminProtected.Get("/", pageHandler.RenderAdmin)
 	adminProtected.Get("/site-pages/:id", pageHandler.RenderAdminSitePage)
+	adminProtected.Get("/site-pages/:id/editor",
+		middleware.OnlyHTMX(),
+		pageHandler.RenderAdminSitePageEditor,
+	)
 
 	app.Post("/login", loginHandler.Login)
 
