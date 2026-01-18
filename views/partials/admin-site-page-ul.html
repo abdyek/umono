@@ -1,4 +1,4 @@
-<ul id="site-page-ul" class="space-y-1">
+<ul id="site-page-ul" class="space-y-1" {{if .IsHTMX}}hx-swap-oob="outerHTML"{{end}}>
   {{range .SitePageUl}}
     {{template "partials/admin-site-page-li" . }}
   {{end}}

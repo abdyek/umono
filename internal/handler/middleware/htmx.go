@@ -10,3 +10,10 @@ func OnlyHTMX() fiber.Handler {
 		return c.Next()
 	}
 }
+
+func HTMXContext() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		c.Locals("IsHTMX", c.Get("HX-Request") == "true")
+		return c.Next()
+	}
+}

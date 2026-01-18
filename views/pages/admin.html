@@ -37,50 +37,7 @@
               </svg>
             </button>
           </div>
-          <ul class="space-y-1">
-            <li>
-              <a 
-                href="/admin/components/1"
-                class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-neutral-700/30 transition-colors"
-                hx-get="/admin/components/1/edit"
-                hx-target="#editor-area"
-                hx-push-url="/admin/components/1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                <span class="text-sm text-neutral-400 truncate">HEADER</span>
-              </a>
-            </li>
-            <li>
-              <a 
-                href="/admin/components/2"
-                class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-neutral-700/30 transition-colors"
-                hx-get="/admin/components/2/edit"
-                hx-target="#editor-area"
-                hx-push-url="/admin/components/2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                <span class="text-sm text-neutral-400 truncate">FOOTER</span>
-              </a>
-            </li>
-            <li>
-              <a 
-                href="/admin/components/3"
-                class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-neutral-700/30 transition-colors"
-                hx-get="/admin/components/3/edit"
-                hx-target="#editor-area"
-                hx-push-url="/admin/components/3"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                <span class="text-sm text-neutral-400 truncate">404</span>
-              </a>
-            </li>
-          </ul>
+          {{ template "partials/admin-component-ul" . }}
         </div>
       </nav>
       <div class="p-4 border-t border-neutral-700/50">
@@ -96,6 +53,10 @@
         </button>
       </div>
     </aside>
-    {{ template "partials/admin-site-page-editor" .SitePageEditor }}
+    {{ if .ComponentMode }}
+      {{ template "partials/admin-component-editor" .ComponentEditor }}
+    {{ else }}
+      {{ template "partials/admin-site-page-editor" .SitePageEditor }}
+    {{ end }}
   </div>
 </div>

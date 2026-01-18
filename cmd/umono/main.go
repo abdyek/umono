@@ -54,7 +54,14 @@ func main() {
 
 	sitePageRepo := repository.NewSitePageRepository(db)
 	sitePageService := service.NewSitePageService(sitePageRepo)
-	pageHandler := handler.NewPageHandler(sitePageService)
+
+	componentRepo := repository.NewComponentRepository(db)
+	componentService := service.NewComponentService(componentRepo)
+
+	pageHandler := handler.NewPageHandler(
+		sitePageService,
+		componentService,
+	)
 
 	engine := html.New("./views", ".html")
 
@@ -69,16 +76,24 @@ func main() {
 	app.Static("/static", "./public")
 
 	admin := app.Group("/admin")
+	admin.Use(middleware.HTMXContext())
 
 	admin.Get("/login", middleware.Guest(store), pageHandler.RenderLogin)
 
 	adminProtected := admin.Group("/", middleware.Logged(store))
 
 	adminProtected.Get("/", pageHandler.RenderAdmin)
+
 	adminProtected.Get("/site-pages/:id", pageHandler.RenderAdminSitePage)
 	adminProtected.Get("/site-pages/:id/editor",
 		middleware.OnlyHTMX(),
 		pageHandler.RenderAdminSitePageEditor,
+	)
+
+	adminProtected.Get("/components/:id", pageHandler.RenderAdminComponent)
+	adminProtected.Get("/components/:id/editor",
+		middleware.OnlyHTMX(),
+		pageHandler.RenderAdminComponentEditor,
 	)
 
 	app.Post("/login", loginHandler.Login)
