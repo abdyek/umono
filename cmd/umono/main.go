@@ -99,6 +99,7 @@ func main() {
 	)
 
 	app.Post("/login", authHandler.Login)
+	app.Post("/logout", middleware.Logged(store), authHandler.Logout)
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 

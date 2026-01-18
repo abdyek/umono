@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
+	"github.com/umono-cms/umono/internal/handler/middleware"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,6 +45,11 @@ func (h *authHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *authHandler) Logout(c *fiber.Ctx) error {
-	// TODO: Fill it
-	return nil
+	session, err := h.store.Get(c)
+	if err != nil {
+		return c.Redirect("/admin/login")
+	}
+
+	session.Destroy()
+	return middleware.SmartRedirect(c, "/admin/login")
 }
