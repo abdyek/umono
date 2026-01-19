@@ -53,8 +53,8 @@
           id="content" 
           name="content"
           placeholder="# Hello"
-          hx-post="/api/v1/converter/umono-lang-to-html"
-          hx-trigger="keyup changed delay:500ms"
+          hx-post="/admin/components/preview"
+          hx-trigger="keyup changed delay:750ms"
           hx-target="#preview-content"
           hx-swap="innerHTML"
           hx-vals='js:{"umono_lang": document.getElementById("content").value}'

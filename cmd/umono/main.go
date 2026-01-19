@@ -67,6 +67,8 @@ func main() {
 		componentService,
 	)
 
+	previewHandler := handler.NewPreviewHandler(sitePageService, componentService)
+
 	siteHandler := handler.NewSiteHandler(sitePageService)
 
 	engine := html.New("./views", ".html")
@@ -100,6 +102,16 @@ func main() {
 	adminProtected.Get("/components/:id/editor",
 		middleware.OnlyHTMX(),
 		adminHandler.RenderAdminComponentEditor,
+	)
+
+	adminProtected.Post("/site-pages/preview",
+		middleware.OnlyHTMX(),
+		previewHandler.RenderSitePagePreview,
+	)
+
+	adminProtected.Post("/components/preview",
+		middleware.OnlyHTMX(),
+		previewHandler.RenderComponentPreview,
 	)
 
 	app.Post("/login", authHandler.Login)

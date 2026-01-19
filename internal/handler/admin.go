@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"html/template"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -110,12 +111,8 @@ func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
 }
 
 type sitePageLi struct {
-	ID    string
-	Title string
-	/*PageURL   string
-	HxGet     string
-	HxTarget  string
-	HxPushURL string*/
+	ID        string
+	Title     string
 	IsActive  bool
 	IsEnabled bool
 }
@@ -138,7 +135,7 @@ type sitePageEditor struct {
 	Name           string
 	Slug           string
 	Content        string
-	Output         string
+	Output         template.HTML
 	IsEnabled      bool
 	LastModifiedAt string
 }
@@ -148,7 +145,7 @@ func (h *adminHandler) buildSitePageEditor(page models.SitePage) sitePageEditor 
 		Name:           page.Name,
 		Slug:           page.Slug,
 		Content:        page.Content,
-		Output:         "here is output to preview",
+		Output:         template.HTML(h.sitePageService.MustPreview(page.Content)),
 		IsEnabled:      page.Enabled,
 		LastModifiedAt: "2 hours ago", // TODO: get relative time string from page.LastModifiedAt
 	}
@@ -176,7 +173,7 @@ func (h *adminHandler) buildComponentUl(comps []models.Component, activeID uint)
 type componentEditor struct {
 	Name           string
 	Content        string
-	Output         string
+	Output         template.HTML
 	LastModifiedAt string
 }
 
@@ -184,7 +181,7 @@ func (h *adminHandler) buildComponentEditor(comp models.Component) componentEdit
 	return componentEditor{
 		Name:           comp.Name,
 		Content:        comp.Content,
-		Output:         "here is output to preview",
+		Output:         template.HTML(h.componentService.MustPreview(comp.Name, comp.Content)),
 		LastModifiedAt: "2 hours ago", // TODO: get relative time string from component.LastModifiedAt
 	}
 }

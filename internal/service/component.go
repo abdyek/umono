@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"errors"
 
 	"github.com/umono-cms/compono"
@@ -13,6 +14,8 @@ type ComponentService interface {
 	GetByID(uint) (models.Component, error)
 	GetAll() []models.Component
 	LoadAsGlobalComponent()
+	Preview(string, string) (string, error)
+	MustPreview(string, string) string
 }
 
 var ErrComponentNotFound = errors.New("component not found")
@@ -45,4 +48,17 @@ func (s *componentService) LoadAsGlobalComponent() {
 	for _, comp := range s.GetAll() {
 		s.compono.RegisterGlobalComponent(comp.Name, []byte(comp.Content))
 	}
+}
+
+func (s *componentService) Preview(name, source string) (string, error) {
+	var buf bytes.Buffer
+	if err := s.compono.ConvertGlobalComponent(name, []byte(source), &buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func (s *componentService) MustPreview(name, source string) string {
+	output, _ := s.Preview(name, source)
+	return output
 }
