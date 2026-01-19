@@ -79,7 +79,6 @@
           hx-trigger="keyup changed delay:750ms"
           hx-target="#preview-content"
           hx-swap="innerHTML"
-          hx-vals='js:{"umono_lang": document.getElementById("content").value}'
           >{{ .Content }}</textarea>
       </div>
     </form>
@@ -97,5 +96,12 @@
     <div id="preview-content" class="flex-1 overflow-auto p-2">
       {{ .Output }}
     </div>
+    <script>
+      (() => {
+        const previewContent = document.getElementById('preview-content');
+        const shadow = previewContent.attachShadow({ mode: 'open' });
+        shadow.innerHTML = `<style>:host{ background-color: white; } :host { all: initial; display: block; background-color: white; }</style>{{ .Output }}`;
+      })()
+    </script>
   </div>
 </main>
