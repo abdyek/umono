@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
@@ -83,6 +84,14 @@ func main() {
 
 	app.Static("/static", "./public")
 
+	if os.Getenv("APP_ENV") == "dev" {
+		app.Use(func(c *fiber.Ctx) error {
+			if c.Get("HX-Request") == "true" {
+				time.Sleep(400 * time.Millisecond)
+			}
+			return c.Next()
+		})
+	}
 	admin := app.Group("/admin")
 	admin.Use(middleware.HTMXContext())
 
