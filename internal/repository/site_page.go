@@ -32,3 +32,8 @@ func (r *SitePageRepository) GetAll() []models.SitePage {
 	r.db.Model(&models.SitePage{}).Find(&all)
 	return all
 }
+
+func (r *SitePageRepository) Create(sp models.SitePage) models.SitePage {
+	r.db.Create(&sp)
+	return sp
+}

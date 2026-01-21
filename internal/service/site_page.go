@@ -3,10 +3,18 @@ package service
 import (
 	"bytes"
 	"errors"
+	"regexp"
+	"time"
 
 	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
+)
+
+var (
+	ErrSlugAlreadyExists = errors.New("Slug already exists for another page")
+	ErrInvalidSlug       = errors.New("Invalid slug")
+	ErrNameRequired      = errors.New("Name required")
 )
 
 // TODO: Remove interface
@@ -17,6 +25,8 @@ type SitePageService interface {
 	GetAll() []models.SitePage
 	Preview(string) (string, error)
 	MustPreview(string) string
+	Create(models.SitePage) (models.SitePage, []error)
+	CheckSlug(slug string, exclude uint) error
 }
 
 var ErrSitePageNotFound = errors.New("site page not found")
@@ -82,10 +92,60 @@ func (s *sitePageService) MustPreview(source string) string {
 	return output
 }
 
+func (s *sitePageService) Create(sp models.SitePage) (models.SitePage, []error) {
+	errs := []error{}
+
+	if !s.isSlugValid(sp.Slug) {
+		errs = append(errs, ErrInvalidSlug)
+	}
+
+	if s.isSlugAvailable(sp.Slug, 0) {
+		errs = append(errs, ErrSlugAlreadyExists)
+	}
+
+	if sp.Name == "" {
+		errs = append(errs, ErrNameRequired)
+	}
+
+	if len(errs) > 0 {
+		return models.SitePage{}, errs
+	}
+
+	now := time.Now()
+	sp.LastModifiedAt = &now
+
+	return s.repo.Create(sp), nil
+}
+
+func (s *sitePageService) CheckSlug(slug string, exclude uint) error {
+	if !s.isSlugValid(slug) {
+		return ErrInvalidSlug
+	}
+	if s.isSlugAvailable(slug, exclude) {
+		return ErrSlugAlreadyExists
+	}
+	return nil
+}
+
 func (s *sitePageService) convert(source string) (string, error) {
 	var buf bytes.Buffer
 	if err := s.compono.Convert([]byte(source), &buf); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func (s *sitePageService) isSlugValid(slug string) bool {
+	if slug == "" {
+		return true
+	}
+	return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`).MatchString(slug)
+}
+
+func (s *sitePageService) isSlugAvailable(slug string, exclude uint) bool {
+	available := s.repo.GetBySlug(slug)
+	if available.ID == 0 || available.ID == exclude {
+		return false
+	}
+	return true
 }

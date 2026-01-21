@@ -2,28 +2,35 @@
   <div class="flex-1 flex flex-col border-r border-neutral-700/50">
     <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
       <div class="flex items-center justify-between">
-        <div>
+        {{ if .ID }}<div>
           <h2 class="text-lg font-semibold text-neutral-200">{{ .Name }}</h2>
           <p class="text-xs text-neutral-500 mt-0.5">Last updated: {{ .LastModifiedAt }}</p>
-        </div>
+        </div>{{ else }}
+        <div>
+          <h2 class="text-lg font-semibold text-neutral-200">Create Page</h2>
+        </div>{{ end }}
         <div class="flex items-center gap-2">
           <label class="flex items-center gap-2 cursor-pointer">
             <span class="text-xs text-neutral-500">Enabled</span>
             <div class="relative">
-              <input type="checkbox" {{ if .IsEnabled }} checked {{ end }}class="sr-only peer">
+              <input id="enabled-checkbox" type="checkbox" name="enabled" form="editor-form" value="1" {{ if .IsEnabled }} checked {{ end }}class="sr-only peer">
               <div class="w-9 h-5 bg-neutral-700 rounded-full peer peer-checked:bg-purple-600 transition-colors"></div>
               <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
             </div>
           </label>
           <button 
+            id="editor-submit-button"
             type="submit"
-            form="page-form"
-            class="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg shadow-purple-900/20 active:scale-[0.98]"
+            form="editor-form"
+            class="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg shadow-purple-900/20 active:scale-[0.98] cursor-pointer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
-            <span>Save</span>
+            <span>{{ if .ID }}Save{{ else }}Create{{ end }}</span>
+            <span class="hidden [.htmx-request_&]:inline-block h-4 w-4 text-white ml-auto shrink-0">
+              {{ template "partials/spinner" . }}
+            </span>
           </button>
           <button 
             class="p-2 rounded-xl hover:bg-red-500/10 text-neutral-500 hover:text-red-400 transition-colors"
@@ -37,28 +44,40 @@
         </div>
       </div>
     </header>
-    <form id="page-form" class="flex-1 flex flex-col overflow-hidden p-6 space-y-4"
-          hx-put="/api/v1/pages"
-          hx-target="#editor-area"
-          hx-swap="innerHTML">
-      <input type="hidden" name="id" value="1">
+    <form id="editor-form" class="flex-1 flex flex-col overflow-hidden p-6 space-y-4"
+        {{ if .ID }}hx-put="/admin/site-pages/{{.ID}}"{{ else }}hx-post="/admin/site-pages"{{ end }}
+        hx-target="#editor-area"
+        hx-swap="innerHTML"
+        hx-indicator="#editor-submit-button"
+        hx-disabled-elt="#name,#slug,#enabled-checkbox,#content">
+        
+      <input type="hidden" name="id" value="{{ .ID }}">
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-2">
           <label class="text-sm font-medium text-neutral-300 ml-1" for="name">Name</label>
           <input 
-            class="w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 placeholder:text-neutral-600" 
+            class="w-full bg-neutral-900/50 border text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 transition-all duration-200 placeholder:text-neutral-600 {{ if .NameErr }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }}" 
             type="text" 
             id="name" 
             name="name"
             value="{{ .Name }}"
+            {{ if eq .ID 0 }}oninput="updateSlug(this.value)"{{ end }}
           >
+          {{ if .NameErr }}
+          <div class="flex items-center gap-1.5 ml-1 mt-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            <p class="text-xs font-medium text-red-400">{{ .NameErr }}</p>
+          </div>
+          {{ end }}
         </div>
         <div class="space-y-2">
           <label class="text-sm font-medium text-neutral-300 ml-1" for="slug">Slug</label>
           <div class="flex">
-            <span class="inline-flex items-center px-3 bg-neutral-800 border border-r-0 border-neutral-700 rounded-l-xl text-neutral-500 text-sm">/</span>
+            <span class="inline-flex items-center px-3 bg-neutral-800 border border-r-0 rounded-l-xl text-neutral-500 text-sm {{ if .SlugErr }}border-red-500/50{{ else }}border-neutral-700{{ end }}">/</span>
             <input 
-              class="flex-1 bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-r-xl px-4 py-2.5 text-sm outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 placeholder:text-neutral-600" 
+              class="flex-1 bg-neutral-900/50 border text-neutral-200 rounded-r-xl px-4 py-2.5 text-sm outline-none focus:ring-4  transition-all duration-200 placeholder:text-neutral-600 {{ if .SlugErr }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }}" 
               type="text" 
               id="slug" 
               name="slug"
@@ -66,6 +85,14 @@
               placeholder="page-slug"
             >
           </div>
+          {{ if .SlugErr }}
+          <div class="flex items-center gap-1.5 ml-1 mt-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            <p class="text-xs font-medium text-red-400">{{ .SlugErr }}</p>
+          </div>
+          {{ end }}
         </div>
       </div>
       <div class="flex-1 flex flex-col space-y-2 min-h-0">
@@ -78,6 +105,7 @@
           hx-post="/admin/site-pages/preview"
           hx-trigger="keyup changed delay:750ms"
           hx-swap="none"
+          hx-indicator="false"
           hx-on::after-request="setPreviewContent(event.detail.xhr.response)"
           >{{ .Content }}</textarea>
       </div>

@@ -56,6 +56,7 @@ func main() {
 
 	db.AutoMigrate(&models.Component{}, &models.SitePage{})
 
+	// TODO: Refactor: move DI another file
 	sitePageRepo := repository.NewSitePageRepository(db)
 	sitePageService := service.NewSitePageService(sitePageRepo, comp)
 
@@ -69,8 +70,8 @@ func main() {
 	)
 
 	previewHandler := handler.NewPreviewHandler(sitePageService, componentService)
-
 	siteHandler := handler.NewSiteHandler(sitePageService)
+	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 
 	engine := html.New("./views", ".html")
 
@@ -101,10 +102,27 @@ func main() {
 
 	adminProtected.Get("/", adminHandler.RenderAdmin)
 
+	adminProtected.Get("/site-pages/new", sitePageHandler.RenderNewPageSiteEditor)
+
+	adminProtected.Get("/site-pages/check-slug",
+		middleware.OnlyHTMX(),
+		sitePageHandler.CheckSlug,
+	)
+
 	adminProtected.Get("/site-pages/:id", adminHandler.RenderAdminSitePage)
 	adminProtected.Get("/site-pages/:id/editor",
 		middleware.OnlyHTMX(),
 		adminHandler.RenderAdminSitePageEditor,
+	)
+
+	adminProtected.Post("/site-pages",
+		middleware.OnlyHTMX(),
+		sitePageHandler.Create,
+	)
+
+	adminProtected.Put("/site-pages/:id",
+		middleware.OnlyHTMX(),
+		sitePageHandler.Update,
 	)
 
 	adminProtected.Get("/components/:id", adminHandler.RenderAdminComponent)

@@ -9,6 +9,7 @@ import (
 	"github.com/umono-cms/umono/internal/service"
 )
 
+// TODO: Refactor: remove h.build* funcs
 type adminHandler struct {
 	sitePageService  service.SitePageService
 	componentService service.ComponentService
@@ -132,16 +133,20 @@ func (h *adminHandler) buildSitePageUl(pages []models.SitePage, activeID uint) [
 }
 
 type sitePageEditor struct {
+	ID             uint
 	Name           string
 	Slug           string
 	Content        string
 	Output         template.HTML
 	IsEnabled      bool
 	LastModifiedAt string
+	SlugErr        string
+	NameErr        string
 }
 
 func (h *adminHandler) buildSitePageEditor(page models.SitePage) sitePageEditor {
 	return sitePageEditor{
+		ID:             page.ID,
 		Name:           page.Name,
 		Slug:           page.Slug,
 		Content:        page.Content,
