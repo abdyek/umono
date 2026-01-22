@@ -23,6 +23,8 @@ func NewSitePageHandler(sps service.SitePageService, cs service.ComponentService
 
 func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 
+	// TODO: Add validator
+
 	sitePage := models.SitePage{
 		Name:    c.FormValue("name"),
 		Slug:    c.FormValue("slug"),
@@ -55,8 +57,39 @@ func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *SitePageHandler) Update(c *fiber.Ctx) error {
-	// TODO: Complete it
-	return c.SendString("Here site page update")
+
+	// TODO: Add validator
+	u64, _ := strconv.ParseUint(c.FormValue("id"), 10, 0)
+
+	sitePage := models.SitePage{
+		ID:      uint(u64),
+		Name:    c.FormValue("name"),
+		Slug:    c.FormValue("slug"),
+		Content: c.FormValue("content"),
+		Enabled: c.FormValue("enabled") == "1",
+	}
+
+	updated, errs := h.sitePageService.Update(sitePage)
+
+	slugErr := ""
+	nameErr := ""
+	if len(errs) > 0 {
+		if err := service.ErrInvalidSlug; service.ErrorsIs(errs, err) {
+			slugErr = err.Error()
+		} else if err := service.ErrSlugAlreadyExists; service.ErrorsIs(errs, err) {
+			slugErr = err.Error()
+		}
+		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
+			nameErr = err.Error()
+		}
+	} else {
+		sitePage = updated
+	}
+
+	return Render(c, "partials/htmx/admin-site-page-editor", fiber.Map{
+		"SitePageEditor": view.SitePageEditor(sitePage, h.sitePageService.MustPreview(sitePage.Content), slugErr, nameErr),
+		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), sitePage.ID),
+	})
 }
 
 func (h *SitePageHandler) Delete(c *fiber.Ctx) error {

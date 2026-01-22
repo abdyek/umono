@@ -280,9 +280,6 @@
   .h-5 {
     height: calc(var(--spacing) * 5);
   }
-  .h-full {
-    height: 100%;
-  }
   .h-screen {
     height: 100vh;
   }
@@ -883,11 +880,6 @@
   .\[\.htmx-request_\&\]\:visible {
     .htmx-request & {
       visibility: visible;
-    }
-  }
-  .\[\.htmx-request_\&\]\:flex {
-    .htmx-request & {
-      display: flex;
     }
   }
   .\[\.htmx-request_\&\]\:hidden {

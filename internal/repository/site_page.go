@@ -37,3 +37,8 @@ func (r *SitePageRepository) Create(sp models.SitePage) models.SitePage {
 	r.db.Create(&sp)
 	return sp
 }
+
+func (r *SitePageRepository) Update(sp models.SitePage) models.SitePage {
+	r.db.Model(&sp).Select("*").Updates(sp)
+	return sp
+}

@@ -26,6 +26,7 @@ type SitePageService interface {
 	Preview(string) (string, error)
 	MustPreview(string) string
 	Create(models.SitePage) (models.SitePage, []error)
+	Update(models.SitePage) (models.SitePage, []error)
 	CheckSlug(slug string, exclude uint) error
 }
 
@@ -99,7 +100,7 @@ func (s *sitePageService) Create(sp models.SitePage) (models.SitePage, []error) 
 		errs = append(errs, ErrInvalidSlug)
 	}
 
-	if s.isSlugAvailable(sp.Slug, 0) {
+	if s.isSlugUsed(sp.Slug, 0) {
 		errs = append(errs, ErrSlugAlreadyExists)
 	}
 
@@ -117,11 +118,36 @@ func (s *sitePageService) Create(sp models.SitePage) (models.SitePage, []error) 
 	return s.repo.Create(sp), nil
 }
 
+func (s *sitePageService) Update(sp models.SitePage) (models.SitePage, []error) {
+	errs := []error{}
+
+	if !s.isSlugValid(sp.Slug) {
+		errs = append(errs, ErrInvalidSlug)
+	}
+
+	if s.isSlugUsed(sp.Slug, sp.ID) {
+		errs = append(errs, ErrSlugAlreadyExists)
+	}
+
+	if sp.Name == "" {
+		errs = append(errs, ErrNameRequired)
+	}
+
+	if len(errs) > 0 {
+		return models.SitePage{}, errs
+	}
+
+	now := time.Now()
+	sp.LastModifiedAt = &now
+
+	return s.repo.Update(sp), nil
+}
+
 func (s *sitePageService) CheckSlug(slug string, exclude uint) error {
 	if !s.isSlugValid(slug) {
 		return ErrInvalidSlug
 	}
-	if s.isSlugAvailable(slug, exclude) {
+	if s.isSlugUsed(slug, exclude) {
 		return ErrSlugAlreadyExists
 	}
 	return nil
@@ -142,9 +168,9 @@ func (s *sitePageService) isSlugValid(slug string) bool {
 	return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`).MatchString(slug)
 }
 
-func (s *sitePageService) isSlugAvailable(slug string, exclude uint) bool {
-	available := s.repo.GetBySlug(slug)
-	if available.ID == 0 || available.ID == exclude {
+func (s *sitePageService) isSlugUsed(slug string, excluding uint) bool {
+	used := s.repo.GetBySlug(slug)
+	if used.ID == 0 || used.ID == excluding {
 		return false
 	}
 	return true
