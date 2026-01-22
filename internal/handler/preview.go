@@ -6,11 +6,11 @@ import (
 )
 
 type previewHandler struct {
-	sitePageService  service.SitePageService
-	componentService service.ComponentService
+	sitePageService  *service.SitePageService
+	componentService *service.ComponentService
 }
 
-func NewPreviewHandler(sps service.SitePageService, cs service.ComponentService) *previewHandler {
+func NewPreviewHandler(sps *service.SitePageService, cs *service.ComponentService) *previewHandler {
 	return &previewHandler{
 		sitePageService:  sps,
 		componentService: cs,

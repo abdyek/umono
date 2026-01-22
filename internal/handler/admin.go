@@ -12,11 +12,11 @@ import (
 
 // TODO: Refactor: remove h.build* funcs
 type adminHandler struct {
-	sitePageService  service.SitePageService
-	componentService service.ComponentService
+	sitePageService  *service.SitePageService
+	componentService *service.ComponentService
 }
 
-func NewAdminHandler(sps service.SitePageService, cs service.ComponentService) *adminHandler {
+func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService) *adminHandler {
 	return &adminHandler{
 		sitePageService:  sps,
 		componentService: cs,

@@ -10,11 +10,11 @@ import (
 )
 
 type SitePageHandler struct {
-	sitePageService  service.SitePageService
-	componentService service.ComponentService
+	sitePageService  *service.SitePageService
+	componentService *service.ComponentService
 }
 
-func NewSitePageHandler(sps service.SitePageService, cs service.ComponentService) *SitePageHandler {
+func NewSitePageHandler(sps *service.SitePageService, cs *service.ComponentService) *SitePageHandler {
 	return &SitePageHandler{
 		sitePageService:  sps,
 		componentService: cs,

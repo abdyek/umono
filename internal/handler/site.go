@@ -8,10 +8,10 @@ import (
 )
 
 type siteHandler struct {
-	sitePageService service.SitePageService
+	sitePageService *service.SitePageService
 }
 
-func NewSiteHandler(sps service.SitePageService) *siteHandler {
+func NewSiteHandler(sps *service.SitePageService) *siteHandler {
 	return &siteHandler{
 		sitePageService: sps,
 	}

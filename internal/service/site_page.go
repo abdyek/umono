@@ -17,34 +17,21 @@ var (
 	ErrNameRequired      = errors.New("Name required")
 )
 
-// TODO: Remove interface
-type SitePageService interface {
-	GetRenderedBySlug(string) (models.SitePage, error)
-	GetBySlug(string) (models.SitePage, error)
-	GetByID(uint) (models.SitePage, error)
-	GetAll() []models.SitePage
-	Preview(string) (string, error)
-	MustPreview(string) string
-	Create(models.SitePage) (models.SitePage, []error)
-	Update(models.SitePage) (models.SitePage, []error)
-	CheckSlug(slug string, exclude uint) error
-}
-
 var ErrSitePageNotFound = errors.New("site page not found")
 
-type sitePageService struct {
+type SitePageService struct {
 	repo    *repository.SitePageRepository
 	compono compono.Compono
 }
 
-func NewSitePageService(r *repository.SitePageRepository, comp compono.Compono) SitePageService {
-	return &sitePageService{
+func NewSitePageService(r *repository.SitePageRepository, comp compono.Compono) *SitePageService {
+	return &SitePageService{
 		repo:    r,
 		compono: comp,
 	}
 }
 
-func (s *sitePageService) GetRenderedBySlug(slug string) (models.SitePage, error) {
+func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error) {
 	// TODO: Put here cache
 	sitePage, err := s.GetBySlug(slug)
 	if err != nil {
@@ -60,7 +47,7 @@ func (s *sitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 	return sitePage, nil
 }
 
-func (s *sitePageService) GetBySlug(slug string) (models.SitePage, error) {
+func (s *SitePageService) GetBySlug(slug string) (models.SitePage, error) {
 	sp := s.repo.GetBySlug(slug)
 	if sp.ID == 0 {
 		return models.SitePage{}, ErrSitePageNotFound
@@ -68,7 +55,7 @@ func (s *sitePageService) GetBySlug(slug string) (models.SitePage, error) {
 	return sp, nil
 }
 
-func (s *sitePageService) GetByID(ID uint) (models.SitePage, error) {
+func (s *SitePageService) GetByID(ID uint) (models.SitePage, error) {
 	sp := s.repo.GetByID(ID)
 	if sp.ID == 0 {
 		return models.SitePage{}, ErrSitePageNotFound
@@ -76,11 +63,11 @@ func (s *sitePageService) GetByID(ID uint) (models.SitePage, error) {
 	return sp, nil
 }
 
-func (s *sitePageService) GetAll() []models.SitePage {
+func (s *SitePageService) GetAll() []models.SitePage {
 	return s.repo.GetAll()
 }
 
-func (s *sitePageService) Preview(source string) (string, error) {
+func (s *SitePageService) Preview(source string) (string, error) {
 	output, err := s.convert(source)
 	if err != nil {
 		return "", err
@@ -88,12 +75,12 @@ func (s *sitePageService) Preview(source string) (string, error) {
 	return output, nil
 }
 
-func (s *sitePageService) MustPreview(source string) string {
+func (s *SitePageService) MustPreview(source string) string {
 	output, _ := s.Preview(source)
 	return output
 }
 
-func (s *sitePageService) Create(sp models.SitePage) (models.SitePage, []error) {
+func (s *SitePageService) Create(sp models.SitePage) (models.SitePage, []error) {
 	errs := []error{}
 
 	if !s.isSlugValid(sp.Slug) {
@@ -118,7 +105,7 @@ func (s *sitePageService) Create(sp models.SitePage) (models.SitePage, []error) 
 	return s.repo.Create(sp), nil
 }
 
-func (s *sitePageService) Update(sp models.SitePage) (models.SitePage, []error) {
+func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) {
 	errs := []error{}
 
 	if !s.isSlugValid(sp.Slug) {
@@ -143,7 +130,7 @@ func (s *sitePageService) Update(sp models.SitePage) (models.SitePage, []error) 
 	return s.repo.Update(sp), nil
 }
 
-func (s *sitePageService) CheckSlug(slug string, exclude uint) error {
+func (s *SitePageService) CheckSlug(slug string, exclude uint) error {
 	if !s.isSlugValid(slug) {
 		return ErrInvalidSlug
 	}
@@ -153,7 +140,7 @@ func (s *sitePageService) CheckSlug(slug string, exclude uint) error {
 	return nil
 }
 
-func (s *sitePageService) convert(source string) (string, error) {
+func (s *SitePageService) convert(source string) (string, error) {
 	var buf bytes.Buffer
 	if err := s.compono.Convert([]byte(source), &buf); err != nil {
 		return "", err
@@ -161,14 +148,14 @@ func (s *sitePageService) convert(source string) (string, error) {
 	return buf.String(), nil
 }
 
-func (s *sitePageService) isSlugValid(slug string) bool {
+func (s *SitePageService) isSlugValid(slug string) bool {
 	if slug == "" {
 		return true
 	}
 	return regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`).MatchString(slug)
 }
 
-func (s *sitePageService) isSlugUsed(slug string, excluding uint) bool {
+func (s *SitePageService) isSlugUsed(slug string, excluding uint) bool {
 	used := s.repo.GetBySlug(slug)
 	if used.ID == 0 || used.ID == excluding {
 		return false
