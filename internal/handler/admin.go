@@ -64,7 +64,7 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 		return c.SendStatus(404)
 	}
 
-	return Render(c, "partials/htmx/admin-site-page-editor", fiber.Map{
+	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
 		"SitePageEditor": h.buildSitePageEditor(sitePage),
 		"SitePageUl":     h.buildSitePageUl(h.sitePageService.GetAll(), sitePage.ID),
 		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
@@ -105,7 +105,7 @@ func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
 		return c.SendStatus(404)
 	}
 
-	return Render(c, "partials/htmx/admin-component-editor", fiber.Map{
+	return Render(c, "partials/htmx/component-editor", fiber.Map{
 		"ComponentEditor": h.buildComponentEditor(comp),
 		"ComponentUl":     h.buildComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      h.buildSitePageUl(h.sitePageService.GetAll(), 0),

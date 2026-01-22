@@ -50,7 +50,7 @@ func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 		sitePage = created
 	}
 
-	return Render(c, "partials/htmx/admin-site-page-editor", fiber.Map{
+	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
 		"SitePageEditor": view.SitePageEditor(sitePage, h.sitePageService.MustPreview(sitePage.Content), slugErr, nameErr),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), sitePage.ID),
 	})
@@ -86,7 +86,7 @@ func (h *SitePageHandler) Update(c *fiber.Ctx) error {
 		sitePage = updated
 	}
 
-	return Render(c, "partials/htmx/admin-site-page-editor", fiber.Map{
+	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
 		"SitePageEditor": view.SitePageEditor(sitePage, h.sitePageService.MustPreview(sitePage.Content), slugErr, nameErr),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), sitePage.ID),
 	})

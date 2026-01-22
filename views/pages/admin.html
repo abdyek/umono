@@ -21,7 +21,7 @@
               </svg>
             </button>
           </div>
-          {{ template "partials/admin-site-page-ul" . }}
+          {{ template "partials/site-page-ul" . }}
         </div>
         <div>
           <div class="flex items-center justify-between mb-3">
@@ -37,7 +37,7 @@
               </svg>
             </button>
           </div>
-          {{ template "partials/admin-component-ul" . }}
+          {{ template "partials/component-ul" . }}
         </div>
       </nav>
       <div class="p-4 border-t border-neutral-700/50">
@@ -55,9 +55,9 @@
       </div>
     </aside>
     {{ if .ComponentMode }}
-      {{ template "partials/admin-component-editor" .ComponentEditor }}
+      {{ template "partials/component-editor" .ComponentEditor }}
     {{ else }}
-      {{ template "partials/admin-site-page-editor" .SitePageEditor }}
+      {{ template "partials/site-page-editor" .SitePageEditor }}
     {{ end }}
   </div>
 </div>
