@@ -26,7 +26,7 @@ func SitePageEditor(sp models.SitePage, output, slugErr, nameErr string) SitePag
 		Content:        sp.Content,
 		Output:         template.HTML(output),
 		IsEnabled:      sp.Enabled,
-		LastModifiedAt: "2 hours ago", // TODO: get relative time string from sitePage.LastModifiedAt
+		LastModifiedAt: RelativeTime(sp.LastModifiedAt),
 		SlugErr:        slugErr,
 		NameErr:        nameErr,
 	}

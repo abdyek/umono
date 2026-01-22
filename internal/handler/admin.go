@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/service"
+	"github.com/umono-cms/umono/internal/view"
 )
 
 // TODO: Refactor: remove h.build* funcs
@@ -152,7 +153,7 @@ func (h *adminHandler) buildSitePageEditor(page models.SitePage) sitePageEditor 
 		Content:        page.Content,
 		Output:         template.HTML(h.sitePageService.MustPreview(page.Content)),
 		IsEnabled:      page.Enabled,
-		LastModifiedAt: "2 hours ago", // TODO: get relative time string from page.LastModifiedAt
+		LastModifiedAt: view.RelativeTime(page.LastModifiedAt),
 	}
 }
 
@@ -187,6 +188,6 @@ func (h *adminHandler) buildComponentEditor(comp models.Component) componentEdit
 		Name:           comp.Name,
 		Content:        comp.Content,
 		Output:         template.HTML(h.componentService.MustPreview(comp.Name, comp.Content)),
-		LastModifiedAt: "2 hours ago", // TODO: get relative time string from component.LastModifiedAt
+		LastModifiedAt: view.RelativeTime(comp.LastModifiedAt),
 	}
 }
