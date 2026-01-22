@@ -72,6 +72,7 @@ func main() {
 	previewHandler := handler.NewPreviewHandler(sitePageService, componentService)
 	siteHandler := handler.NewSiteHandler(sitePageService)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
+	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 
 	engine := html.New("./views", ".html")
 
@@ -103,6 +104,7 @@ func main() {
 	adminProtected.Get("/", adminHandler.RenderAdmin)
 
 	adminProtected.Get("/site-pages/new", sitePageHandler.RenderNewPageSiteEditor)
+	adminProtected.Get("/components/new", componentHandler.RenderComponentEditor)
 
 	adminProtected.Get("/site-pages/check-slug",
 		middleware.OnlyHTMX(),
@@ -129,6 +131,16 @@ func main() {
 	adminProtected.Get("/components/:id/editor",
 		middleware.OnlyHTMX(),
 		adminHandler.RenderAdminComponentEditor,
+	)
+
+	adminProtected.Post("/components",
+		middleware.OnlyHTMX(),
+		componentHandler.Create,
+	)
+
+	adminProtected.Put("/components/:id",
+		middleware.OnlyHTMX(),
+		componentHandler.Update,
 	)
 
 	adminProtected.Post("/site-pages/preview",

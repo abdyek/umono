@@ -1,6 +1,30 @@
 package view
 
-import "github.com/umono-cms/umono/internal/models"
+import (
+	"html/template"
+
+	"github.com/umono-cms/umono/internal/models"
+)
+
+type ComponentEditorData struct {
+	ID             uint
+	Name           string
+	Content        string
+	Output         template.HTML
+	LastModifiedAt string
+	NameErr        string
+}
+
+func ComponentEditor(comp models.Component, output, nameErr string) ComponentEditorData {
+	return ComponentEditorData{
+		ID:             comp.ID,
+		Name:           comp.Name,
+		Content:        comp.Content,
+		Output:         template.HTML(output),
+		LastModifiedAt: RelativeTime(comp.LastModifiedAt),
+		NameErr:        nameErr,
+	}
+}
 
 type ComponentLi struct {
 	ID       uint

@@ -177,14 +177,17 @@ func (h *adminHandler) buildComponentUl(comps []models.Component, activeID uint)
 }
 
 type componentEditor struct {
+	ID             uint
 	Name           string
 	Content        string
 	Output         template.HTML
 	LastModifiedAt string
+	NameErr        string
 }
 
 func (h *adminHandler) buildComponentEditor(comp models.Component) componentEditor {
 	return componentEditor{
+		ID:             comp.ID,
 		Name:           comp.Name,
 		Content:        comp.Content,
 		Output:         template.HTML(h.componentService.MustPreview(comp.Name, comp.Content)),

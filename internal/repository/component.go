@@ -26,3 +26,19 @@ func (r *ComponentRepository) GetAll() []models.Component {
 	r.db.Model(&models.Component{}).Find(&all)
 	return all
 }
+
+func (r *ComponentRepository) GetByName(name string) models.Component {
+	var c models.Component
+	r.db.Model(&models.Component{}).Where("name = ?", name).First(&c)
+	return c
+}
+
+func (r *ComponentRepository) Create(c models.Component) models.Component {
+	r.db.Create(&c)
+	return c
+}
+
+func (r *ComponentRepository) Update(c models.Component) models.Component {
+	r.db.Model(&c).Select("*").Updates(c)
+	return c
+}
