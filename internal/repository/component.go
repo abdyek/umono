@@ -42,3 +42,7 @@ func (r *ComponentRepository) Update(c models.Component) models.Component {
 	r.db.Model(&c).Select("*").Updates(c)
 	return c
 }
+
+func (r *ComponentRepository) Delete(id uint) error {
+	return r.db.Delete(&models.Component{}, id).Error
+}

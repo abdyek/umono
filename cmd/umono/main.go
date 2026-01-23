@@ -148,6 +148,11 @@ func main() {
 		componentHandler.Update,
 	)
 
+	adminProtected.Delete("/components/:id",
+		middleware.OnlyHTMX(),
+		componentHandler.Delete,
+	)
+
 	adminProtected.Post("/site-pages/preview",
 		middleware.OnlyHTMX(),
 		previewHandler.RenderSitePagePreview,

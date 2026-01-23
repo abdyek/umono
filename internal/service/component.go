@@ -111,6 +111,10 @@ func (s *ComponentService) Update(c models.Component) (models.Component, []error
 	return s.repo.Update(c), nil
 }
 
+func (s *ComponentService) Delete(id uint) error {
+	return s.repo.Delete(id)
+}
+
 func (s *ComponentService) isNameValid(name string) bool {
 	re := regexp.MustCompile(`^[A-Z0-9]+(?:_[A-Z0-9]+)*$`)
 	return re.MatchString(name)

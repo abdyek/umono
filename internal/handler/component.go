@@ -82,8 +82,17 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *ComponentHandler) Delete(c *fiber.Ctx) error {
-	// TODO: Delete
-	return nil
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if err := h.componentService.Delete(uint(id)); err != nil {
+		return err
+	}
+
+	c.Set("HX-Redirect", "/admin/components/new")
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *ComponentHandler) RenderComponentEditor(c *fiber.Ctx) error {
