@@ -23,7 +23,7 @@ func (r *ComponentRepository) GetByID(ID uint) models.Component {
 
 func (r *ComponentRepository) GetAll() []models.Component {
 	var all []models.Component
-	r.db.Model(&models.Component{}).Find(&all)
+	r.db.Model(&models.Component{}).Order("last_modified_at DESC").Find(&all)
 	return all
 }
 

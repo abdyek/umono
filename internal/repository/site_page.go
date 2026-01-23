@@ -29,7 +29,7 @@ func (r *SitePageRepository) GetByID(ID uint) models.SitePage {
 
 func (r *SitePageRepository) GetAll() []models.SitePage {
 	var all []models.SitePage
-	r.db.Model(&models.SitePage{}).Find(&all)
+	r.db.Model(&models.SitePage{}).Order("enabled DESC, last_modified_at DESC").Find(&all)
 	return all
 }
 
