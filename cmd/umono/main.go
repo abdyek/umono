@@ -101,7 +101,7 @@ func main() {
 
 	adminProtected := admin.Group("/", middleware.Logged(store))
 
-	adminProtected.Get("/", adminHandler.RenderAdmin)
+	adminProtected.Get("/", adminHandler.Index)
 
 	adminProtected.Get("/site-pages/new", sitePageHandler.RenderNewPageSiteEditor)
 	adminProtected.Get("/components/new", componentHandler.RenderComponentEditor)

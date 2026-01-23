@@ -23,11 +23,12 @@ func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService)
 	}
 }
 
-func (h *adminHandler) RenderAdmin(c *fiber.Ctx) error {
-	return Render(c, "pages/admin", fiber.Map{
-		"SitePageUl":  h.buildSitePageUl(h.sitePageService.GetAll(), 0),
-		"ComponentUl": h.buildComponentUl(h.componentService.GetAll(), 0),
-	}, "layouts/admin")
+func (h *adminHandler) Index(c *fiber.Ctx) error {
+	pages := h.sitePageService.GetAll()
+	if len(pages) > 0 {
+		return c.Redirect("/admin/site-pages/" + strconv.FormatUint(uint64(pages[0].ID), 10))
+	}
+	return c.Redirect("/admin/site-pages/new")
 }
 
 func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {
