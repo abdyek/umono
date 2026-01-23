@@ -93,8 +93,17 @@ func (h *SitePageHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *SitePageHandler) Delete(c *fiber.Ctx) error {
-	// TODO: Complete it
-	return c.SendString("Here site page delete")
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if err := h.sitePageService.Delete(uint(id)); err != nil {
+		return err
+	}
+
+	c.Set("HX-Redirect", "/admin/site-pages/new")
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {

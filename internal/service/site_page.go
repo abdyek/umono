@@ -130,6 +130,10 @@ func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) 
 	return s.repo.Update(sp), nil
 }
 
+func (s *SitePageService) Delete(id uint) error {
+	return s.repo.Delete(id)
+}
+
 func (s *SitePageService) CheckSlug(slug string, exclude uint) error {
 	if !s.isSlugValid(slug) {
 		return ErrInvalidSlug

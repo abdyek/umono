@@ -42,3 +42,7 @@ func (r *SitePageRepository) Update(sp models.SitePage) models.SitePage {
 	r.db.Model(&sp).Select("*").Updates(sp)
 	return sp
 }
+
+func (r *SitePageRepository) Delete(id uint) error {
+	return r.db.Delete(&models.SitePage{}, id).Error
+}

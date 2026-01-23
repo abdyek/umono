@@ -127,6 +127,11 @@ func main() {
 		sitePageHandler.Update,
 	)
 
+	adminProtected.Delete("/site-pages/:id",
+		middleware.OnlyHTMX(),
+		sitePageHandler.Delete,
+	)
+
 	adminProtected.Get("/components/:id", adminHandler.RenderAdminComponent)
 	adminProtected.Get("/components/:id/editor",
 		middleware.OnlyHTMX(),
