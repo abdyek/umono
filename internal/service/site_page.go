@@ -38,6 +38,10 @@ func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 		return models.SitePage{}, err
 	}
 
+	if !sitePage.Enabled {
+		return models.SitePage{}, ErrSitePageNotFound
+	}
+
 	output, err := s.convert(sitePage.Content)
 	if err != nil {
 		return models.SitePage{}, err
