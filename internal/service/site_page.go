@@ -35,7 +35,7 @@ func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 	// TODO: Put here cache
 	sitePage, err := s.GetBySlug(slug)
 	if err != nil {
-		return models.SitePage{}, nil
+		return models.SitePage{}, err
 	}
 
 	output, err := s.convert(sitePage.Content)
