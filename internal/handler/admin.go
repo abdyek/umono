@@ -61,7 +61,7 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 	}
 
 	sitePage, err := h.sitePageService.GetByID(uint(id))
-	if err != nil {
+  if id != 0 && err != nil {
 		return c.SendStatus(404)
 	}
 
@@ -102,7 +102,7 @@ func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
 	}
 
 	comp, err := h.componentService.GetByID(uint(id))
-	if err != nil {
+	if id != 0 && err != nil {
 		return c.SendStatus(404)
 	}
 
