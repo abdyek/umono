@@ -83,6 +83,11 @@ func main() {
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
+  
+  app.Use(func(c *fiber.Ctx) error {
+    c.Set("X-Powered-By", "Umono")
+    return c.Next()
+  })
 
 	app.Static("/static", "./public")
 
