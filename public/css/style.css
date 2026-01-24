@@ -872,6 +872,16 @@
       opacity: 50%;
     }
   }
+  .\[\&\.htmx-request\]\:invisible {
+    &.htmx-request {
+      visibility: hidden;
+    }
+  }
+  .\[\&\.htmx-request\]\:visible {
+    &.htmx-request {
+      visibility: visible;
+    }
+  }
   .\[\.htmx-request_\&\]\:invisible {
     .htmx-request & {
       visibility: hidden;
