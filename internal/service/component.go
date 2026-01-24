@@ -5,7 +5,6 @@ import (
 	"errors"
 	"regexp"
 	"time"
-
 	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
@@ -42,10 +41,28 @@ func (s *ComponentService) GetAll() []models.Component {
 	return s.repo.GetAll()
 }
 
+// TODO: Refactor LoadAsGlobalComponent -> LoadAllGlobalComponents()
 func (s *ComponentService) LoadAsGlobalComponent() {
 	for _, comp := range s.GetAll() {
 		s.compono.RegisterGlobalComponent(comp.Name, []byte(comp.Content))
 	}
+}
+
+func (s *ComponentService) LoadGlobalComponent(comp models.Component) error {
+  // TODO: Wrap compono errors
+  return s.compono.RegisterGlobalComponent(comp.Name, []byte(comp.Content))
+}
+
+func (s *ComponentService) RemoveGlobalComponent(comp models.Component) error {
+  // TODO: Wrap compono errors
+  return s.compono.UnregisterGlobalComponent(comp.Name)
+}
+
+func (s *ComponentService) ReloadGlobalComponent(comp models.Component) error {
+  if err := s.RemoveGlobalComponent(comp); err != nil{
+    return err
+  }
+  return s.LoadGlobalComponent(comp)
 }
 
 func (s *ComponentService) Preview(name, source string) (string, error) {
@@ -83,7 +100,13 @@ func (s *ComponentService) Create(c models.Component) (models.Component, []error
 	now := time.Now()
 	c.LastModifiedAt = &now
 
-	return s.repo.Create(c), nil
+  created := s.repo.Create(c)
+  err := s.LoadGlobalComponent(created)
+  if err != nil {
+    return models.Component{}, []error{err}
+  }
+
+	return created, nil
 }
 
 func (s *ComponentService) Update(c models.Component) (models.Component, []error) {
@@ -108,11 +131,38 @@ func (s *ComponentService) Update(c models.Component) (models.Component, []error
 	now := time.Now()
 	c.LastModifiedAt = &now
 
-	return s.repo.Update(c), nil
+  old := s.repo.GetByID(c.ID)
+  updated := s.repo.Update(c)
+
+  if old.Name != updated.Name {
+    err := s.RemoveGlobalComponent(old)
+    if err != nil {
+      return models.Component{}, []error{err}
+    }
+    err = s.LoadGlobalComponent(updated)
+    if err != nil {
+      return models.Component{}, []error{err}
+    }
+    return updated, nil
+  }
+
+  err := s.ReloadGlobalComponent(updated)
+  if err != nil {
+    return models.Component{}, []error{err}
+  }
+
+	return updated, nil
 }
 
 func (s *ComponentService) Delete(id uint) error {
-	return s.repo.Delete(id)
+
+  comp := s.repo.GetByID(id)
+
+  if err := s.repo.Delete(id); err != nil {
+    return err
+  }
+
+  return s.RemoveGlobalComponent(comp)
 }
 
 func (s *ComponentService) isNameValid(name string) bool {
