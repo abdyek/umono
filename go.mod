@@ -8,7 +8,7 @@ require (
 	github.com/gofiber/storage/sqlite3 v1.3.8
 	github.com/gofiber/template/html/v2 v2.1.3
 	github.com/joho/godotenv v1.5.1
-	github.com/umono-cms/compono v0.1.0
+	github.com/umono-cms/compono v0.1.1
 	golang.org/x/crypto v0.36.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
