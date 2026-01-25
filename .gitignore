@@ -62,5 +62,7 @@ tags
 # End of https://www.toptal.com/developers/gitignore/api/linux,vim,go
 
 .env
-
 umono.db
+bin/tailwindcss
+tmp
+session_storage.db

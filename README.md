@@ -1,63 +1,58 @@
 # Umono
-Umono is a content management system written golang.
+**Umono** is the vendor lock-in killer CMS.
 
-## Demo
-You can demo it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#demo) repository.
+## v0.5.0 Notes
+v0.5.0 introduces breaking changes (language, admin UI, tooling).  
+Please read the migration guide before upgrading:
 
-## Production
-You can use it on [build](https://github.com/umono-cms/build?tab=readme-ov-file#production) repository.
+👉 https://umono.io/migration-v0-5
+
+## Usage
+### Easy Way (Recommended)
+Use the official CLI to manage your Umono websites easily:
+
+👉 [Umono CLI](https://github.com/umono-cms/cli)
+
+### Manually
+Clone an empty Umono project:
+```bash
+git clone https://github.com/umono-cms/umono my-website
+cd my-website
+```
+Create .env file:
+```bash
+cp .env.example .env
+```
+**Don’t forget to update the .env file.**
+
+Build and run:
+```bash
+go build -o umono ./cmd/umono
+./umono
+```
+Runs on **port 8999**.
+
+✨ You are ready to create your first page
+
+👉 http://127.0.0.1:8999/admin
 
 ## Development
+### Live Reload
+Umono uses **air** for live reload.
 
-### Requirements
-- Golang
-- Node.js
-
-### Admin UI
-Umono has a admin UI written Vue.
-#### Clone
+Runs on **port 9000**:
 ```
-git clone https://github.com/umono-cms/admin-ui
+air
 ```
-
-#### Change directory
+### TailwindCSS Installation
+TailwindCSS is used for the admin UI and must be installed locally.
+```bash
+mkdir -p bin
+curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.18/tailwindcss-linux-x64
+mv tailwindcss-linux-x64 bin/tailwindcss
+chmod +x bin/tailwindcss
 ```
-cd admin-ui
-```
-
-#### Install packages
-```
-npm install
-```
-
-#### Start process for tailwindcss
-```
-npx tailwindcss -i ./input.css -o ./src/style.css --watch
-```
-
-#### Run
-```
-npm run dev
-```
-
-### Backend
-#### Clone
-```
-git clone https://github.com/umono-cms/umono
-```
-
-#### Change directory
-```
-cd umono
-```
-
-#### .env file
-Copy .env file from .env-example and edit it
-```
-cp .env-example .env
-```
-
-#### Run server
-```
-go run .
+Watch:
+```bash
+./bin/tailwindcss -i assets/input.css -o public/css/style.css --watch
 ```

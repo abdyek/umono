@@ -1,0 +1,16 @@
+<li>
+  <a 
+    href="/admin/site-pages/{{.ID}}"
+    class="flex items-center gap-3 px-3 py-2 rounded-xl {{ if .IsActive }}bg-purple-500/10 border border-purple-500/20 text-purple-300{{ else }}hover:bg-neutral-700/30 transition-colors {{end}}"
+    hx-get="/admin/site-pages/{{.ID}}/editor"
+    hx-target="#editor-area"
+    hx-push-url="/admin/site-pages/{{.ID}}"
+    hx-disabled-elt="#content,#name,#slug,#logout-button"
+  >
+    <span class="w-2 h-2 rounded-full{{ if .IsEnabled }} bg-emerald-400{{ end }}"></span>
+    <span class="text-sm truncate">{{.Title}}</span>
+    <span class="hidden [.htmx-request_&]:inline-block h-4 w-4 text-white ml-auto shrink-0">
+      {{ template "partials/spinner" . }}
+    </span>
+  </a>
+</li>
