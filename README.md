@@ -10,6 +10,7 @@ Please read the migration guide before upgrading:
 ## Usage
 ### Easy Way (Recommended)
 Use the official CLI to manage your Umono websites easily:
+
 👉 [Umono CLI](https://github.com/umono-cms/cli)
 
 ### Manually
@@ -30,12 +31,15 @@ go build -o umono ./cmd/umono
 ./umono
 ```
 Runs on **port 8999**.
+
 ✨ You are ready to create your first page
+
 👉 http://127.0.0.1:8999/admin
 
 ## Development
 ### Live Reload
 Umono uses **air** for live reload.
+
 Runs on **port 9000**:
 ```
 air
