@@ -5,7 +5,7 @@
 v0.5.0 introduces breaking changes (language, admin UI, tooling).  
 Please read the migration guide before upgrading:
 
-👉 https://umono.io/migration-v0.5
+👉 https://umono.io/migration-v0-5
 
 ## Usage
 ### Easy Way (Recommended)
