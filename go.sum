@@ -41,6 +41,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/umono-cms/compono v0.1.1 h1:4DeVaAQ2SkZCYn4z9UJmszlhhuMUf2SbXeEyn7mvYis=
 github.com/umono-cms/compono v0.1.1/go.mod h1:RnJVw4D9S4G05/SW/epwYnBzGfAGeO0tOlu1vQ/5jF0=
+github.com/umono-cms/compono v0.1.2 h1:b78TfaRHisKrjj99pnVD/iQROacgRgMaV15M8x3c9X8=
+github.com/umono-cms/compono v0.1.2/go.mod h1:RnJVw4D9S4G05/SW/epwYnBzGfAGeO0tOlu1vQ/5jF0=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasthttp v1.59.0 h1:Qu0qYHfXvPk1mSLNqcFtEk6DpxgA26hy6bmydotDpRI=
