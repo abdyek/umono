@@ -9,10 +9,10 @@ Although v0.5 is a minor release, it introduces significant structural changes. 
 - [Compono](https://github.com/umono-cms/compono) has replaced **UmonoLang**. Compono was designed specifically for Umono to produce more predictable outputs.
 - **A default frontend** has been introduced. Until the theme system arrives in a future release, this aims to provide a more polished default look for Umono.
 
-You can create a fresh Umono v0.5.x instance and migrate by copying `umono.db` and `.env`.
+You can create a fresh Umono v0.5.x instance and migrate by copying `umono.db` and `.env`. If you need help please open an issue.
 
 ## Usage
-### Easy Way (Comming Soon - WIP)
+### Easy Way (Coming Soon - WIP)
 Use the official CLI to manage your Umono websites easily:
 
 👉 [Umono CLI](https://github.com/umono-cms/cli)
