@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install ARM64 cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-macos:
+    runs-on: macos-latest
+    needs: release-linux
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build macOS binaries
+        run: |
+          # AMD64
+          CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build \
+            -ldflags="-s -w" \
+            -o umono-darwin-amd64 \
+            ./cmd/umono
+          
+          # ARM64
+          CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build \
+            -ldflags="-s -w" \
+            -o umono-darwin-arm64 \
+            ./cmd/umono
+          
+          # Package
+          tar -czf umono_${{ github.ref_name }}_Darwin_x86_64.tar.gz umono-darwin-amd64 README.md LICENSE .env.example
+          tar -czf umono_${{ github.ref_name }}_Darwin_arm64.tar.gz umono-darwin-arm64 README.md LICENSE .env.example
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            umono_${{ github.ref_name }}_Darwin_x86_64.tar.gz
+            umono_${{ github.ref_name }}_Darwin_arm64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

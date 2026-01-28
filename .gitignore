@@ -67,3 +67,4 @@ bin/tailwindcss
 tmp
 session_storage.db
 umono
+dist/
