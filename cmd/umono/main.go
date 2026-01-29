@@ -5,13 +5,16 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/compono"
+	"github.com/umono-cms/umono"
 	"github.com/umono-cms/umono/internal/config"
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/handler/middleware"
@@ -32,7 +35,6 @@ func main() {
 
 		bytes := make([]byte, 32)
 		_, err := rand.Read(bytes)
-
 		if err != nil {
 			panic("SECRET could not generate.")
 		}
@@ -74,7 +76,7 @@ func main() {
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 
-	engine := html.New("./views", ".html")
+	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
 
 	store := config.NewSessionStore()
 
@@ -83,13 +85,16 @@ func main() {
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
-  
-  app.Use(func(c *fiber.Ctx) error {
-    c.Set("X-Powered-By", "Umono")
-    return c.Next()
-  })
 
-	app.Static("/static", "./public")
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("X-Powered-By", "Umono")
+		return c.Next()
+	})
+
+	app.Use("/static", filesystem.New(filesystem.Config{
+		Root:   http.FS(umono.Public()),
+		Browse: false,
+	}))
 
 	if os.Getenv("APP_ENV") == "dev" {
 		app.Use(func(c *fiber.Ctx) error {
@@ -177,7 +182,6 @@ func main() {
 }
 
 func updateEnvFile() error {
-
 	hashedUsername, err := hashData(os.Getenv("USERNAME"))
 	if err != nil {
 		return err
@@ -197,7 +201,7 @@ func updateEnvFile() error {
 	content += "HASHED_PASSWORD=" + base64.StdEncoding.EncodeToString([]byte(hashedPassword)) + "\n\n"
 	content += "DSN=" + os.Getenv("DSN")
 
-	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
 		return err
 	}
