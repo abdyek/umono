@@ -178,7 +178,12 @@ func main() {
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 
-	log.Fatal(app.Listen(":8999"))
+	port := ":8999"
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		port = envPort
+	}
+
+	log.Fatal(app.Listen(port))
 }
 
 func updateEnvFile() error {
@@ -193,13 +198,17 @@ func updateEnvFile() error {
 	}
 
 	content := ""
+	content += "APP_ENV=" + os.Getenv("APP_ENV") + "\n"
+	content += "SESSION_DRIVER=" + os.Getenv("SESSION_DRIVER") + "\n\n"
 
-	content += "DEV=" + os.Getenv("DEV") + "\n\n"
+	content += "PORT=" + os.Getenv("PORT") + "\n"
+	content += "DSN=" + os.Getenv("DSN") + "\n\n"
+
 	content += "USERNAME=\n"
 	content += "PASSWORD=\n\n"
+
 	content += "HASHED_USERNAME=" + base64.StdEncoding.EncodeToString([]byte(hashedUsername)) + "\n"
 	content += "HASHED_PASSWORD=" + base64.StdEncoding.EncodeToString([]byte(hashedPassword)) + "\n\n"
-	content += "DSN=" + os.Getenv("DSN")
 
 	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
