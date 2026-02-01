@@ -35,6 +35,12 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload compatibility manifest
+        uses: softprops/action-gh-release@v1
+        with:
+          files: umono.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-macos:
     runs-on: macos-latest
