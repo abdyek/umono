@@ -4,10 +4,49 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ .Title }}</title>
+  
+  <style>
+    @font-face {
+      font-family: 'Inter';
+      src: url('/static/fonts/inter/InterVariable.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('/static/fonts/inter/InterVariable-Italic.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: italic;
+      font-display: swap;
+    }
+    body {
+      background-color: #F4F1EA;
+      color: #2D2A26;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 18px;
+      line-height: 1.8;
+      padding: 2.5rem;
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3 {
+      color: #1A1816;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+    h1 { font-size: 2.6rem; margin: 0 0 0.8em; }
+    a { color: #5D55FA; }
+  </style>
+  
   <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/static/fonts/inter/InterVariable-Italic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/css/default.css">
-  <script src="/static/js/error-placeholder.js"></script>
+  
+  <link rel="preload" href="/static/css/default.css" as="style">
+  <link rel="stylesheet" href="/static/css/default.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/static/css/default.css"></noscript>
+  
+  <script src="/static/js/error-placeholder.js" defer></script>
 </head>
 <body>
   {{ .Content }}
