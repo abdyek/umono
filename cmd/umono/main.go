@@ -180,7 +180,7 @@ func main() {
 
 	port := ":8999"
 	if envPort := os.Getenv("PORT"); envPort != "" {
-		port = envPort
+		port = ":" + envPort
 	}
 
 	log.Fatal(app.Listen(port))
