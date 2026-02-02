@@ -13,10 +13,23 @@ builds:
     goos:
       - linux
     goarch:
-      - amd64  # Sadece amd64 bırak
+      - amd64
+      - arm64
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CGO_ENABLED=1
+          - CC=gcc
+          - CXX=g++
+      - goos: linux
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
+          - CC=aarch64-linux-gnu-gcc
+          - CXX=aarch64-linux-gnu-g++
     ldflags:
       - -s -w
-      - -X main.version={{.Version}}
     flags:
       - -trimpath
 
@@ -24,7 +37,7 @@ archives:
   - format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
-      {{- .Version }}_
+      v{{- .Version }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else }}{{ .Arch }}{{ end }}

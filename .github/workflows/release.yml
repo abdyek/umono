@@ -35,12 +35,19 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload compatibility manifest
         uses: softprops/action-gh-release@v1
         with:
           files: umono.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-checksums
+          path: dist/checksums.txt
 
   release-macos:
     runs-on: macos-latest
@@ -56,29 +63,58 @@ jobs:
         with:
           go-version: '1.23'
 
+      - name: Install coreutils for sha256sum
+        run: brew install coreutils
+
+      - name: Download Linux checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-checksums
+          path: ./checksums
+
       - name: Build macOS binaries
         run: |
+          VERSION="${{ github.ref_name }}"
+          
           # AMD64
           CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build \
             -ldflags="-s -w" \
-            -o umono-darwin-amd64 \
+            -o umono \
             ./cmd/umono
+          
+          tar -czf "umono_${VERSION}_Darwin_x86_64.tar.gz" umono README.md LICENSE .env.example umono.json
+          rm umono
           
           # ARM64
           CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build \
             -ldflags="-s -w" \
-            -o umono-darwin-arm64 \
+            -o umono \
             ./cmd/umono
           
-          # Package
-          tar -czf umono_${{ github.ref_name }}_Darwin_x86_64.tar.gz umono-darwin-amd64 README.md LICENSE .env.example
-          tar -czf umono_${{ github.ref_name }}_Darwin_arm64.tar.gz umono-darwin-arm64 README.md LICENSE .env.example
+          tar -czf "umono_${VERSION}_Darwin_arm64.tar.gz" umono README.md LICENSE .env.example umono.json
 
-      - name: Upload to Release
+      - name: Generate macOS checksums
+        run: |
+          VERSION="${{ github.ref_name }}"
+          
+          gsha256sum "umono_${VERSION}_Darwin_x86_64.tar.gz" >> checksums/checksums.txt
+          gsha256sum "umono_${VERSION}_Darwin_arm64.tar.gz" >> checksums/checksums.txt
+          
+          echo "=== Final checksums.txt ==="
+          cat checksums/checksums.txt
+
+      - name: Upload macOS binaries to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             umono_${{ github.ref_name }}_Darwin_x86_64.tar.gz
             umono_${{ github.ref_name }}_Darwin_arm64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update checksums.txt in Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: checksums/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
