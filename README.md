@@ -12,7 +12,7 @@ Although v0.5 is a minor release, it introduces significant structural changes. 
 You can create a fresh Umono v0.5.x instance and migrate by copying `umono.db` and `.env`. If you need help please open an issue.
 
 ## Usage
-### Easy Way (Coming Soon - WIP)
+### Easy Way (Recommended)
 Use the official CLI to manage your Umono websites easily:
 
 👉 [Umono CLI](https://github.com/umono-cms/cli)
