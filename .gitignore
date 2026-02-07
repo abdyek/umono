@@ -68,3 +68,4 @@ tmp
 session_storage.db
 umono
 dist/
+public/css/style.css
