@@ -3,6 +3,7 @@ version: 2
 before:
   hooks:
     - go mod tidy
+    - ./bin/tailwindcss -i assets/input.css -o public/css/style.css --minify
 
 builds:
   - id: umono

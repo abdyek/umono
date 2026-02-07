@@ -27,6 +27,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
+      - name: Install TailwindCSS CLI (Linux)
+        run: |
+          mkdir -p bin
+          curl -sL https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.18/tailwindcss-linux-x64 -o bin/tailwindcss
+          chmod +x bin/tailwindcss
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -71,6 +77,22 @@ jobs:
         with:
           name: linux-checksums
           path: ./checksums
+
+      - name: Install TailwindCSS CLI and Build CSS (macOS)
+        run: |
+          mkdir -p bin
+          ARCH=$(uname -m)
+          
+          if [ "$ARCH" = "x86_64" ]; then
+            echo "Detected Intel Mac (x64). Downloading x64 binary..."
+            curl -sL https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.18/tailwindcss-macos-x64 -o bin/tailwindcss
+          else
+            echo "Detected Apple Silicon (arm64). Downloading arm64 binary..."
+            curl -sL https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.18/tailwindcss-macos-arm64 -o bin/tailwindcss
+          fi
+
+          chmod +x bin/tailwindcss
+          ./bin/tailwindcss -i assets/input.css -o public/css/style.css --minify
 
       - name: Build macOS binaries
         run: |
