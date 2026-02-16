@@ -8,14 +8,14 @@
   <style>
     @font-face {
       font-family: 'Inter';
-      src: url('/static/fonts/inter/InterVariable.woff2') format('woff2');
+      src: url('/static/fonts/inter/InterVariable.woff2?v={{.Version}}') format('woff2');
       font-weight: 100 900;
       font-style: normal;
       font-display: swap;
     }
     @font-face {
       font-family: 'Inter';
-      src: url('/static/fonts/inter/InterVariable-Italic.woff2') format('woff2');
+      src: url('/static/fonts/inter/InterVariable-Italic.woff2?v={{.Version}}') format('woff2');
       font-weight: 100 900;
       font-style: italic;
       font-display: swap;
@@ -40,13 +40,13 @@
     a { color: #5D55FA; }
   </style>
   
-  <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-  
-  <link rel="preload" href="/static/css/default.css" as="style">
-  <link rel="stylesheet" href="/static/css/default.css" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="/static/css/default.css"></noscript>
-  
-  <script src="/static/js/error-placeholder.js" defer></script>
+  <link rel="preload" href="/static/fonts/inter/InterVariable.woff2?v={{.Version}}" as="font" type="font/woff2" crossorigin>
+
+  <link rel="preload" href="/static/css/default.css?v={{.Version}}" as="style">
+  <link rel="stylesheet" href="/static/css/default.css?v={{.Version}}" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/static/css/default.css?v={{.Version}}"></noscript>
+
+  <script src="/static/js/error-placeholder.js?v={{.Version}}" defer></script>
 </head>
 <body>
   {{ .Content }}

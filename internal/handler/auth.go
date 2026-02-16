@@ -21,7 +21,7 @@ func NewAuthHandler(store *session.Store) *authHandler {
 }
 
 func (h *authHandler) RenderLogin(c *fiber.Ctx) error {
-	return c.Render("pages/login", fiber.Map{}, "layouts/admin")
+	return Render(c, "pages/login", fiber.Map{}, "layouts/admin")
 }
 
 func (h *authHandler) Login(c *fiber.Ctx) error {
