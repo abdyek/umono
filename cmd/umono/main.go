@@ -116,6 +116,8 @@ func main() {
 
 	adminProtected.Get("/", adminHandler.Index)
 
+	adminProtected.Get("/settings", adminHandler.Settings)
+
 	adminProtected.Get("/site-pages/new", sitePageHandler.RenderNewPageSiteEditor)
 	adminProtected.Get("/components/new", componentHandler.RenderComponentEditor)
 

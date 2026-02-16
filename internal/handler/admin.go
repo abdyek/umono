@@ -25,10 +25,24 @@ func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService)
 
 func (h *adminHandler) Index(c *fiber.Ctx) error {
 	pages := h.sitePageService.GetAll()
+
+	var target string
 	if len(pages) > 0 {
-		return c.Redirect("/admin/site-pages/" + strconv.FormatUint(uint64(pages[0].ID), 10))
+		target = "/admin/site-pages/" + strconv.FormatUint(uint64(pages[0].ID), 10)
+	} else {
+		target = "/admin/site-pages/new"
 	}
-	return c.Redirect("/admin/site-pages/new")
+
+	if c.Get("HX-Request") == "true" {
+		c.Set("HX-Redirect", target)
+		return c.SendStatus(200)
+	}
+
+	return c.Redirect(target)
+}
+
+func (h *adminHandler) Settings(c *fiber.Ctx) error {
+	return Render(c, "pages/settings", fiber.Map{}, "layouts/admin")
 }
 
 func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {
@@ -53,7 +67,6 @@ func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
-
 	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -61,7 +74,7 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 	}
 
 	sitePage, err := h.sitePageService.GetByID(uint(id))
-  if id != 0 && err != nil {
+	if id != 0 && err != nil {
 		return c.SendStatus(404)
 	}
 
@@ -73,7 +86,6 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) RenderAdminComponent(c *fiber.Ctx) error {
-
 	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -94,7 +106,6 @@ func (h *adminHandler) RenderAdminComponent(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
-
 	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
