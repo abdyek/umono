@@ -91,7 +91,10 @@ func main() {
 		return c.Next()
 	})
 
-	app.Use("/static", filesystem.New(filesystem.Config{
+	app.Use("/static", func(c *fiber.Ctx) error {
+		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		return c.Next()
+	}, filesystem.New(filesystem.Config{
 		Root:   http.FS(umono.Public()),
 		Browse: false,
 	}))
