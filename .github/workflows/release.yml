@@ -100,7 +100,7 @@ jobs:
           
           # AMD64
           CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build \
-            -ldflags="-s -w" \
+            -ldflags="-s -w -X github.com/umono-cms/umono.Version=${VERSION#v}" \
             -o umono \
             ./cmd/umono
           
@@ -109,7 +109,7 @@ jobs:
           
           # ARM64
           CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build \
-            -ldflags="-s -w" \
+            -ldflags="-s -w -X github.com/umono-cms/umono.Version=${VERSION#v}" \
             -o umono \
             ./cmd/umono
           

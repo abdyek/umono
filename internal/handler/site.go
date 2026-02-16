@@ -23,7 +23,7 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 		// TODO: Here 404 page
 		return fiber.ErrNotFound
 	}
-	return c.Render("layouts/page", fiber.Map{
+	return Render(c, "layouts/page", fiber.Map{
 		"Title":   sitePage.Name,
 		"Content": template.HTML(sitePage.Content),
 	})
