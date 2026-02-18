@@ -21,12 +21,14 @@ var ErrSitePageNotFound = errors.New("site page not found")
 
 type SitePageService struct {
 	repo    *repository.SitePageRepository
+	optRepo *repository.OptionRepository
 	compono compono.Compono
 }
 
-func NewSitePageService(r *repository.SitePageRepository, comp compono.Compono) *SitePageService {
+func NewSitePageService(r *repository.SitePageRepository, or *repository.OptionRepository, comp compono.Compono) *SitePageService {
 	return &SitePageService{
 		repo:    r,
+		optRepo: or,
 		compono: comp,
 	}
 }
@@ -49,6 +51,31 @@ func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 
 	sitePage.Content = output
 	return sitePage, nil
+}
+
+func (s *SitePageService) GetNotFoundPage() (models.SitePage, error) {
+	title := models.DefaultNotFoundTitle
+	content := models.DefaultNotFoundContent
+
+	notFoundPageOpt, err := repository.GetOption[models.NotFoundPageOption](*s.optRepo, "not_found_page_option")
+	if err == nil {
+		if notFoundPageOpt.Title != "" {
+			title = notFoundPageOpt.Title
+		}
+		if notFoundPageOpt.Content != "" {
+			content = notFoundPageOpt.Content
+		}
+	}
+
+	rendered, err := s.convert(content)
+	if err != nil {
+		return models.SitePage{}, err
+	}
+
+	return models.SitePage{
+		Name:    title,
+		Content: rendered,
+	}, nil
 }
 
 func (s *SitePageService) GetBySlug(slug string) (models.SitePage, error) {

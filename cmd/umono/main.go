@@ -56,15 +56,20 @@ func main() {
 
 	comp := compono.New()
 
-	db.AutoMigrate(&models.Component{}, &models.SitePage{})
+	db.AutoMigrate(&models.Component{}, &models.SitePage{}, &models.Option{})
 
 	// TODO: Refactor: move DI another file
+	optionRepo := repository.NewOptionRepository(db)
+
 	sitePageRepo := repository.NewSitePageRepository(db)
-	sitePageService := service.NewSitePageService(sitePageRepo, comp)
+	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, comp)
 
 	componentRepo := repository.NewComponentRepository(db)
 	componentService := service.NewComponentService(componentRepo, comp)
 	componentService.LoadAsGlobalComponent()
+
+	settingsService := service.NewSettingsService()
+	optionService := service.NewOptionService(optionRepo)
 
 	adminHandler := handler.NewAdminHandler(
 		sitePageService,
@@ -75,6 +80,8 @@ func main() {
 	siteHandler := handler.NewSiteHandler(sitePageService)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
+	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService)
+	optionHandler := handler.NewOptionHandler(optionService)
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
 
@@ -115,8 +122,6 @@ func main() {
 	adminProtected := admin.Group("/", middleware.Logged(store))
 
 	adminProtected.Get("/", adminHandler.Index)
-
-	adminProtected.Get("/settings", adminHandler.Settings)
 
 	adminProtected.Get("/site-pages/new", sitePageHandler.RenderNewPageSiteEditor)
 	adminProtected.Get("/components/new", componentHandler.RenderComponentEditor)
@@ -176,6 +181,20 @@ func main() {
 	adminProtected.Post("/components/preview",
 		middleware.OnlyHTMX(),
 		previewHandler.RenderComponentPreview,
+	)
+
+	adminProtected.Post("/not-found-page/preview",
+		middleware.OnlyHTMX(),
+		previewHandler.NotFoundPagePreview,
+	)
+
+	adminProtected.Get("/settings", settingsHandler.Index)
+	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
+	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
+
+	adminProtected.Post("/options/not-found-page-option",
+		middleware.OnlyHTMX(),
+		optionHandler.SaveNotFoundPageOption,
 	)
 
 	app.Post("/login", authHandler.Login)

@@ -24,25 +24,29 @@ func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService)
 }
 
 func (h *adminHandler) Index(c *fiber.Ctx) error {
-	pages := h.sitePageService.GetAll()
+	sitePages := h.sitePageService.GetAll()
 
 	var target string
-	if len(pages) > 0 {
-		target = "/admin/site-pages/" + strconv.FormatUint(uint64(pages[0].ID), 10)
+	var sitePage models.SitePage
+
+	if len(sitePages) > 0 {
+		target = "/admin/site-pages/" + strconv.FormatUint(uint64(sitePages[0].ID), 10)
+		sitePage = sitePages[0]
 	} else {
 		target = "/admin/site-pages/new"
 	}
 
-	if c.Get("HX-Request") == "true" {
-		c.Set("HX-Redirect", target)
-		return c.SendStatus(200)
+	if c.Get("HX-Request") != "true" {
+		return c.Redirect(target)
 	}
 
-	return c.Redirect(target)
-}
+	c.Set("HX-Push-Url", target)
 
-func (h *adminHandler) Settings(c *fiber.Ctx) error {
-	return Render(c, "pages/settings", fiber.Map{}, "layouts/admin")
+	return Render(c, "pages/admin", fiber.Map{
+		"SitePageEditor": h.buildSitePageEditor(sitePage),
+		"SitePageUl":     h.buildSitePageUl(sitePages, sitePage.ID),
+		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
+	})
 }
 
 func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {

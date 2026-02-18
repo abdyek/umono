@@ -1,0 +1,5 @@
+<ul id="settings-ul" class="space-y-1"{{if and .IsHTMX .IsAlreadyOnSettings}} hx-swap-oob="outerHTML"{{end}}>
+  {{ range .SettingsUl }}
+    {{ template "partials/settings-li" . }}
+  {{ end }}
+</ul>

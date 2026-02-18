@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/service"
 )
 
@@ -17,8 +18,11 @@ func NewPreviewHandler(sps *service.SitePageService, cs *service.ComponentServic
 	}
 }
 
-func (h *previewHandler) RenderSitePagePreview(c *fiber.Ctx) error {
+// TODO: Change names
+// RenderSitePagePreview -> SitePageReview
+// RenderComponentPreview -> ComponentPreview
 
+func (h *previewHandler) RenderSitePagePreview(c *fiber.Ctx) error {
 	var req struct {
 		Content string `form:"content"`
 	}
@@ -36,7 +40,6 @@ func (h *previewHandler) RenderSitePagePreview(c *fiber.Ctx) error {
 }
 
 func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
-
 	var req struct {
 		Content string `form:"content"`
 		Name    string `form:"name"`
@@ -47,6 +50,20 @@ func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
 	}
 
 	output, err := h.componentService.Preview(req.Name, req.Content)
+	if err != nil {
+		return err
+	}
+
+	return c.SendString(output)
+}
+
+func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
+	content := c.FormValue("content")
+	if content == "" {
+		content = models.DefaultNotFoundContent
+	}
+
+	output, err := h.sitePageService.Preview(content)
 	if err != nil {
 		return err
 	}
