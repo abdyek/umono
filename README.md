@@ -47,13 +47,6 @@ Runs on **port 8999**.
 👉 http://127.0.0.1:8999/admin
 
 ## Development
-### Live Reload
-Umono uses **air** for live reload.
-
-Runs on **port 9000**:
-```
-air
-```
 ### TailwindCSS Installation
 TailwindCSS is used for the admin UI and must be installed locally.
 ```bash
@@ -62,7 +55,11 @@ curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v4.1.18/
 mv tailwindcss-linux-x64 bin/tailwindcss
 chmod +x bin/tailwindcss
 ```
-Watch:
-```bash
-./bin/tailwindcss -i assets/input.css -o public/css/style.css --watch
+
+### Live Reload
+Umono uses **air** for live reload.
+
+Runs on **port 9000**:
+```
+air
 ```

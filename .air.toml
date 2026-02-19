@@ -2,13 +2,22 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go build -o ./tmp/main ./cmd/umono"
+cmd = "./bin/tailwindcss -i assets/input.css -o public/css/style.css && go build -o ./tmp/main ./cmd/umono"
 bin = "./tmp/main"
 include_ext = ["go", "html", "css"]
 exclude_dir = ["tmp", "bin", "public"]
 exclude_regex = ["_test\\.go"]
-exclude_file = ["session_storage.db", "session_storage.db-journal"]
+exclude_file = [
+    "session_storage.db", 
+    "session_storage.db-journal", 
+    "umono.db", 
+    "umono.db-journal", 
+    "umono.json"
+]
 delay = 300
+
+send_interrupt = true
+kill_delay = "500ms"
 
 [misc]
 clean_on_exit = true
