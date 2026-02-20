@@ -24,11 +24,29 @@ func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService)
 }
 
 func (h *adminHandler) Index(c *fiber.Ctx) error {
-	pages := h.sitePageService.GetAll()
-	if len(pages) > 0 {
-		return c.Redirect("/admin/site-pages/" + strconv.FormatUint(uint64(pages[0].ID), 10))
+	sitePages := h.sitePageService.GetAll()
+
+	var target string
+	var sitePage models.SitePage
+
+	if len(sitePages) > 0 {
+		target = "/admin/site-pages/" + strconv.FormatUint(uint64(sitePages[0].ID), 10)
+		sitePage = sitePages[0]
+	} else {
+		target = "/admin/site-pages/new"
 	}
-	return c.Redirect("/admin/site-pages/new")
+
+	if c.Get("HX-Request") != "true" {
+		return c.Redirect(target)
+	}
+
+	c.Set("HX-Push-Url", target)
+
+	return Render(c, "pages/admin", fiber.Map{
+		"SitePageEditor": h.buildSitePageEditor(sitePage),
+		"SitePageUl":     h.buildSitePageUl(sitePages, sitePage.ID),
+		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
+	})
 }
 
 func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {
@@ -53,7 +71,6 @@ func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
-
 	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -61,7 +78,7 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 	}
 
 	sitePage, err := h.sitePageService.GetByID(uint(id))
-  if id != 0 && err != nil {
+	if id != 0 && err != nil {
 		return c.SendStatus(404)
 	}
 
@@ -73,7 +90,6 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) RenderAdminComponent(c *fiber.Ctx) error {
-
 	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -94,7 +110,6 @@ func (h *adminHandler) RenderAdminComponent(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
-
 	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {

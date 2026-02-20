@@ -1,4 +1,4 @@
-<ul id="component-ul" class="space-y-1"{{if .IsHTMX}} hx-swap-oob="outerHTML"{{end}}>
+<ul id="component-ul" class="space-y-1"{{if and .IsHTMX (or .IsAlreadyOnSitePages .IsAlreadyOnComponents)}} hx-swap-oob="outerHTML"{{end}}>
   {{range .ComponentUl}}
     {{template "partials/component-li" . }}
   {{end}}
