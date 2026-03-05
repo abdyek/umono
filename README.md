@@ -1,48 +1,19 @@
 # Umono
 **Umono** is the vendor lock-in killer CMS.
 
-## v0.5.x Notes
-Although v0.5 is a minor release, it introduces significant structural changes. With this release:
-
-- The **admin-ui** repository has been deprecated. The Admin UI is now an internal part of Umono.
-- The **build** repository has been deprecated. Umono can now exist as a single binary.
-- [Compono](https://github.com/umono-cms/compono) has replaced **UmonoLang**. Compono was designed specifically for Umono to produce more predictable outputs.
-- **A default frontend** has been introduced. Until the theme system arrives in a future release, this aims to provide a more polished default look for Umono.
-
-You can create a fresh Umono v0.5.x instance and migrate by copying `umono.db` and `.env`. If you need help please open an issue.
+## Install
+```sh
+curl -fsSL https://umono.io/install.sh | sh
+```
 
 ## Usage
-### Easy Way (Recommended)
-Use the official CLI to manage your Umono websites easily:
+Use the CLI to create a new project and Up
 
-👉 [Umono CLI](https://github.com/umono-cms/cli)
-
-### Manually
-Dependencies
-- gcc/clang (for CGO)
-- libc / glibc development headers
-- SQLite development library
-- Go (CGO enabled)
-
-Clone an empty Umono project:
-```bash
-git clone https://github.com/umono-cms/umono my-website
+```
+umono create my-website
 cd my-website
+umono up
 ```
-Create .env file:
-```bash
-cp .env.example .env
-```
-**Don’t forget to update the .env file.**
-
-Build and run:
-```bash
-go build -o umono ./cmd/umono
-./umono
-```
-Runs on **port 8999**.
-
-✨ You are ready to create your first page
 
 👉 http://127.0.0.1:8999/admin
 
