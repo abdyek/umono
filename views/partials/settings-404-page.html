@@ -59,7 +59,7 @@
           hx-swap="none"
           hx-indicator="false"
           hx-disinherit="hx-confirm"
-          hx-on::after-request="setPreviewContent(event.detail.xhr.response);"
+          hx-on::after-request="setPreviewContent(event.detail.xhr.responseText);"
           >{{ .Content }}</textarea>
       </div>
     </form>
@@ -74,7 +74,7 @@
         </div>
       </div>
     </header>
-    <div id="preview-content" class="flex-1 overflow-auto p-2"></div>
+    <div id="preview-content" class="flex-1 overflow-auto"></div>
     <script>
       setPreviewContent({{ .Output }})
     </script>

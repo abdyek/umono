@@ -167,7 +167,7 @@ func (h *adminHandler) buildSitePageEditor(page models.SitePage) sitePageEditor 
 		Name:           page.Name,
 		Slug:           page.Slug,
 		Content:        page.Content,
-		Output:         template.HTML(h.sitePageService.MustPreview(page.Content)),
+		Output:         mustPreviewHTML(h.sitePageService.MustPreview(page.Content)),
 		IsEnabled:      page.Enabled,
 		LastModifiedAt: view.RelativeTime(page.LastModifiedAt),
 	}
@@ -206,7 +206,7 @@ func (h *adminHandler) buildComponentEditor(comp models.Component) componentEdit
 		ID:             comp.ID,
 		Name:           comp.Name,
 		Content:        comp.Content,
-		Output:         template.HTML(h.componentService.MustPreview(comp.Name, comp.Content)),
+		Output:         mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)),
 		LastModifiedAt: view.RelativeTime(comp.LastModifiedAt),
 	}
 }

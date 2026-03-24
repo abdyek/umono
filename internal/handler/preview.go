@@ -36,7 +36,7 @@ func (h *previewHandler) RenderSitePagePreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.SendString(output)
+	return c.SendString(buildPreviewHTML(output))
 }
 
 func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
@@ -54,7 +54,7 @@ func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.SendString(output)
+	return c.SendString(buildPreviewHTML(output))
 }
 
 func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
@@ -68,5 +68,5 @@ func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.SendString(output)
+	return c.SendString(buildPreviewHTML(output))
 }

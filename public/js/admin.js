@@ -1,6 +1,7 @@
 function setPreviewContent(content) {
   const previewContent = document.getElementById('preview-content');
   const shadow = previewContent.shadowRoot || previewContent.attachShadow({ mode: 'open' });
+  const previewHeight = `${previewContent.clientHeight}px`;
   shadow.innerHTML = `<link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/static/fonts/inter/InterVariable-Italic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/static/css/default.css">
@@ -8,6 +9,10 @@ function setPreviewContent(content) {
       :host {
         all: initial;
         display: block;
+        --preview-height: ${previewHeight};
+      }
+
+      .preview-body {
         background-color: #F4F1EA;
         color: #2D2A26;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -15,10 +20,16 @@ function setPreviewContent(content) {
         line-height: 1.8;
         padding: 2.5rem; 
         margin: 0;
+        min-height: var(--preview-height);
+        box-sizing: border-box;
         -webkit-font-smoothing: antialiased;
         font-optical-sizing: auto;
       }
-    </style>${content}`;
+
+      .preview-body > compono-web-grid:nth-of-type(1) {
+        min-height: calc(var(--preview-height) - 5rem);
+      }
+    </style><div class="preview-body">${content}</div>`;
 }
 
 function updateSlug(value) {

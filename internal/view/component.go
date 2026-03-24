@@ -15,12 +15,12 @@ type ComponentEditorData struct {
 	NameErr        string
 }
 
-func ComponentEditor(comp models.Component, output, nameErr string) ComponentEditorData {
+func ComponentEditor(comp models.Component, output template.HTML, nameErr string) ComponentEditorData {
 	return ComponentEditorData{
 		ID:             comp.ID,
 		Name:           comp.Name,
 		Content:        comp.Content,
-		Output:         template.HTML(output),
+		Output:         output,
 		LastModifiedAt: RelativeTime(comp.LastModifiedAt),
 		NameErr:        nameErr,
 	}

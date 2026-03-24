@@ -22,7 +22,6 @@ func NewSitePageHandler(sps *service.SitePageService, cs *service.ComponentServi
 }
 
 func (h *SitePageHandler) Create(c *fiber.Ctx) error {
-
 	// TODO: Add validator
 
 	sitePage := models.SitePage{
@@ -51,14 +50,13 @@ func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(sitePage, h.sitePageService.MustPreview(sitePage.Content), slugErr, nameErr),
+		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(sitePage.Content)), slugErr, nameErr),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), sitePage.ID),
-		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), 0),
+		"ComponentUl":    view.ComponentUl(h.componentService.GetAll(), 0),
 	})
 }
 
 func (h *SitePageHandler) Update(c *fiber.Ctx) error {
-
 	// TODO: Add validator
 	u64, _ := strconv.ParseUint(c.FormValue("id"), 10, 0)
 
@@ -88,9 +86,9 @@ func (h *SitePageHandler) Update(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(sitePage, h.sitePageService.MustPreview(sitePage.Content), slugErr, nameErr),
+		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(sitePage.Content)), slugErr, nameErr),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), sitePage.ID),
-		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), 0),
+		"ComponentUl":    view.ComponentUl(h.componentService.GetAll(), 0),
 	})
 }
 
@@ -129,7 +127,7 @@ func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {
 
 func (h *SitePageHandler) RenderNewPageSiteEditor(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(models.SitePage{}, "", "", ""),
+		"SitePageEditor": view.SitePageEditor(models.SitePage{}, mustPreviewHTML(""), "", ""),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), 0),
 		"ComponentUl":    view.ComponentUl(h.componentService.GetAll(), 0),
 	}, "layouts/admin")

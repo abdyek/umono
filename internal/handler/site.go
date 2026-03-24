@@ -5,6 +5,7 @@ import (
 	"html/template"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/umono-cms/umono/internal/runtime"
 	"github.com/umono-cms/umono/internal/service"
 )
 
@@ -34,8 +35,11 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 		}
 	}
 
+	gridCSS, _ := runtime.GenerateGridCSS(sitePage.Content)
+
 	return Render(c, "layouts/page", fiber.Map{
 		"Title":   sitePage.Name,
 		"Content": template.HTML(sitePage.Content),
+		"GridCSS": template.CSS(gridCSS),
 	})
 }
