@@ -10,6 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/umono-cms/compono v0.3.0
 	golang.org/x/crypto v0.45.0
+	golang.org/x/net v0.47.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
 )

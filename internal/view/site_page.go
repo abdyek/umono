@@ -18,13 +18,13 @@ type SitePageEditorData struct {
 	NameErr        string
 }
 
-func SitePageEditor(sp models.SitePage, output, slugErr, nameErr string) SitePageEditorData {
+func SitePageEditor(sp models.SitePage, output template.HTML, slugErr, nameErr string) SitePageEditorData {
 	return SitePageEditorData{
 		ID:             sp.ID,
 		Name:           sp.Name,
 		Slug:           sp.Slug,
 		Content:        sp.Content,
-		Output:         template.HTML(output),
+		Output:         output,
 		IsEnabled:      sp.Enabled,
 		LastModifiedAt: RelativeTime(sp.LastModifiedAt),
 		SlugErr:        slugErr,

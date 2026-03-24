@@ -22,7 +22,6 @@ func NewComponentHandler(cs *service.ComponentService, sps *service.SitePageServ
 }
 
 func (h *ComponentHandler) Create(c *fiber.Ctx) error {
-
 	comp := models.Component{
 		Name:    c.FormValue("name"),
 		Content: c.FormValue("content"),
@@ -44,14 +43,13 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, h.componentService.MustPreview(comp.Name, comp.Content), nameErr),
+		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 	})
 }
 
 func (h *ComponentHandler) Update(c *fiber.Ctx) error {
-
 	u64, _ := strconv.ParseUint(c.FormValue("id"), 10, 0)
 
 	comp := models.Component{
@@ -75,7 +73,7 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, h.componentService.MustPreview(comp.Name, comp.Content), nameErr),
+		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 	})
@@ -98,7 +96,7 @@ func (h *ComponentHandler) Delete(c *fiber.Ctx) error {
 func (h *ComponentHandler) RenderComponentEditor(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
 		"ComponentMode":   true,
-		"ComponentEditor": view.ComponentEditor(models.Component{}, "", ""),
+		"ComponentEditor": view.ComponentEditor(models.Component{}, mustPreviewHTML(""), ""),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), 0),
 	}, "layouts/admin")

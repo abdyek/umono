@@ -47,6 +47,8 @@
   <noscript><link rel="stylesheet" href="/static/css/default.css?v={{.Version}}"></noscript>
 
   <script src="/static/js/error-placeholder.js?v={{.Version}}" defer></script>
+  <script src="/static/js/web-grid.js?v={{.Version}}" defer></script>
+  <style>{{ .GridCSS }}</style>
 </head>
 <body>
   {{ .Content }}

@@ -56,7 +56,7 @@ func (h *settingsHandler) Render404Page(c *fiber.Ctx) error {
 		"DefaultContent": models.DefaultNotFoundContent,
 		"Title":          title,
 		"Content":        content,
-		"Output":         h.sitePageService.MustPreview(previewContent),
+		"Output":         mustPreviewHTML(h.sitePageService.MustPreview(previewContent)),
 	}, layouts...)
 }
 
