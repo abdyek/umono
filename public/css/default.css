@@ -16,6 +16,10 @@ body > compono-web-grid:nth-of-type(1) {
   min-height: calc(100dvh - 5rem);
 }
 
+compono-web-grid {
+    gap: 1.5rem;
+}
+
 h1, h2, h3, h4, h5, h6 {
     color: #1A1816;
     font-weight: 800;
