@@ -3,7 +3,6 @@ module github.com/umono-cms/umono
 go 1.26.0
 
 require (
-	github.com/dustin/go-humanize v1.0.1
 	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/gofiber/storage/sqlite3 v1.3.8
 	github.com/gofiber/template/html/v2 v2.1.3

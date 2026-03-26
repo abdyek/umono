@@ -27,7 +27,7 @@ func SitePageEditor(sp models.SitePage, output template.HTML, slugErr, nameErr s
 		Content:        sp.Content,
 		Output:         output,
 		IsEnabled:      sp.Enabled,
-		LastModifiedAt: RelativeTime(sp.LastModifiedAt),
+		LastModifiedAt: RelativeTimeWithTranslator(sp.LastModifiedAt, translator),
 		SlugErr:        slugErr,
 		NameErr:        nameErr,
 		I18n:           translator,

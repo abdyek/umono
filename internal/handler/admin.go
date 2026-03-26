@@ -171,7 +171,7 @@ func (h *adminHandler) buildSitePageEditor(page models.SitePage, translator any)
 		Content:        page.Content,
 		Output:         mustPreviewHTML(h.sitePageService.MustPreview(page.Content)),
 		IsEnabled:      page.Enabled,
-		LastModifiedAt: view.RelativeTime(page.LastModifiedAt),
+		LastModifiedAt: view.RelativeTimeWithTranslator(page.LastModifiedAt, translator),
 		I18n:           translator,
 	}
 }
@@ -211,7 +211,7 @@ func (h *adminHandler) buildComponentEditor(comp models.Component, translator an
 		Name:           comp.Name,
 		Content:        comp.Content,
 		Output:         mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)),
-		LastModifiedAt: view.RelativeTime(comp.LastModifiedAt),
+		LastModifiedAt: view.RelativeTimeWithTranslator(comp.LastModifiedAt, translator),
 		I18n:           translator,
 	}
 }
