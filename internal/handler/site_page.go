@@ -37,12 +37,12 @@ func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 	nameErr := ""
 	if len(errs) > 0 {
 		if err := service.ErrInvalidSlug; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		} else if err := service.ErrSlugAlreadyExists; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		}
 		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		c.Set("HX-Push-Url", "/admin/site-pages/"+strconv.FormatUint(uint64(created.ID), 10))
@@ -74,12 +74,12 @@ func (h *SitePageHandler) Update(c *fiber.Ctx) error {
 	nameErr := ""
 	if len(errs) > 0 {
 		if err := service.ErrInvalidSlug; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		} else if err := service.ErrSlugAlreadyExists; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		}
 		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		sitePage = updated
@@ -118,7 +118,7 @@ func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {
 	err = h.sitePageService.CheckSlug(slug, uint(u64ID))
 	if err != nil {
 		return Render(c, "partials/slug-error", fiber.Map{
-			"SlugErr": err.Error(),
+			"SlugErr": translatedValidationError(c, err),
 		})
 	}
 

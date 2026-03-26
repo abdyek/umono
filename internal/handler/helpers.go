@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"strings"
 
 	umono "github.com/umono-cms/umono"
 	"github.com/umono-cms/umono/internal/runtime"
+	"github.com/umono-cms/umono/internal/service"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -33,6 +35,32 @@ func localizedNotFoundDefaults(c *fiber.Ctx) (string, string) {
 	}
 
 	return translator.T("settings.404_page.default_title"), translator.T("settings.404_page.default_content")
+}
+
+func translate(c *fiber.Ctx, key string) string {
+	translator, _ := c.Locals("I18n").(interface{ T(string) string })
+	if translator == nil {
+		return key
+	}
+
+	return translator.T(key)
+}
+
+func translatedValidationError(c *fiber.Ctx, err error) string {
+	switch {
+	case errors.Is(err, service.ErrInvalidSlug):
+		return translate(c, "admin.pages.errors.invalid_slug")
+	case errors.Is(err, service.ErrSlugAlreadyExists):
+		return translate(c, "admin.pages.errors.slug_exists")
+	case errors.Is(err, service.ErrNameRequired):
+		return translate(c, "common.errors.name_required")
+	case errors.Is(err, service.ErrInvalidComponentName):
+		return translate(c, "admin.components.errors.invalid_name")
+	case errors.Is(err, service.ErrComponentNameAlreadyExists):
+		return translate(c, "admin.components.errors.name_exists")
+	default:
+		return err.Error()
+	}
 }
 
 func buildPreviewHTML(renderedHTML string) string {

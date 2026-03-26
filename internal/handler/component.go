@@ -33,9 +33,12 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 	// TODO: Refactor
 	if len(errs) > 0 {
 		if err := service.ErrInvalidComponentName; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		} else if err := service.ErrComponentNameAlreadyExists; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
+		}
+		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		c.Set("HX-Push-Url", "/admin/components/"+strconv.FormatUint(uint64(created.ID), 10))
@@ -64,9 +67,12 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 	// TODO: Refactor
 	if len(errs) > 0 {
 		if err := service.ErrInvalidComponentName; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		} else if err := service.ErrComponentNameAlreadyExists; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
+		}
+		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		comp = updated
