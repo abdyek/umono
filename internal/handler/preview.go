@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/service"
 )
@@ -48,7 +50,7 @@ func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	output, err := h.componentService.Preview(req.Name, req.Content)
+	output, err := h.componentService.Preview(strings.TrimSpace(req.Name), req.Content)
 	if err != nil {
 		return err
 	}

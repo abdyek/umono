@@ -68,6 +68,8 @@ func (s *ComponentService) ReloadGlobalComponent(comp models.Component) error {
 }
 
 func (s *ComponentService) Preview(name, source string) (string, error) {
+	name = strings.TrimSpace(name)
+
 	var buf bytes.Buffer
 	if err := s.compono.Convert([]byte("{{"+name+"}}"), &buf,
 		compono.WithGlobalComponent(name, []byte(strings.TrimSpace(string(source)))),
