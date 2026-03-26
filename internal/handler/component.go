@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/models"
@@ -23,7 +24,7 @@ func NewComponentHandler(cs *service.ComponentService, sps *service.SitePageServ
 
 func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 	comp := models.Component{
-		Name:    c.FormValue("name"),
+		Name:    strings.TrimSpace(c.FormValue("name")),
 		Content: c.FormValue("content"),
 	}
 
@@ -57,7 +58,7 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 
 	comp := models.Component{
 		ID:      uint(u64),
-		Name:    c.FormValue("name"),
+		Name:    strings.TrimSpace(c.FormValue("name")),
 		Content: c.FormValue("content"),
 	}
 

@@ -61,20 +61,25 @@
             name="name"
             value="{{ .Name }}"
             placeholder="{{ t .I18n "admin.components.placeholders.name" }}"
+            data-component-name-input
+            data-component-name-mode="{{ if .ID }}edit{{ else }}create{{ end }}"
+            data-component-name-has-server-error="{{ if .NameErr }}true{{ else }}false{{ end }}"
             hx-post="/admin/components/preview"
             hx-swap="none"
             hx-indicator="false"
             hx-trigger="keyup changed delay:750ms"
             hx-on::after-request="setPreviewContent(event.detail.xhr.responseText);"
           >
-          {{ if .NameErr }}
-          <div class="flex items-center gap-1.5 ml-1 mt-1">
+          <div class="{{ if .NameErr }}flex{{ else }}hidden{{ end }} items-center gap-1.5 ml-1 mt-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2" data-component-name-error>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
-            <p class="text-xs font-medium text-red-400">{{ .NameErr }}</p>
+            <p class="text-xs font-medium text-red-400" data-component-name-error-text>{{ .NameErr }}</p>
           </div>
-          {{ end }}
+          <div class="ml-1 mt-1 rounded-lg border px-3 py-2 text-xs transition-all duration-200 {{ if .NameErr }}hidden border-transparent bg-transparent{{ else if .ID }}hidden border-transparent bg-transparent{{ else }}flex items-center gap-1.5 border-neutral-800 bg-neutral-900/40 text-neutral-500{{ end }}" data-component-name-helper>
+            <span class="h-1.5 w-1.5 rounded-full bg-neutral-600 transition-colors duration-200" data-component-name-helper-dot></span>
+            <p>{{ t .I18n "admin.components.name_helper" }}</p>
+          </div>
         </div>
       </div>
       <div class="flex-1 flex flex-col space-y-2 min-h-0">
