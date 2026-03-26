@@ -37,12 +37,12 @@ func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 	nameErr := ""
 	if len(errs) > 0 {
 		if err := service.ErrInvalidSlug; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		} else if err := service.ErrSlugAlreadyExists; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		}
 		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		c.Set("HX-Push-Url", "/admin/site-pages/"+strconv.FormatUint(uint64(created.ID), 10))
@@ -50,7 +50,7 @@ func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(sitePage.Content)), slugErr, nameErr),
+		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(sitePage.Content)), slugErr, nameErr, c.Locals("I18n")),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), sitePage.ID),
 		"ComponentUl":    view.ComponentUl(h.componentService.GetAll(), 0),
 	})
@@ -74,19 +74,19 @@ func (h *SitePageHandler) Update(c *fiber.Ctx) error {
 	nameErr := ""
 	if len(errs) > 0 {
 		if err := service.ErrInvalidSlug; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		} else if err := service.ErrSlugAlreadyExists; service.ErrorsIs(errs, err) {
-			slugErr = err.Error()
+			slugErr = translatedValidationError(c, err)
 		}
 		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		sitePage = updated
 	}
 
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(sitePage.Content)), slugErr, nameErr),
+		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(sitePage.Content)), slugErr, nameErr, c.Locals("I18n")),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), sitePage.ID),
 		"ComponentUl":    view.ComponentUl(h.componentService.GetAll(), 0),
 	})
@@ -118,7 +118,7 @@ func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {
 	err = h.sitePageService.CheckSlug(slug, uint(u64ID))
 	if err != nil {
 		return Render(c, "partials/slug-error", fiber.Map{
-			"SlugErr": err.Error(),
+			"SlugErr": translatedValidationError(c, err),
 		})
 	}
 
@@ -127,7 +127,7 @@ func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {
 
 func (h *SitePageHandler) RenderNewPageSiteEditor(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(models.SitePage{}, mustPreviewHTML(""), "", ""),
+		"SitePageEditor": view.SitePageEditor(models.SitePage{}, mustPreviewHTML(""), "", "", c.Locals("I18n")),
 		"SitePageUl":     view.SitePageUl(h.sitePageService.GetAll(), 0),
 		"ComponentUl":    view.ComponentUl(h.componentService.GetAll(), 0),
 	}, "layouts/admin")

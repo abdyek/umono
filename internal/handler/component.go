@@ -33,9 +33,12 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 	// TODO: Refactor
 	if len(errs) > 0 {
 		if err := service.ErrInvalidComponentName; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		} else if err := service.ErrComponentNameAlreadyExists; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
+		}
+		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		c.Set("HX-Push-Url", "/admin/components/"+strconv.FormatUint(uint64(created.ID), 10))
@@ -43,7 +46,7 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr),
+		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 	})
@@ -64,16 +67,19 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 	// TODO: Refactor
 	if len(errs) > 0 {
 		if err := service.ErrInvalidComponentName; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
 		} else if err := service.ErrComponentNameAlreadyExists; service.ErrorsIs(errs, err) {
-			nameErr = err.Error()
+			nameErr = translatedValidationError(c, err)
+		}
+		if err := service.ErrNameRequired; service.ErrorsIs(errs, err) {
+			nameErr = translatedValidationError(c, err)
 		}
 	} else {
 		comp = updated
 	}
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr),
+		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 	})
@@ -96,7 +102,7 @@ func (h *ComponentHandler) Delete(c *fiber.Ctx) error {
 func (h *ComponentHandler) RenderComponentEditor(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
 		"ComponentMode":   true,
-		"ComponentEditor": view.ComponentEditor(models.Component{}, mustPreviewHTML(""), ""),
+		"ComponentEditor": view.ComponentEditor(models.Component{}, mustPreviewHTML(""), "", c.Locals("I18n")),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), 0),
 	}, "layouts/admin")

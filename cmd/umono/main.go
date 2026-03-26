@@ -18,9 +18,11 @@ import (
 	"github.com/umono-cms/umono/internal/config"
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/handler/middleware"
+	"github.com/umono-cms/umono/internal/i18n"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/service"
+	"github.com/umono-cms/umono/internal/view"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -69,7 +71,11 @@ func main() {
 	componentService.LoadAsGlobalComponent()
 
 	settingsService := service.NewSettingsService()
-	optionService := service.NewOptionService(optionRepo)
+	bundle, err := i18n.LoadBundle(umono.Locales(), service.DefaultLanguage)
+	if err != nil {
+		log.Fatal("i18n err", err)
+	}
+	optionService := service.NewOptionService(optionRepo, bundle)
 
 	adminHandler := handler.NewAdminHandler(
 		sitePageService,
@@ -84,6 +90,7 @@ func main() {
 	optionHandler := handler.NewOptionHandler(optionService)
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
+	engine.AddFunc("t", view.Translate)
 
 	store := config.NewSessionStore()
 
@@ -97,6 +104,7 @@ func main() {
 		c.Set("X-Powered-By", "Umono")
 		return c.Next()
 	})
+	app.Use(middleware.I18nContext(optionService, bundle))
 
 	app.Use("/static", func(c *fiber.Ctx) error {
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")
@@ -189,8 +197,14 @@ func main() {
 	)
 
 	adminProtected.Get("/settings", settingsHandler.Index)
+	adminProtected.Get("/settings/general", settingsHandler.RenderGeneral)
 	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
+
+	adminProtected.Post("/options/language",
+		middleware.OnlyHTMX(),
+		optionHandler.SaveLanguage,
+	)
 
 	adminProtected.Post("/options/not-found-page-option",
 		middleware.OnlyHTMX(),

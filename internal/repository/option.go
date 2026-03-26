@@ -26,6 +26,21 @@ func (r *OptionRepository) GetOptionByKey(key string) models.Option {
 	return opt
 }
 
+func (r *OptionRepository) SaveOption(key, value string) error {
+	optInDB := r.GetOptionByKey(key)
+	if optInDB.ID == 0 {
+		return r.db.Create(&models.Option{
+			Key:   key,
+			Value: value,
+		}).Error
+	}
+
+	return r.db.Model(&models.Option{}).
+		Where("id = ?", optInDB.ID).
+		Update("value", value).
+		Error
+}
+
 func (r *OptionRepository) SaveNotFoundPageOption(option models.NotFoundPageOption) error {
 	optInDB := r.GetOptionByKey("not_found_page_option")
 	alreadyExists := optInDB.ID != 0
@@ -37,21 +52,18 @@ func (r *OptionRepository) SaveNotFoundPageOption(option models.NotFoundPageOpti
 
 	if alreadyExists && option.Title == "" && option.Content == "" {
 		// Delete
-		r.db.Unscoped().Delete(&optInDB)
-		return nil
+		return r.db.Unscoped().Delete(&optInDB).Error
 	} else if alreadyExists && (option.Title != "" || option.Content != "") {
 		// Update
-		r.db.Model(&models.Option{}).Where("ID = ?", optInDB.ID).Updates(&models.Option{
+		return r.db.Model(&models.Option{}).Where("ID = ?", optInDB.ID).Updates(&models.Option{
 			Value: string(value),
-		})
-		return nil
+		}).Error
 	} else {
 		// Create
-		r.db.Create(&models.Option{
+		return r.db.Create(&models.Option{
 			Key:   "not_found_page_option",
 			Value: string(value),
-		})
-		return nil
+		}).Error
 	}
 }
 

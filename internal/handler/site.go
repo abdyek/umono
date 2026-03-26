@@ -23,7 +23,8 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	sitePage, err := h.sitePageService.GetRenderedBySlug(c.Params("slug"))
 	if err != nil {
 		if errors.Is(err, service.ErrSitePageNotFound) {
-			sitePage, err = h.sitePageService.GetNotFoundPage()
+			defaultTitle, defaultContent := localizedNotFoundDefaults(c)
+			sitePage, err = h.sitePageService.GetNotFoundPage(defaultTitle, defaultContent)
 			if err != nil {
 				// TODO: handle other errors
 				return c.SendStatus(fiber.StatusInternalServerError)
