@@ -7,22 +7,27 @@ func NewSettingsService() *SettingsService {
 }
 
 type SettingsMenuItem struct {
-	Title   string
-	Slug    string
-	Partial string
+	TitleKey string
+	Slug     string
+	Partial  string
 }
 
 func (*SettingsService) MenuItems() []SettingsMenuItem {
 	return []SettingsMenuItem{
 		{
-			Title:   "404 Page",
-			Slug:    "404-page",
-			Partial: "settings-404-page",
+			TitleKey: "settings.menu.general",
+			Slug:     "general",
+			Partial:  "settings-general",
 		},
 		{
-			Title:   "About",
-			Slug:    "about",
-			Partial: "settings-about",
+			TitleKey: "settings.menu.not_found_page",
+			Slug:     "404-page",
+			Partial:  "settings-404-page",
+		},
+		{
+			TitleKey: "settings.menu.about",
+			Slug:     "about",
+			Partial:  "settings-about",
 		},
 	}
 }

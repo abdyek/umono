@@ -18,18 +18,18 @@
       hx-disabled-elt="#submitBtn,#username,#password"
     >
       <div class="space-y-2">
-        <label class="text-sm font-medium text-neutral-300 ml-1" for="username">Username</label>
+        <label class="text-sm font-medium text-neutral-300 ml-1" for="username">{{ t .I18n "auth.login.username" }}</label>
         <input 
           class="w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 placeholder:text-neutral-600" 
           type="text" 
           id="username" 
           name="username"
-          placeholder="username"
+          placeholder="{{ t .I18n `auth.login.username` }}"
         >
       </div>
 
       <div class="space-y-2">
-        <label class="text-sm font-medium text-neutral-300 ml-1" for="password">Password</label>
+        <label class="text-sm font-medium text-neutral-300 ml-1" for="password">{{ t .I18n "auth.login.password" }}</label>
         <input 
           class="w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 placeholder:text-neutral-600" 
           type="password" 
@@ -44,7 +44,7 @@
         class="w-full group relative flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-purple-900/20 active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span class="flex items-center gap-2 [.htmx-request_&]:hidden">
-          <span>Sign in</span>
+          <span>{{ t .I18n "auth.login.sign_in" }}</span>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>

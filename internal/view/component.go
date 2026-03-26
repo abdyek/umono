@@ -13,9 +13,10 @@ type ComponentEditorData struct {
 	Output         template.HTML
 	LastModifiedAt string
 	NameErr        string
+	I18n           any
 }
 
-func ComponentEditor(comp models.Component, output template.HTML, nameErr string) ComponentEditorData {
+func ComponentEditor(comp models.Component, output template.HTML, nameErr string, translator any) ComponentEditorData {
 	return ComponentEditorData{
 		ID:             comp.ID,
 		Name:           comp.Name,
@@ -23,6 +24,7 @@ func ComponentEditor(comp models.Component, output template.HTML, nameErr string
 		Output:         output,
 		LastModifiedAt: RelativeTime(comp.LastModifiedAt),
 		NameErr:        nameErr,
+		I18n:           translator,
 	}
 }
 

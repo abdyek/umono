@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/service"
 )
 
@@ -60,7 +59,7 @@ func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
 func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
 	content := c.FormValue("content")
 	if content == "" {
-		content = models.DefaultNotFoundContent
+		_, content = localizedNotFoundDefaults(c)
 	}
 
 	output, err := h.sitePageService.Preview(content)

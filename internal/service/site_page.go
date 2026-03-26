@@ -53,9 +53,9 @@ func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 	return sitePage, nil
 }
 
-func (s *SitePageService) GetNotFoundPage() (models.SitePage, error) {
-	title := models.DefaultNotFoundTitle
-	content := models.DefaultNotFoundContent
+func (s *SitePageService) GetNotFoundPage(defaultTitle, defaultContent string) (models.SitePage, error) {
+	title := defaultTitle
+	content := defaultContent
 
 	notFoundPageOpt, err := repository.GetOption[models.NotFoundPageOption](*s.optRepo, "not_found_page_option")
 	if err == nil {

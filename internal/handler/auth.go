@@ -33,7 +33,7 @@ func (h *authHandler) Login(c *fiber.Ctx) error {
 
 	if bcrypt.CompareHashAndPassword(hashedUsername, []byte(username)) != nil ||
 		bcrypt.CompareHashAndPassword(hashedPassword, []byte(password)) != nil {
-		return c.Render("partials/invalid-credentials", fiber.Map{})
+		return Render(c, "partials/invalid-credentials", fiber.Map{})
 	}
 
 	session, _ := h.store.Get(c)

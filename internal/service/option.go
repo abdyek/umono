@@ -1,22 +1,56 @@
 package service
 
 import (
+	"errors"
+
+	"github.com/umono-cms/umono/internal/i18n"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
 
+const DefaultLanguage = "en"
+
+var ErrInvalidLanguage = errors.New("invalid language")
+
 type OptionService struct {
-	repo *repository.OptionRepository
+	repo   *repository.OptionRepository
+	bundle *i18n.Bundle
 }
 
-func NewOptionService(r *repository.OptionRepository) *OptionService {
+func NewOptionService(r *repository.OptionRepository, bundle *i18n.Bundle) *OptionService {
 	return &OptionService{
-		repo: r,
+		repo:   r,
+		bundle: bundle,
 	}
 }
 
 func (s *OptionService) SaveNotFoundPageOption(option models.NotFoundPageOption) error {
 	return s.repo.SaveNotFoundPageOption(option)
+}
+
+func (s *OptionService) GetLanguage() string {
+	option := s.repo.GetOptionByKey("language")
+	if option.Value == "" {
+		return DefaultLanguage
+	}
+
+	if !s.bundle.HasLocale(option.Value) {
+		return DefaultLanguage
+	}
+
+	return option.Value
+}
+
+func (s *OptionService) SaveLanguage(language string) error {
+	if !s.bundle.HasLocale(language) {
+		return ErrInvalidLanguage
+	}
+
+	return s.repo.SaveOption("language", language)
+}
+
+func (s *OptionService) SupportedLanguages() []i18n.LocaleOption {
+	return s.bundle.SupportedLocales()
 }
 
 func (s *OptionService) GetNotFoundPageOption() (string, string) {

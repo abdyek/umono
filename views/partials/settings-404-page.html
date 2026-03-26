@@ -8,7 +8,7 @@
   <div class="flex flex-1 flex-col border-r border-neutral-700/50 min-h-0">
     <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-neutral-200">Customize 404 Page</h2>
+        <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "settings.404_page.title" }}</h2>
         <div class="flex items-center gap-2">
           <button 
             id="editor-submit-button"
@@ -19,13 +19,13 @@
             hx-swap="none"
             hx-indicator="#editor-submit-button"
             hx-disabled-elt="#title,#content,#editor-submit-button"
-            hx-confirm="This action will update or delete your current 404 page settings. Are you sure you want to proceed?"
+            hx-confirm="{{ t .I18n "settings.404_page.confirm" }}"
           >
             <span class="flex items-center gap-2 [.htmx-request_&]:invisible">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Save</span>
+              <span>{{ t .I18n "common.save" }}</span>
             </span>
             <span class="absolute inset-0 flex items-center justify-center invisible [.htmx-request_&]:visible text-white">
               <span class="h-4 w-4">
@@ -38,7 +38,7 @@
     </header>
     <form id="editor-form" class="flex-1 flex flex-col overflow-hidden p-6 space-y-4 min-h-0" >
       <div class="flex-1 flex flex-col space-y-2 min-h-0">
-        <label class="text-sm font-medium text-neutral-300 ml-1" for="title">Title</label>
+        <label class="text-sm font-medium text-neutral-300 ml-1" for="title">{{ t .I18n "common.title" }}</label>
         <input 
           class="w-full bg-neutral-900/50 border text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 transition-all duration-200 placeholder:text-neutral-600 {{ if .NameErr }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }}" 
           type="text" 
@@ -47,7 +47,7 @@
           value="{{ .Title }}"
           placeholder="{{ .DefaultTitle }}"
         >
-        <label class="text-sm font-medium text-neutral-300 ml-1" for="content">Content</label>
+        <label class="text-sm font-medium text-neutral-300 ml-1" for="content">{{ t .I18n "settings.404_page.content" }}</label>
         <textarea 
           class="flex-1 w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-3 text-lg outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 placeholder:text-neutral-600 resize-none" 
           style="font-family: 'Ioveska', monospace;"
@@ -67,10 +67,10 @@
   <div class="w-[50%] flex flex-col bg-neutral-950/50">
     <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-medium text-neutral-400">Preview</h3>
+        <h3 class="text-sm font-medium text-neutral-400">{{ t .I18n "settings.404_page.preview" }}</h3>
         <div class="flex items-center gap-1 text-xs text-neutral-600">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Live</span>
+          <span>{{ t .I18n "settings.404_page.live" }}</span>
         </div>
       </div>
     </header>
