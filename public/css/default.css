@@ -18,6 +18,11 @@ body > compono-web-grid:nth-of-type(1) {
 
 compono-web-grid {
     gap: 1.5rem;
+    min-width: 0;
+}
+
+compono-web-grid-item {
+    min-width: 0;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -77,6 +82,12 @@ code {
     color: #A32A2A;
     padding: 0.25em 0.5em;
     border-radius: 4px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+code[style*="white-space: pre"] {
+    white-space: normal !important;
 }
 
 pre {
@@ -85,6 +96,8 @@ pre {
     padding: 1.5em;
     border-radius: 8px;
     overflow-x: auto;
+    max-width: 100%;
+    box-sizing: border-box;
     margin: 2.5em 0;
     border: 1px solid #2D2A26;
 }
@@ -93,6 +106,7 @@ pre code {
     background-color: transparent;
     color: inherit;
     padding: 0;
+    white-space: pre !important;
 }
 
 img {
