@@ -58,7 +58,15 @@ func main() {
 
 	comp := compono.New()
 
-	db.AutoMigrate(&models.Component{}, &models.SitePage{}, &models.Option{})
+	db.AutoMigrate(
+		&models.Component{},
+		&models.SitePage{},
+		&models.Option{},
+		&models.Storage{},
+		&models.Media{},
+		&models.MediaVariant{},
+		&models.MediaJob{},
+	)
 
 	// TODO: Refactor: move DI another file
 	optionRepo := repository.NewOptionRepository(db)
