@@ -27,17 +27,17 @@ func NewMediaHandler(ms *service.MediaService) *mediaHandler {
 func (h *mediaHandler) Index(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 
-	return Render(c, "partials/media-index", fiber.Map{
+	return h.render(c, "partials/media-index", fiber.Map{
 		"MediaList": view.MediaList(items, ""),
-	}, "layouts/media", "layouts/admin")
+	})
 }
 
 func (h *mediaHandler) RenderNew(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 
-	return Render(c, "partials/media-new", fiber.Map{
+	return h.render(c, "partials/media-new", fiber.Map{
 		"MediaList": view.MediaList(items, ""),
-	}, "layouts/media", "layouts/admin")
+	})
 }
 
 func (h *mediaHandler) RenderShow(c *fiber.Ctx) error {
@@ -48,10 +48,10 @@ func (h *mediaHandler) RenderShow(c *fiber.Ctx) error {
 
 	items := h.mediaService.GetAll()
 
-	return Render(c, "partials/media-show", fiber.Map{
+	return h.render(c, "partials/media-show", fiber.Map{
 		"MediaList": view.MediaList(items, item.ID),
 		"Media":     buildMediaDetail(item),
-	}, "layouts/media", "layouts/admin")
+	})
 }
 
 func (h *mediaHandler) Upload(c *fiber.Ctx) error {
@@ -115,8 +115,11 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		})
 	}
 
-	c.Set("HX-Redirect", "/admin/media")
-	return c.SendStatus(fiber.StatusNoContent)
+	items := h.mediaService.GetAll()
+	c.Set("HX-Push-Url", "/admin/media")
+	return h.render(c, "partials/media-index", fiber.Map{
+		"MediaList": view.MediaList(items, ""),
+	})
 }
 
 func (h *mediaHandler) ConfirmUpload(c *fiber.Ctx) error {
@@ -138,8 +141,11 @@ func (h *mediaHandler) ConfirmUpload(c *fiber.Ctx) error {
 		})
 	}
 
-	c.Set("HX-Redirect", "/admin/media")
-	return c.SendStatus(fiber.StatusNoContent)
+	items := h.mediaService.GetAll()
+	c.Set("HX-Push-Url", "/admin/media")
+	return h.render(c, "partials/media-index", fiber.Map{
+		"MediaList": view.MediaList(items, ""),
+	})
 }
 
 func (h *mediaHandler) CancelUpload(c *fiber.Ctx) error {
@@ -181,8 +187,10 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 		})
 	}
 
-	return Render(c, "partials/media-show-content", fiber.Map{
-		"Media": buildMediaDetail(item),
+	items := h.mediaService.GetAll()
+	return h.render(c, "partials/media-show", fiber.Map{
+		"MediaList": view.MediaList(items, item.ID),
+		"Media":     buildMediaDetail(item),
 	})
 }
 
@@ -194,8 +202,11 @@ func (h *mediaHandler) Delete(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Set("HX-Redirect", "/admin/media")
-	return c.SendStatus(fiber.StatusNoContent)
+	items := h.mediaService.GetAll()
+	c.Set("HX-Push-Url", "/admin/media")
+	return h.render(c, "partials/media-index", fiber.Map{
+		"MediaList": view.MediaList(items, ""),
+	})
 }
 
 func (h *mediaHandler) ServePending(c *fiber.Ctx) error {
@@ -329,4 +340,18 @@ func sniffMedia(file io.Reader) (io.Reader, string, error) {
 
 	detected := http.DetectContentType(head[:n])
 	return io.MultiReader(bytes.NewReader(head[:n]), file), detected, nil
+}
+
+func (h *mediaHandler) render(c *fiber.Ctx, partial string, data fiber.Map) error {
+	layouts := []string{"layouts/media", "layouts/admin"}
+	if isMediaContentSwap(c) {
+		partial = "partials/htmx/" + strings.TrimPrefix(partial, "partials/")
+		layouts = []string{}
+	}
+
+	return Render(c, partial, data, layouts...)
+}
+
+func isMediaContentSwap(c *fiber.Ctx) bool {
+	return c.Get("HX-Request") == "true" && c.Get("HX-Target") == "media-content"
 }

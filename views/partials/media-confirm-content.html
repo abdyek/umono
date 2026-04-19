@@ -42,14 +42,20 @@
           <input type="hidden" name="token" value="{{ .Pending.Token }}">
           <button
             type="submit"
-            class="px-4 py-2.5 rounded-xl border border-neutral-700 bg-neutral-900/50 text-sm font-medium text-neutral-200 hover:bg-neutral-800/60 transition-all duration-200 cursor-pointer"
+            class="relative px-4 py-2.5 rounded-xl border border-neutral-700 bg-neutral-900/50 text-sm font-medium text-neutral-200 hover:bg-neutral-800/60 transition-all duration-200 cursor-pointer"
           >
-            Cancel
+            <span class="[.htmx-request_&]:invisible">Cancel</span>
+            <span class="absolute inset-0 flex items-center justify-center invisible [.htmx-request_&]:visible">
+              <span class="h-4 w-4">
+                {{ template "partials/spinner" . }}
+              </span>
+            </span>
           </button>
         </form>
         <form
           hx-post="/admin/media/confirm"
-          hx-swap="none"
+          hx-target="#media-content"
+          hx-swap="outerHTML"
         >
           <input type="hidden" name="token" value="{{ .Pending.Token }}">
           <button

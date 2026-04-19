@@ -6,14 +6,20 @@
         <p class="text-sm text-neutral-500">{{ .Media.Name }}</p>
       </div>
       <button
-        class="p-2 rounded-xl hover:bg-red-500/10 text-neutral-500 hover:text-red-400 transition-colors cursor-pointer"
+        class="group relative p-2 rounded-xl hover:bg-red-500/10 text-neutral-500 hover:text-red-400 transition-colors cursor-pointer"
         hx-delete="/admin/media/{{ .Media.ID }}"
         hx-confirm="Delete this media item?"
-        hx-swap="none"
+        hx-target="#media-content"
+        hx-swap="outerHTML"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 [.htmx-request_&]:invisible" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
+        <span class="absolute inset-0 invisible [.htmx-request_&]:visible flex items-center justify-center">
+          <span class="h-4 w-4">
+          {{ template "partials/spinner" . }}
+          </span>
+        </span>
       </button>
     </div>
   </header>
@@ -32,12 +38,21 @@
             </div>
             <a
               href="/admin/media"
-              class="inline-flex items-center justify-center h-11 w-11 rounded-2xl text-neutral-300 hover:text-white hover:bg-neutral-700 hover:border-neutral-600 transition-all duration-200 cursor-pointer"
+              class="group relative inline-flex items-center justify-center h-11 w-11 rounded-2xl text-neutral-300 hover:text-white hover:bg-neutral-700 hover:border-neutral-600 transition-all duration-200 cursor-pointer"
               title="Back to media"
+              hx-get="/admin/media"
+              hx-target="#media-content"
+              hx-push-url="/admin/media"
+              hx-swap="outerHTML"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 [.htmx-request_&]:invisible" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
+              <span class="absolute inset-0 invisible [.htmx-request_&]:visible flex items-center justify-center">
+                <span class="h-5 w-5">
+                  {{ template "partials/spinner" . }}
+                </span>
+              </span>
             </a>
           </div>
           <div class="space-y-1">
