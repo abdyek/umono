@@ -1,9 +1,18 @@
 package media
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+var kebabCasePattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
 func NormalizeAlias(alias string) string {
 	return strings.TrimSpace(alias)
+}
+
+func IsKebabCase(alias string) bool {
+	return kebabCasePattern.MatchString(NormalizeAlias(alias))
 }
 
 func AllowedMimeType(mimeType string) bool {

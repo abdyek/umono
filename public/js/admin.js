@@ -141,10 +141,85 @@ function initComponentNameGuidance(root = document) {
   updateState();
 }
 
+function initMediaAliasGuidance(root = document) {
+  const input = findSelfOrDescendant(root, '[data-media-alias-input]');
+  const helper = findSelfOrDescendant(root, '[data-media-alias-helper]');
+  const helperDot = findSelfOrDescendant(root, '[data-media-alias-helper-dot]');
+  const error = findSelfOrDescendant(root, '[data-media-alias-error]');
+
+  if (!input || !helper || !helperDot || !error || input.dataset.mediaAliasBound === 'true') {
+    return;
+  }
+
+  const mediaAliasPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const mode = input.dataset.mediaAliasMode;
+  const hasServerError = input.dataset.mediaAliasHasServerError === 'true';
+  let hasInteracted = false;
+
+  const updateState = () => {
+    const value = input.value.trim();
+    const isNeutral = value === '';
+    const isValid = mediaAliasPattern.test(value);
+    const shouldShow = mode === 'create' || (hasInteracted && !isNeutral);
+
+    input.classList.remove('border-neutral-700', 'border-emerald-500/40', 'border-amber-500/40', 'border-red-500/50');
+    error.classList.remove('hidden', 'flex');
+    helper.classList.remove('hidden', 'flex', 'items-center', 'gap-1.5', 'text-neutral-500', 'text-emerald-400', 'text-red-300', 'border-transparent', 'border-neutral-800', 'border-emerald-500/20', 'border-red-500/30', 'bg-transparent', 'bg-neutral-900/40', 'bg-emerald-500/10', 'bg-red-500/10');
+    helperDot.classList.remove('bg-neutral-600', 'bg-emerald-400', 'bg-red-400');
+
+    if (!hasInteracted || isNeutral) {
+      if (hasServerError) {
+        input.classList.add('border-red-500/50');
+        error.classList.add('flex');
+        helper.classList.add('hidden', 'border-transparent', 'bg-transparent');
+      } else {
+        input.classList.add('border-neutral-700');
+        error.classList.add('hidden');
+        if (shouldShow) {
+          helper.classList.add('flex', 'items-center', 'gap-1.5', 'text-neutral-500', 'border-neutral-800', 'bg-neutral-900/40');
+          helperDot.classList.add('bg-neutral-600');
+        } else {
+          helper.classList.add('hidden', 'border-transparent', 'bg-transparent');
+        }
+      }
+      input.removeAttribute('aria-invalid');
+      return;
+    }
+
+    error.classList.add('hidden');
+
+    if (isValid) {
+      input.classList.add('border-emerald-500/40');
+      if (shouldShow) {
+        helper.classList.add('flex', 'items-center', 'gap-1.5', 'text-emerald-400', 'border-emerald-500/20', 'bg-emerald-500/10');
+        helperDot.classList.add('bg-emerald-400');
+      } else {
+        helper.classList.add('hidden', 'border-transparent', 'bg-transparent');
+      }
+      input.setAttribute('aria-invalid', 'false');
+      return;
+    }
+
+    input.classList.add('border-amber-500/40');
+    helper.classList.add('flex', 'items-center', 'gap-1.5', 'text-red-300', 'border-red-500/30', 'bg-red-500/10');
+    helperDot.classList.add('bg-red-400');
+    input.setAttribute('aria-invalid', 'true');
+  };
+
+  input.dataset.mediaAliasBound = 'true';
+  input.addEventListener('input', () => {
+    hasInteracted = true;
+    updateState();
+  });
+  updateState();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initComponentNameGuidance();
+  initMediaAliasGuidance();
 });
 
 document.addEventListener('htmx:load', (event) => {
   initComponentNameGuidance(event.target);
+  initMediaAliasGuidance(event.target);
 });

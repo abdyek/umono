@@ -24,6 +24,7 @@ var (
 	ErrMediaNotFound        = errors.New("media not found")
 	ErrUnsupportedMediaType = errors.New("unsupported media type")
 	ErrAliasAlreadyExists   = errors.New("alias already exists")
+	ErrInvalidAlias         = errors.New("invalid alias")
 	ErrPendingUploadMissing = errors.New("pending upload not found")
 )
 
@@ -117,6 +118,9 @@ func (s *MediaService) GetByID(id string) (models.Media, error) {
 
 func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (UploadMediaResult, error) {
 	alias := media.NormalizeAlias(input.Alias)
+	if alias != "" && !media.IsKebabCase(alias) {
+		return UploadMediaResult{}, ErrInvalidAlias
+	}
 	if alias != "" && s.aliasExists(alias, "") {
 		return UploadMediaResult{}, ErrAliasAlreadyExists
 	}
@@ -195,6 +199,9 @@ func (s *MediaService) ConfirmPendingUpload(ctx context.Context, token string) (
 	}
 
 	alias := MediaAlias(pending.Media)
+	if alias != "" && !media.IsKebabCase(alias) {
+		return models.Media{}, ErrInvalidAlias
+	}
 	if alias != "" && s.aliasExists(alias, "") {
 		return models.Media{}, ErrAliasAlreadyExists
 	}
@@ -240,6 +247,9 @@ func (s *MediaService) UpdateAlias(id, alias string) (models.Media, error) {
 	}
 
 	alias = media.NormalizeAlias(alias)
+	if alias != "" && !media.IsKebabCase(alias) {
+		return models.Media{}, ErrInvalidAlias
+	}
 	if alias != "" && s.aliasExists(alias, id) {
 		return models.Media{}, ErrAliasAlreadyExists
 	}

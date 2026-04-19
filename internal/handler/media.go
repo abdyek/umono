@@ -58,8 +58,9 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		return Render(c, "partials/media-new-content", fiber.Map{
-			"Alias":    strings.TrimSpace(c.FormValue("alias")),
-			"ErrorMsg": "Select a PNG, JPEG, or WEBP image to continue.",
+			"Alias":      strings.TrimSpace(c.FormValue("alias")),
+			"ErrorMsg":   "Select a PNG, JPEG, or WEBP image to continue.",
+			"AliasError": false,
 		})
 	}
 
@@ -76,8 +77,9 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 
 	if !media.AllowedMimeType(mimeType) {
 		return Render(c, "partials/media-new-content", fiber.Map{
-			"Alias":    strings.TrimSpace(c.FormValue("alias")),
-			"ErrorMsg": "Only PNG, JPEG, and WEBP files are allowed.",
+			"Alias":      strings.TrimSpace(c.FormValue("alias")),
+			"ErrorMsg":   "Only PNG, JPEG, and WEBP files are allowed.",
+			"AliasError": false,
 		})
 	}
 
@@ -89,15 +91,21 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 	})
 	if err != nil {
 		errMsg := "Upload failed."
+		aliasError := false
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
 			errMsg = "This alias is already in use."
+			aliasError = true
+		} else if errors.Is(err, service.ErrInvalidAlias) {
+			errMsg = "Alias must be kebab-case."
+			aliasError = true
 		} else if errors.Is(err, service.ErrUnsupportedMediaType) {
 			errMsg = "Only PNG, JPEG, and WEBP files are allowed."
 		}
 
 		return Render(c, "partials/media-new-content", fiber.Map{
-			"Alias":    strings.TrimSpace(c.FormValue("alias")),
-			"ErrorMsg": errMsg,
+			"Alias":      strings.TrimSpace(c.FormValue("alias")),
+			"ErrorMsg":   errMsg,
+			"AliasError": aliasError,
 		})
 	}
 
@@ -115,12 +123,18 @@ func (h *mediaHandler) ConfirmUpload(c *fiber.Ctx) error {
 	_, err := h.mediaService.ConfirmPendingUpload(c.UserContext(), c.FormValue("token"))
 	if err != nil {
 		errMsg := "The pending upload could not be completed."
+		aliasError := false
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
 			errMsg = "This alias is already in use."
+			aliasError = true
+		} else if errors.Is(err, service.ErrInvalidAlias) {
+			errMsg = "Alias must be kebab-case."
+			aliasError = true
 		}
 
 		return Render(c, "partials/media-new-content", fiber.Map{
-			"ErrorMsg": errMsg,
+			"ErrorMsg":   errMsg,
+			"AliasError": aliasError,
 		})
 	}
 
@@ -131,7 +145,8 @@ func (h *mediaHandler) ConfirmUpload(c *fiber.Ctx) error {
 func (h *mediaHandler) CancelUpload(c *fiber.Ctx) error {
 	if err := h.mediaService.CancelPendingUpload(c.UserContext(), c.FormValue("token")); err != nil {
 		return Render(c, "partials/media-new-content", fiber.Map{
-			"ErrorMsg": "The pending upload could not be canceled cleanly.",
+			"ErrorMsg":   "The pending upload could not be canceled cleanly.",
+			"AliasError": false,
 		})
 	}
 
@@ -139,7 +154,8 @@ func (h *mediaHandler) CancelUpload(c *fiber.Ctx) error {
 }
 
 func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
-	item, err := h.mediaService.UpdateAlias(c.Params("id"), c.FormValue("alias"))
+	submittedAlias := strings.TrimSpace(c.FormValue("alias"))
+	item, err := h.mediaService.UpdateAlias(c.Params("id"), submittedAlias)
 	if err != nil {
 		if errors.Is(err, service.ErrMediaNotFound) {
 			return c.SendStatus(fiber.StatusNotFound)
@@ -151,8 +167,11 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 		}
 
 		detail := buildMediaDetail(current)
+		detail.Alias = submittedAlias
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
 			detail.ErrorMsg = "This alias is already in use."
+		} else if errors.Is(err, service.ErrInvalidAlias) {
+			detail.ErrorMsg = "Alias must be kebab-case."
 		} else {
 			detail.ErrorMsg = "Alias update failed."
 		}
