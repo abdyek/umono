@@ -19,6 +19,7 @@ import (
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/handler/middleware"
 	"github.com/umono-cms/umono/internal/i18n"
+	umonomedia "github.com/umono-cms/umono/internal/media"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/service"
@@ -70,6 +71,8 @@ func main() {
 
 	// TODO: Refactor: move DI another file
 	optionRepo := repository.NewOptionRepository(db)
+	storageRepo := repository.NewStorageRepository(db)
+	mediaRepo := repository.NewMediaRepository(db)
 
 	sitePageRepo := repository.NewSitePageRepository(db)
 	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, comp)
@@ -84,6 +87,11 @@ func main() {
 		log.Fatal("i18n err", err)
 	}
 	optionService := service.NewOptionService(optionRepo, bundle)
+	mediaStorage := umonomedia.NewLocalStorage("uploads")
+	mediaService := service.NewMediaService(mediaRepo, storageRepo, mediaStorage, "uploads/.pending")
+	if err := mediaService.EnsureDefaultLocalStorage("uploads"); err != nil {
+		log.Fatal("media storage err", err)
+	}
 
 	adminHandler := handler.NewAdminHandler(
 		sitePageService,
@@ -94,6 +102,7 @@ func main() {
 	siteHandler := handler.NewSiteHandler(sitePageService)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
+	mediaHandler := handler.NewMediaHandler(mediaService)
 	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
@@ -208,6 +217,30 @@ func main() {
 	adminProtected.Get("/settings/general", settingsHandler.RenderGeneral)
 	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
+	adminProtected.Get("/media", mediaHandler.Index)
+	adminProtected.Get("/media/new", mediaHandler.RenderNew)
+	adminProtected.Get("/media/pending/:token/preview", mediaHandler.ServePending)
+	adminProtected.Get("/media/:id", mediaHandler.RenderShow)
+	adminProtected.Post("/media",
+		middleware.OnlyHTMX(),
+		mediaHandler.Upload,
+	)
+	adminProtected.Post("/media/confirm",
+		middleware.OnlyHTMX(),
+		mediaHandler.ConfirmUpload,
+	)
+	adminProtected.Post("/media/cancel",
+		middleware.OnlyHTMX(),
+		mediaHandler.CancelUpload,
+	)
+	adminProtected.Put("/media/:id/alias",
+		middleware.OnlyHTMX(),
+		mediaHandler.UpdateAlias,
+	)
+	adminProtected.Delete("/media/:id",
+		middleware.OnlyHTMX(),
+		mediaHandler.Delete,
+	)
 
 	adminProtected.Post("/options/language",
 		middleware.OnlyHTMX(),
@@ -221,6 +254,7 @@ func main() {
 
 	app.Post("/login", authHandler.Login)
 	app.Post("/logout", middleware.Logged(store), authHandler.Logout)
+	app.Get("/uploads/:filename", mediaHandler.Serve)
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 

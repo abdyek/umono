@@ -25,6 +25,7 @@ func Render(c *fiber.Ctx, view string, data fiber.Map, layouts ...string) error 
 	data["IsAlreadyOnSettings"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/settings")
 	data["IsAlreadyOnSitePages"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/site-pages")
 	data["IsAlreadyOnComponents"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/components")
+	data["IsAlreadyOnMedia"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/media")
 	return c.Render(view, data, layouts...)
 }
 
