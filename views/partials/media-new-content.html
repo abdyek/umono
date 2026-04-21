@@ -13,9 +13,26 @@
     hx-target="#media-content"
     hx-swap="outerHTML"
     hx-encoding="multipart/form-data"
+    data-media-upload-form
   >
     <div class="mx-auto max-w-2xl space-y-6">
       <div class="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-5">
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-neutral-300 ml-1" for="media-storage">Storage</label>
+          <select
+            id="media-storage"
+            name="storage_id"
+            class="w-full appearance-none rounded-xl border border-neutral-700 bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10"
+            data-media-storage-select
+          >
+            {{ range .MediaUpload.Storages }}
+            <option value="{{ .ID }}" data-storage-type="{{ .Type }}" {{ if .IsSelected }}selected{{ end }}>
+              {{ .Name }} · {{ .TypeLabel }}{{ if .IsDefault }} · Default{{ end }}
+            </option>
+            {{ end }}
+          </select>
+          <p class="ml-1 text-xs text-neutral-500">Choose where this file will be uploaded before it is added to the media library.</p>
+        </div>
         <div class="space-y-2">
           <label class="text-sm font-medium text-neutral-300 ml-1" for="media-file">Image file</label>
           <input
@@ -33,29 +50,36 @@
             id="media-alias"
             name="alias"
             type="text"
-            value="{{ .Alias }}"
+            value="{{ .MediaUpload.Alias }}"
             placeholder="Optional unique alias"
             data-media-alias-input
             data-media-alias-mode="create"
-            data-media-alias-has-server-error="{{ if .AliasError }}true{{ else }}false{{ end }}"
-            class="w-full bg-neutral-900/50 border {{ if .AliasError }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-4 transition-all duration-200 placeholder:text-neutral-600"
+            data-media-alias-has-server-error="{{ if .MediaUpload.AliasError }}true{{ else }}false{{ end }}"
+            class="w-full bg-neutral-900/50 border {{ if .MediaUpload.AliasError }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-4 transition-all duration-200 placeholder:text-neutral-600"
           >
-          <div class="{{ if .AliasError }}flex{{ else }}hidden{{ end }} items-center gap-1.5 ml-1 mt-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2" data-media-alias-error>
+          <div class="{{ if .MediaUpload.AliasError }}flex{{ else }}hidden{{ end }} items-center gap-1.5 ml-1 mt-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2" data-media-alias-error>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
-            <p class="text-xs font-medium text-red-400" data-media-alias-error-text>{{ .ErrorMsg }}</p>
+            <p class="text-xs font-medium text-red-400" data-media-alias-error-text>{{ .MediaUpload.ErrorMsg }}</p>
           </div>
-          <div class="ml-1 mt-1 rounded-lg border px-3 py-2 text-xs transition-all duration-200 {{ if .AliasError }}hidden border-transparent bg-transparent{{ else }}flex items-center gap-1.5 border-neutral-800 bg-neutral-900/40 text-neutral-500{{ end }}" data-media-alias-helper>
+          <div class="ml-1 mt-1 rounded-lg border px-3 py-2 text-xs transition-all duration-200 {{ if .MediaUpload.AliasError }}hidden border-transparent bg-transparent{{ else }}flex items-center gap-1.5 border-neutral-800 bg-neutral-900/40 text-neutral-500{{ end }}" data-media-alias-helper>
             <span class="h-1.5 w-1.5 rounded-full bg-neutral-600 transition-colors duration-200" data-media-alias-helper-dot></span>
             <p>Use kebab-case, for example `hero-banner`.</p>
           </div>
         </div>
-        {{ if .ErrorMsg }}
-        <div class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          {{ .ErrorMsg }}
+        <div class="hidden rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100" data-media-upload-progress>
+          <div class="flex items-center justify-between gap-3">
+            <p data-media-upload-progress-label>Uploading directly to storage…</p>
+            <span class="text-xs text-amber-200" data-media-upload-progress-value>0%</span>
+          </div>
+          <div class="mt-3 h-2 overflow-hidden rounded-full bg-neutral-950/60">
+            <div class="h-full w-0 rounded-full bg-amber-400 transition-all duration-200" data-media-upload-progress-bar></div>
+          </div>
         </div>
-        {{ end }}
+        <div class="{{ if or (eq .MediaUpload.ErrorMsg "") (.MediaUpload.AliasError) }}hidden {{ end }}rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200" data-media-upload-server-error>
+          {{ .MediaUpload.ErrorMsg }}
+        </div>
       </div>
       <div class="flex items-center justify-end">
         <button

@@ -101,7 +101,7 @@ func main() {
 	siteHandler := handler.NewSiteHandler(sitePageService)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
-	mediaHandler := handler.NewMediaHandler(mediaService)
+	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
 	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
@@ -238,6 +238,14 @@ func main() {
 	adminProtected.Post("/media",
 		middleware.OnlyHTMX(),
 		mediaHandler.Upload,
+	)
+	adminProtected.Post("/media/presign",
+		middleware.OnlyHTMX(),
+		mediaHandler.PresignUpload,
+	)
+	adminProtected.Post("/media/complete",
+		middleware.OnlyHTMX(),
+		mediaHandler.CompleteUpload,
 	)
 	adminProtected.Post("/media/confirm",
 		middleware.OnlyHTMX(),

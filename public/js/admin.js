@@ -214,12 +214,285 @@ function initMediaAliasGuidance(root = document) {
   updateState();
 }
 
+function findMediaUploadElements(root) {
+  const form = findSelfOrDescendant(root, '[data-media-upload-form]');
+  if (!form) {
+    return null;
+  }
+
+  return {
+    form,
+    fileInput: form.querySelector('#media-file'),
+    aliasInput: form.querySelector('#media-alias'),
+    storageSelect: form.querySelector('[data-media-storage-select]'),
+    progress: form.querySelector('[data-media-upload-progress]'),
+    progressLabel: form.querySelector('[data-media-upload-progress-label]'),
+    progressValue: form.querySelector('[data-media-upload-progress-value]'),
+    progressBar: form.querySelector('[data-media-upload-progress-bar]'),
+    submitButton: form.querySelector('button[type="submit"]'),
+    serverError: form.querySelector('[data-media-upload-server-error]'),
+    aliasError: form.querySelector('[data-media-alias-error]'),
+    aliasErrorText: form.querySelector('[data-media-alias-error-text]'),
+    aliasHelper: form.querySelector('[data-media-alias-helper]'),
+  };
+}
+
+function setMediaUploadProgress(elements, value, label) {
+  if (!elements.progress || !elements.progressValue || !elements.progressBar || !elements.progressLabel) {
+    return;
+  }
+
+  const percent = Math.max(0, Math.min(100, Math.round(value)));
+  elements.progress.classList.remove('hidden');
+  elements.progressValue.textContent = `${percent}%`;
+  elements.progressBar.style.width = `${percent}%`;
+  if (label) {
+    elements.progressLabel.textContent = label;
+  }
+}
+
+function hideMediaUploadProgress(elements) {
+  if (!elements.progress) {
+    return;
+  }
+
+  elements.progress.classList.add('hidden');
+}
+
+function setMediaUploadBusy(elements, busy) {
+  elements.form.classList.toggle('pointer-events-none', busy);
+  elements.form.classList.toggle('opacity-90', busy);
+  if (elements.submitButton) {
+    elements.submitButton.disabled = busy;
+  }
+}
+
+function clearMediaUploadError(elements) {
+  if (elements.serverError) {
+    elements.serverError.classList.add('hidden');
+    elements.serverError.textContent = '';
+  }
+  if (elements.aliasError && elements.aliasErrorText) {
+    elements.aliasError.classList.add('hidden');
+    elements.aliasError.classList.remove('flex');
+    elements.aliasErrorText.textContent = '';
+  }
+  if (elements.aliasInput) {
+    elements.aliasInput.dataset.mediaAliasHasServerError = 'false';
+  }
+}
+
+function setMediaUploadError(elements, message, aliasError = false) {
+  if (aliasError && elements.aliasError && elements.aliasErrorText) {
+    elements.aliasError.classList.remove('hidden');
+    elements.aliasError.classList.add('flex');
+    elements.aliasErrorText.textContent = message;
+    if (elements.aliasHelper) {
+      elements.aliasHelper.classList.add('hidden');
+    }
+    if (elements.aliasInput) {
+      elements.aliasInput.dataset.mediaAliasHasServerError = 'true';
+      elements.aliasInput.classList.remove('border-neutral-700', 'border-emerald-500/40', 'border-amber-500/40');
+      elements.aliasInput.classList.add('border-red-500/50');
+    }
+    return;
+  }
+
+  if (elements.serverError) {
+    elements.serverError.classList.remove('hidden');
+    elements.serverError.textContent = message;
+  }
+}
+
+async function sha256Hex(file) {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function uploadFileWithXHR(url, headers, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url, true);
+
+    Object.entries(headers || {}).forEach(([key, value]) => {
+      xhr.setRequestHeader(key, value);
+    });
+    if (!headers || (!('Content-Type' in headers) && !('content-type' in headers))) {
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    }
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable) {
+        return;
+      }
+      onProgress((event.loaded / event.total) * 100);
+    });
+
+    xhr.onerror = () => reject(new Error('upload_failed'));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      reject(new Error('upload_failed'));
+    };
+
+    xhr.send(file);
+  });
+}
+
+function applyMediaContentResponse(html, pushUrl) {
+  const parser = new DOMParser();
+  const nextDocument = parser.parseFromString(html, 'text/html');
+  const nextContent = nextDocument.querySelector('#media-content');
+  const currentContent = document.querySelector('#media-content');
+
+  if (!nextContent || !currentContent) {
+    throw new Error('Upload failed.');
+  }
+
+  currentContent.outerHTML = nextContent.outerHTML;
+
+  if (pushUrl && pushUrl !== 'false') {
+    window.history.pushState({}, '', pushUrl);
+  }
+
+  const replacedContent = document.querySelector('#media-content');
+  if (replacedContent) {
+    htmx.process(replacedContent);
+    initComponentNameGuidance(replacedContent);
+    initMediaAliasGuidance(replacedContent);
+    initMediaUpload(replacedContent);
+  }
+}
+
+async function submitLocalMediaUpload(elements) {
+  const formData = new FormData(elements.form);
+  const response = await fetch('/admin/media', {
+    method: 'POST',
+    headers: {
+      'HX-Request': 'true',
+      'HX-Target': 'media-content',
+      'X-Umono-Media-Upload': 'true',
+    },
+    body: formData,
+  });
+
+  const contentType = response.headers.get('Content-Type') || '';
+  if (!response.ok) {
+    if (contentType.includes('application/json')) {
+      const uploadError = await response.json();
+      throw { message: uploadError.error || 'Upload failed.', aliasError: uploadError.alias_error === true };
+    }
+    throw new Error('Upload failed.');
+  }
+
+  const html = await response.text();
+  applyMediaContentResponse(html, response.headers.get('HX-Push-Url'));
+}
+
+function initMediaUpload(root = document) {
+  const elements = findMediaUploadElements(root);
+  if (!elements || elements.form.dataset.mediaUploadBound === 'true') {
+    return;
+  }
+
+  elements.form.dataset.mediaUploadBound = 'true';
+
+  elements.form.addEventListener('submit', async (event) => {
+    const selectedOption = elements.storageSelect && elements.storageSelect.selectedOptions ? elements.storageSelect.selectedOptions[0] : null;
+    const storageType = selectedOption ? selectedOption.dataset.storageType : 'local';
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === 'function') {
+      event.stopImmediatePropagation();
+    }
+
+    const file = elements.fileInput && elements.fileInput.files ? elements.fileInput.files[0] : null;
+    if (!file) {
+      setMediaUploadError(elements, 'Select a PNG, JPEG, or WEBP image to continue.');
+      return;
+    }
+
+    clearMediaUploadError(elements);
+    setMediaUploadBusy(elements, true);
+
+    try {
+      if (storageType !== 's3') {
+        setMediaUploadProgress(elements, 20, 'Uploading to local storage…');
+        await submitLocalMediaUpload(elements);
+        return;
+      }
+
+      setMediaUploadProgress(elements, 5, 'Preparing direct upload…');
+      const hash = await sha256Hex(file);
+      const payload = new URLSearchParams({
+        storage_id: elements.storageSelect ? elements.storageSelect.value : '',
+        original_name: file.name,
+        alias: elements.aliasInput ? elements.aliasInput.value.trim() : '',
+        mime_type: file.type || 'application/octet-stream',
+        size: `${file.size}`,
+        hash,
+      });
+
+      const presignResponse = await fetch('/admin/media/presign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'HX-Request': 'true',
+        },
+        body: payload.toString(),
+      });
+
+      const presignData = await presignResponse.json();
+      if (!presignResponse.ok) {
+        throw { message: presignData.error || 'Upload failed.', aliasError: presignData.alias_error === true };
+      }
+
+      setMediaUploadProgress(elements, 15, 'Uploading directly to storage…');
+      await uploadFileWithXHR(presignData.url, presignData.headers, file, (progress) => {
+        setMediaUploadProgress(elements, progress, 'Uploading directly to storage…');
+      });
+
+      setMediaUploadProgress(elements, 100, 'Finalizing media record…');
+      const completeResponse = await fetch('/admin/media/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'HX-Request': 'true',
+          'HX-Target': 'media-content',
+        },
+        body: new URLSearchParams({ token: presignData.token }).toString(),
+      });
+
+      const contentType = completeResponse.headers.get('Content-Type') || '';
+      if (!completeResponse.ok) {
+        if (contentType.includes('application/json')) {
+          const completeError = await completeResponse.json();
+          throw { message: completeError.error || 'Upload failed.', aliasError: completeError.alias_error === true };
+        }
+        throw new Error('Upload failed.');
+      }
+
+      const html = await completeResponse.text();
+      applyMediaContentResponse(html, completeResponse.headers.get('HX-Push-Url'));
+    } catch (error) {
+      hideMediaUploadProgress(elements);
+      setMediaUploadBusy(elements, false);
+      setMediaUploadError(elements, error.message || 'Upload failed.', error.aliasError === true);
+    }
+  }, true);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initComponentNameGuidance();
   initMediaAliasGuidance();
+  initMediaUpload();
 });
 
 document.addEventListener('htmx:load', (event) => {
   initComponentNameGuidance(event.target);
   initMediaAliasGuidance(event.target);
+  initMediaUpload(event.target);
 });

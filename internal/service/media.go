@@ -40,10 +40,26 @@ func (r *countingReader) Read(p []byte) (int, error) {
 }
 
 type UploadMediaInput struct {
+	StorageID    string
 	OriginalName string
 	Alias        string
 	MimeType     string
 	Reader       io.Reader
+}
+
+type PrepareUploadInput struct {
+	StorageID    string
+	OriginalName string
+	Alias        string
+	MimeType     string
+	Size         int64
+	Hash         string
+}
+
+type PrepareUploadResult struct {
+	Token   string            `json:"token"`
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
 }
 
 type UploadMediaResult struct {
@@ -139,7 +155,7 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	hasher := sha256.New()
 	counter := &countingReader{reader: input.Reader}
 	reader := io.TeeReader(counter, hasher)
-	storageModel, storageBackend, err := s.defaultStorage(ctx)
+	storageModel, storageBackend, err := s.storageByID(ctx, input.StorageID)
 	if err != nil {
 		return UploadMediaResult{}, err
 	}
@@ -184,6 +200,116 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	}
 
 	record = s.repo.Create(record)
+	return UploadMediaResult{Media: record}, nil
+}
+
+func (s *MediaService) PrepareUpload(ctx context.Context, input PrepareUploadInput) (PrepareUploadResult, error) {
+	alias := media.NormalizeAlias(input.Alias)
+	if alias != "" && !media.IsKebabCase(alias) {
+		return PrepareUploadResult{}, ErrInvalidAlias
+	}
+	if alias != "" && s.aliasExists(alias, "") {
+		return PrepareUploadResult{}, ErrAliasAlreadyExists
+	}
+
+	ext, ok := media.ExtensionByMimeType(input.MimeType)
+	if !ok {
+		return PrepareUploadResult{}, ErrUnsupportedMediaType
+	}
+
+	storageModel, storageBackend, err := s.storageByID(ctx, input.StorageID)
+	if err != nil {
+		return PrepareUploadResult{}, err
+	}
+	if storageModel.Type != models.StorageTypeS3 {
+		return PrepareUploadResult{}, media.ErrPresignUnsupported
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		return PrepareUploadResult{}, err
+	}
+
+	record := models.Media{
+		ID:           id.String(),
+		StorageID:    storageModel.ID,
+		OriginalName: strings.TrimSpace(input.OriginalName),
+		PathKey:      id.String() + "." + ext,
+		MimeType:     input.MimeType,
+		Size:         input.Size,
+		Hash:         strings.TrimSpace(strings.ToLower(input.Hash)),
+		Metadata:     buildMediaMetadata(alias),
+	}
+
+	pending, err := s.savePendingUpload(record, "")
+	if err != nil {
+		return PrepareUploadResult{}, err
+	}
+
+	url, headers, err := storageBackend.PresignPut(ctx, record.PathKey, media.ObjectMeta{
+		ContentType: record.MimeType,
+		Size:        record.Size,
+	})
+	if err != nil {
+		_ = s.deletePendingUpload(pending.Token)
+		return PrepareUploadResult{}, err
+	}
+
+	return PrepareUploadResult{
+		Token:   pending.Token,
+		URL:     url,
+		Headers: headers,
+	}, nil
+}
+
+func (s *MediaService) CompletePreparedUpload(ctx context.Context, token string) (UploadMediaResult, error) {
+	pending, err := s.loadPendingUpload(token)
+	if err != nil {
+		return UploadMediaResult{}, err
+	}
+
+	_, storageBackend, err := s.storageByID(ctx, pending.Media.StorageID)
+	if err != nil {
+		_ = s.deletePendingUpload(token)
+		return UploadMediaResult{}, ErrPendingUploadMissing
+	}
+
+	reader, meta, err := storageBackend.Get(ctx, pending.Media.PathKey)
+	if err != nil {
+		_ = s.deletePendingUpload(token)
+		return UploadMediaResult{}, ErrPendingUploadMissing
+	}
+	reader.Close()
+
+	if meta.Size > 0 {
+		pending.Media.Size = meta.Size
+	}
+	if pending.Media.MimeType == "" && meta.ContentType != "" {
+		pending.Media.MimeType = meta.ContentType
+	}
+
+	if width, height, err := s.readDimensions(ctx, storageBackend, pending.Media.PathKey, pending.Media.MimeType); err == nil {
+		pending.Media.Metadata["width"] = width
+		pending.Media.Metadata["height"] = height
+	}
+
+	existing := s.repo.GetByHash(pending.Media.Hash)
+	if existing.ID != "" {
+		pending.DuplicateID = existing.ID
+		existingURL, _ := s.DirectURL(ctx, existing)
+		pending.DuplicateURL = existingURL
+		if err := s.writePendingUpload(pending); err != nil {
+			return UploadMediaResult{}, err
+		}
+
+		return UploadMediaResult{
+			Duplicate: &existing,
+			Pending:   &pending,
+		}, nil
+	}
+
+	record := s.repo.Create(pending.Media)
+	_ = s.deletePendingUpload(token)
 	return UploadMediaResult{Media: record}, nil
 }
 
@@ -462,16 +588,24 @@ func (s *MediaService) savePendingUpload(item models.Media, duplicateID string) 
 		return nil, err
 	}
 
-	data, err := json.Marshal(pending)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := os.WriteFile(s.pendingPath(token.String()), data, 0o644); err != nil {
+	if err := s.writePendingUpload(*pending); err != nil {
 		return nil, err
 	}
 
 	return pending, nil
+}
+
+func (s *MediaService) writePendingUpload(pending PendingUpload) error {
+	data, err := json.Marshal(pending)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(s.pendingPath(pending.Token), data, 0o644); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *MediaService) loadPendingUpload(token string) (PendingUpload, error) {
