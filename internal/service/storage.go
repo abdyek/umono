@@ -29,6 +29,7 @@ type StorageService struct {
 
 type StorageInput struct {
 	Name      string
+	IsDefault bool
 	Endpoint  string
 	Region    string
 	Bucket    string
@@ -38,6 +39,12 @@ type StorageInput struct {
 
 type StorageValidationError struct {
 	FieldErrors map[string]error
+}
+
+type StorageDeleteState struct {
+	CanDelete  bool
+	MediaCount int64
+	ReasonKey  string
 }
 
 func (e *StorageValidationError) Error() string {
@@ -132,6 +139,33 @@ func (s *StorageService) Delete(id string) error {
 	}
 
 	return s.repo.Delete(id)
+}
+
+func (s *StorageService) DeleteState(storage models.Storage, defaultStorageID string) StorageDeleteState {
+	mediaCount := s.repo.CountMediaByStorageID(storage.ID)
+	isDefault := storage.ID == defaultStorageID
+
+	state := StorageDeleteState{
+		CanDelete:  true,
+		MediaCount: mediaCount,
+	}
+
+	switch {
+	case storage.ID == DefaultLocalStorageID:
+		state.CanDelete = false
+		state.ReasonKey = "settings.storage.delete_disabled.local"
+	case isDefault && mediaCount > 0:
+		state.CanDelete = false
+		state.ReasonKey = "settings.storage.delete_disabled.default_with_media"
+	case isDefault:
+		state.CanDelete = false
+		state.ReasonKey = "settings.storage.delete_disabled.default"
+	case mediaCount > 0:
+		state.CanDelete = false
+		state.ReasonKey = "settings.storage.delete_disabled.has_media"
+	}
+
+	return state
 }
 
 func storageConfig(input StorageInput) models.JSONMap {

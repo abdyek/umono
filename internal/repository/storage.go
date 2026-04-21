@@ -38,3 +38,9 @@ func (r *StorageRepository) Update(storage models.Storage) models.Storage {
 func (r *StorageRepository) Delete(id string) error {
 	return r.db.Delete(&models.Storage{}, "id = ?", id).Error
 }
+
+func (r *StorageRepository) CountMediaByStorageID(id string) int64 {
+	var count int64
+	r.db.Model(&models.Media{}).Where("storage_id = ?", id).Count(&count)
+	return count
+}

@@ -32,16 +32,19 @@ type storageFormData struct {
 	Name        string
 	Type        string
 	TypeLabel   string
+	IsDefault   bool
 	Endpoint    string
 	Region      string
 	Bucket      string
 	AccessKey   string
 	SecretKey   string
 	LocalRoot   string
+	MediaCount  int64
 	CreatedAt   string
 	UpdatedAt   string
 	IsReadonly  bool
 	CanDelete   bool
+	DeleteHint  string
 	Errors      map[string]string
 	GlobalError string
 	SubmitURL   string
@@ -63,13 +66,15 @@ func (h *settingsHandler) RenderStorageNew(c *fiber.Ctx) error {
 		HasSelection: true,
 		IsCreateMode: true,
 		Storage: storageFormData{
-			Type:      models.StorageTypeS3,
-			TypeLabel: translate(c, "settings.storage.type.s3"),
-			SubmitURL: "/admin/settings/storage",
-			CancelURL: "/admin/settings/storage",
-			BackURL:   "/admin/settings/storage",
-			PushURL:   "/admin/settings/storage/new",
-			Errors:    map[string]string{},
+			Type:       models.StorageTypeS3,
+			TypeLabel:  translate(c, "settings.storage.type.s3"),
+			SubmitURL:  "/admin/settings/storage",
+			CancelURL:  "/admin/settings/storage",
+			BackURL:    "/admin/settings/storage",
+			PushURL:    "/admin/settings/storage/new",
+			CanDelete:  false,
+			DeleteHint: "",
+			Errors:     map[string]string{},
 		},
 	}
 
@@ -97,6 +102,9 @@ func (h *settingsHandler) CreateStorage(c *fiber.Ctx) error {
 	storage, err := h.storageService.CreateS3(input)
 	if err != nil {
 		return h.renderStorageCreateError(c, input, err)
+	}
+	if err := h.persistDefaultStorageSelection(input.IsDefault, storage.ID, ""); err != nil {
+		return fiber.ErrInternalServerError
 	}
 
 	c.Set("HX-Push-Url", "/admin/settings/storage/"+storage.ID)
@@ -140,6 +148,7 @@ func (h *settingsHandler) UpdateStorage(c *fiber.Ctx) error {
 
 		form := h.buildStorageFormData(c, current, storageErrors(c, err), "")
 		form.Name = input.Name
+		form.IsDefault = input.IsDefault
 		form.Endpoint = input.Endpoint
 		form.Region = input.Region
 		form.Bucket = input.Bucket
@@ -152,6 +161,9 @@ func (h *settingsHandler) UpdateStorage(c *fiber.Ctx) error {
 			Storage:      form,
 		})
 	}
+	if err := h.persistDefaultStorageSelection(input.IsDefault, storage.ID, id); err != nil {
+		return fiber.ErrInternalServerError
+	}
 
 	c.Set("HX-Push-Url", "/admin/settings/storage/"+storage.ID)
 
@@ -163,7 +175,25 @@ func (h *settingsHandler) UpdateStorage(c *fiber.Ctx) error {
 }
 
 func (h *settingsHandler) DeleteStorage(c *fiber.Ctx) error {
-	if err := h.storageService.Delete(c.Params("id")); err != nil {
+	id := c.Params("id")
+	storage, err := h.storageService.GetByID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrStorageNotFound) {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		return fiber.ErrInternalServerError
+	}
+
+	deleteState := h.storageService.DeleteState(storage, h.optionService.GetDefaultStorageID())
+	if !deleteState.CanDelete {
+		return h.renderStorage(c, storagePageData{
+			List:         h.buildStorageList(c, storage.ID, ""),
+			HasSelection: true,
+			Storage:      h.buildStorageFormData(c, storage, map[string]string{}, ""),
+		})
+	}
+
+	if err := h.storageService.Delete(id); err != nil {
 		if errors.Is(err, service.ErrStorageNotFound) {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
@@ -180,7 +210,7 @@ func (h *settingsHandler) DeleteStorage(c *fiber.Ctx) error {
 					c,
 					storage,
 					map[string]string{},
-					translate(c, "settings.storage.local.delete_notice"),
+					translate(c, "settings.storage.delete_disabled.local"),
 				),
 			})
 		}
@@ -200,6 +230,7 @@ func (h *settingsHandler) renderStorageCreateError(c *fiber.Ctx, input service.S
 		Type:        models.StorageTypeS3,
 		TypeLabel:   translate(c, "settings.storage.type.s3"),
 		Name:        input.Name,
+		IsDefault:   input.IsDefault,
 		Endpoint:    input.Endpoint,
 		Region:      input.Region,
 		Bucket:      input.Bucket,
@@ -240,6 +271,7 @@ func (h *settingsHandler) renderStorage(c *fiber.Ctx, page storagePageData) erro
 
 func (h *settingsHandler) buildStorageList(c *fiber.Ctx, activeID, createRoute string) []storageListItem {
 	storages := h.storageService.GetAll()
+	defaultStorageID := h.optionService.GetDefaultStorageID()
 	items := make([]storageListItem, 0, len(storages))
 	for _, storage := range storages {
 		items = append(items, storageListItem{
@@ -248,7 +280,7 @@ func (h *settingsHandler) buildStorageList(c *fiber.Ctx, activeID, createRoute s
 			Type:      storage.Type,
 			TypeLabel: storageTypeLabel(c, storage.Type),
 			Summary:   storageSummary(c, storage),
-			IsDefault: storage.ID == service.DefaultLocalStorageID,
+			IsDefault: storage.ID == defaultStorageID,
 			IsActive:  storage.ID == activeID,
 		})
 	}
@@ -267,15 +299,21 @@ func (h *settingsHandler) buildStorageList(c *fiber.Ctx, activeID, createRoute s
 }
 
 func (h *settingsHandler) buildStorageFormData(c *fiber.Ctx, storage models.Storage, errs map[string]string, globalError string) storageFormData {
+	defaultStorageID := h.optionService.GetDefaultStorageID()
+	deleteState := h.storageService.DeleteState(storage, defaultStorageID)
+
 	form := storageFormData{
 		ID:          storage.ID,
 		Name:        storage.Name,
 		Type:        storage.Type,
 		TypeLabel:   storageTypeLabel(c, storage.Type),
+		IsDefault:   storage.ID == defaultStorageID,
+		MediaCount:  deleteState.MediaCount,
 		CreatedAt:   storage.CreatedAt.Local().Format(time.DateTime),
 		UpdatedAt:   storage.UpdatedAt.Local().Format(time.DateTime),
 		IsReadonly:  storage.Type != models.StorageTypeS3,
-		CanDelete:   storage.ID != service.DefaultLocalStorageID,
+		CanDelete:   deleteState.CanDelete,
+		DeleteHint:  storageDeleteHint(c, deleteState),
 		Errors:      errs,
 		GlobalError: globalError,
 		BackURL:     "/admin/settings/storage",
@@ -300,6 +338,7 @@ func (h *settingsHandler) buildStorageFormData(c *fiber.Ctx, storage models.Stor
 func storageInputFromRequest(c *fiber.Ctx) service.StorageInput {
 	return service.StorageInput{
 		Name:      c.FormValue("name"),
+		IsDefault: c.FormValue("is_default") != "",
 		Endpoint:  c.FormValue("endpoint"),
 		Region:    c.FormValue("region"),
 		Bucket:    c.FormValue("bucket"),
@@ -356,4 +395,23 @@ func storageSummary(c *fiber.Ctx, storage models.Storage) string {
 	default:
 		return translate(c, "settings.storage.type.unknown")
 	}
+}
+
+func storageDeleteHint(c *fiber.Ctx, state service.StorageDeleteState) string {
+	if state.ReasonKey == "" {
+		return ""
+	}
+
+	return translate(c, state.ReasonKey)
+}
+
+func (h *settingsHandler) persistDefaultStorageSelection(isDefault bool, storageID, previousStorageID string) error {
+	currentDefaultID := h.optionService.GetDefaultStorageID()
+	if isDefault {
+		return h.optionService.SaveDefaultStorageID(storageID)
+	}
+	if currentDefaultID == storageID || previousStorageID == currentDefaultID {
+		return h.optionService.SaveDefaultStorageID(service.DefaultLocalStorageID)
+	}
+	return nil
 }

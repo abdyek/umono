@@ -240,6 +240,21 @@
                 <p class="ml-1 text-xs font-medium text-red-400">{{ . }}</p>
                 {{ end }}
               </div>
+
+              <label for="storage-is-default" class="md:col-span-2 flex cursor-pointer items-start gap-3 rounded-2xl border border-neutral-800 bg-neutral-950/40 px-4 py-3">
+                <input
+                  id="storage-is-default"
+                  name="is_default"
+                  type="checkbox"
+                  value="1"
+                  {{ if .StoragePage.Storage.IsDefault }}checked{{ end }}
+                  class="mt-0.5 h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-purple-500 focus:ring-purple-500/20"
+                >
+                <span class="space-y-1">
+                  <span class="block text-sm font-medium text-neutral-200">{{ t .I18n "settings.storage.field.is_default" }}</span>
+                  <span class="block text-xs text-neutral-500">{{ t .I18n "settings.storage.field.is_default_help" }}</span>
+                </span>
+              </label>
             </div>
 
             <div class="flex items-center justify-between gap-3 border-t border-neutral-800 pt-2">
@@ -251,17 +266,34 @@
                 {{ end }}
               </div>
               <div class="flex items-center gap-3">
-                {{ if .StoragePage.Storage.CanDelete }}
+                {{ if not .StoragePage.IsCreateMode }}
+                {{ if .StoragePage.Storage.DeleteHint }}
+                <div class="group relative flex items-center">
+                  <button
+                    type="button"
+                    class="inline-flex h-8 w-8 cursor-help items-center justify-center text-sm font-semibold text-neutral-400 transition-colors hover:text-neutral-200"
+                    aria-label="{{ .StoragePage.Storage.DeleteHint }}"
+                  >
+                    ?
+                  </button>
+                  <div class="pointer-events-none absolute bottom-full right-0 z-[60] mb-2 hidden w-72 rounded-2xl border border-neutral-800 bg-neutral-950/95 px-3 py-2 text-left text-[11px] leading-5 text-neutral-300 shadow-2xl group-hover:block">
+                    {{ .StoragePage.Storage.DeleteHint }}
+                  </div>
+                </div>
+                {{ end }}
                 <button
                   id="storage-delete-button"
                   type="button"
-                  class="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-200 transition-colors hover:bg-red-500/20"
+                  class="relative rounded-xl p-2 transition-colors {{ if .StoragePage.Storage.CanDelete }}cursor-pointer text-neutral-500 hover:bg-red-500/10 hover:text-red-400{{ else }}cursor-not-allowed text-neutral-700{{ end }}"
                   hx-delete="/admin/settings/storage/{{ .StoragePage.Storage.ID }}"
                   hx-confirm="{{ t .I18n "settings.storage.delete_confirm" }}"
                   hx-target="#settings-content"
                   hx-indicator="#storage-delete-button"
+                  {{ if not .StoragePage.Storage.CanDelete }}disabled{{ end }}
                 >
-                  <span class="[.htmx-request_&]:invisible">{{ t .I18n "common.delete" }}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 [.htmx-request_&]:invisible" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
                   <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
                     <span class="h-4 w-4">
                       {{ template "partials/spinner" . }}

@@ -8,7 +8,10 @@ import (
 	"github.com/umono-cms/umono/internal/repository"
 )
 
-const DefaultLanguage = "en"
+const (
+	DefaultLanguage           = "en"
+	DefaultStorageIDOptionKey = "default_storage_id"
+)
 
 var ErrInvalidLanguage = errors.New("invalid language")
 
@@ -47,6 +50,23 @@ func (s *OptionService) SaveLanguage(language string) error {
 	}
 
 	return s.repo.SaveOption("language", language)
+}
+
+func (s *OptionService) GetDefaultStorageID() string {
+	option := s.repo.GetOptionByKey(DefaultStorageIDOptionKey)
+	if option.Value == "" {
+		return DefaultLocalStorageID
+	}
+
+	return option.Value
+}
+
+func (s *OptionService) SaveDefaultStorageID(storageID string) error {
+	if storageID == "" {
+		storageID = DefaultLocalStorageID
+	}
+
+	return s.repo.SaveOption(DefaultStorageIDOptionKey, storageID)
 }
 
 func (s *OptionService) SupportedLanguages() []i18n.LocaleOption {
