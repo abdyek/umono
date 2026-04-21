@@ -1,0 +1,332 @@
+<div id="settings-storage-content" class="flex-1 flex overflow-hidden h-full">
+  <div class="flex-1 flex flex-col min-h-0">
+    <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "settings.storage.title" }}</h2>
+          <p class="text-sm text-neutral-500">{{ t .I18n "settings.storage.description" }}</p>
+        </div>
+        <a
+          href="/admin/settings/storage/new"
+          class="group relative inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-purple-500"
+          hx-get="/admin/settings/storage/new"
+          hx-target="#settings-content"
+          hx-push-url="/admin/settings/storage/new"
+        >
+          <span class="flex items-center gap-2 [.htmx-request_&]:invisible">{{ t .I18n "settings.storage.create_cta" }}</span>
+          <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+            <span class="h-4 w-4">
+              {{ template "partials/spinner" . }}
+            </span>
+          </span>
+        </a>
+      </div>
+    </header>
+    <div class="flex-1 overflow-y-auto p-6">
+      <div class="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.5fr)]">
+        <section class="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900/40">
+          <div class="border-b border-neutral-800 px-5 py-4">
+            <h3 class="text-sm font-semibold text-neutral-200">{{ t .I18n "settings.storage.list.title" }}</h3>
+            <p class="mt-1 text-xs text-neutral-500">{{ t .I18n "settings.storage.list.description" }}</p>
+          </div>
+          <div class="divide-y divide-neutral-800">
+            {{ range .StoragePage.List }}
+            <a
+              href="{{ if eq .ID "new" }}/admin/settings/storage/new{{ else }}/admin/settings/storage/{{ .ID }}{{ end }}"
+              class="block px-5 py-4 transition-colors {{ if .IsActive }}bg-purple-500/10{{ else }}hover:bg-neutral-800/40{{ end }}"
+              hx-get="{{ if eq .ID "new" }}/admin/settings/storage/new{{ else }}/admin/settings/storage/{{ .ID }}{{ end }}"
+              hx-target="#settings-content"
+              hx-push-url="{{ if eq .ID "new" }}/admin/settings/storage/new{{ else }}/admin/settings/storage/{{ .ID }}{{ end }}"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="truncate text-sm font-medium {{ if .IsActive }}text-purple-200{{ else }}text-neutral-200{{ end }}">{{ .Name }}</p>
+                    {{ if .IsDefault }}
+                    <span class="rounded-full border border-neutral-700 bg-neutral-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-300">
+                      {{ t $.I18n "settings.storage.default_badge" }}
+                    </span>
+                    {{ end }}
+                  </div>
+                  <p class="mt-1 text-xs text-neutral-500">{{ .Summary }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="rounded-full border border-neutral-700 bg-neutral-800 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-300">{{ .TypeLabel }}</span>
+                  <span class="hidden [.htmx-request_&]:inline-flex h-4 w-4 text-white">
+                    {{ template "partials/spinner" $ }}
+                  </span>
+                </div>
+              </div>
+            </a>
+            {{ end }}
+          </div>
+        </section>
+
+        {{ if .StoragePage.HasSelection }}
+        <section class="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900/40">
+          <div class="border-b border-neutral-800 px-6 py-5">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-base font-semibold text-neutral-100">
+                    {{ if .StoragePage.IsCreateMode }}
+                      {{ t .I18n "settings.storage.new.title" }}
+                    {{ else }}
+                      {{ .StoragePage.Storage.Name }}
+                    {{ end }}
+                  </h3>
+                  <span class="rounded-full border border-neutral-700 bg-neutral-800 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-300">{{ .StoragePage.Storage.TypeLabel }}</span>
+                </div>
+                <p class="mt-1 text-sm text-neutral-500">
+                  {{ if .StoragePage.IsCreateMode }}
+                    {{ t .I18n "settings.storage.new.description" }}
+                  {{ else if .StoragePage.Storage.IsReadonly }}
+                    {{ t .I18n "settings.storage.local.description" }}
+                  {{ else }}
+                    {{ t .I18n "settings.storage.edit.description" }}
+                  {{ end }}
+                </p>
+              </div>
+              <a
+                href="{{ .StoragePage.Storage.BackURL }}"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-2xl text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white"
+                hx-get="{{ .StoragePage.Storage.BackURL }}"
+                hx-target="#settings-content"
+                hx-push-url="{{ .StoragePage.Storage.BackURL }}"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 [.htmx-request_&]:invisible" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span class="absolute invisible [.htmx-request_&]:visible h-4 w-4">
+                  {{ template "partials/spinner" . }}
+                </span>
+              </a>
+            </div>
+          </div>
+
+          {{ if .StoragePage.Storage.IsReadonly }}
+          <div class="space-y-6 p-6">
+            <div class="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              {{ t .I18n "settings.storage.local.readonly_notice" }}
+            </div>
+            {{ if .StoragePage.Storage.GlobalError }}
+            <div class="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {{ .StoragePage.Storage.GlobalError }}
+            </div>
+            {{ end }}
+            <div class="grid gap-4 md:grid-cols-2">
+              <div class="space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{{ t .I18n "common.name" }}</p>
+                <p class="text-sm text-neutral-200">{{ .StoragePage.Storage.Name }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{{ t .I18n "settings.storage.field.type" }}</p>
+                <p class="text-sm text-neutral-200">{{ .StoragePage.Storage.TypeLabel }}</p>
+              </div>
+              <div class="space-y-1 md:col-span-2">
+                <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{{ t .I18n "settings.storage.field.root" }}</p>
+                <p class="break-all text-sm text-neutral-200">{{ .StoragePage.Storage.LocalRoot }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{{ t .I18n "settings.storage.field.created_at" }}</p>
+                <p class="text-sm text-neutral-200">{{ .StoragePage.Storage.CreatedAt }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{{ t .I18n "settings.storage.field.updated_at" }}</p>
+                <p class="text-sm text-neutral-200">{{ .StoragePage.Storage.UpdatedAt }}</p>
+              </div>
+            </div>
+          </div>
+          {{ else }}
+          <form
+            class="space-y-6 p-6"
+            {{ if .StoragePage.IsCreateMode }}hx-post="{{ .StoragePage.Storage.SubmitURL }}"{{ else }}hx-put="{{ .StoragePage.Storage.SubmitURL }}"{{ end }}
+            hx-target="#settings-content"
+            hx-indicator="#storage-save-button"
+          >
+            {{ if .StoragePage.Storage.GlobalError }}
+            <div class="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {{ .StoragePage.Storage.GlobalError }}
+            </div>
+            {{ end }}
+
+            <div class="grid gap-5 md:grid-cols-2">
+              <div class="space-y-2 md:col-span-2">
+                <label class="ml-1 text-sm font-medium text-neutral-300" for="storage-name">{{ t .I18n "common.name" }}</label>
+                <input
+                  id="storage-name"
+                  name="name"
+                  type="text"
+                  value="{{ .StoragePage.Storage.Name }}"
+                  placeholder="{{ t .I18n "settings.storage.placeholder.name" }}"
+                  class="w-full rounded-xl border {{ if index .StoragePage.Storage.Errors "name" }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:ring-4 placeholder:text-neutral-600"
+                >
+                {{ with index .StoragePage.Storage.Errors "name" }}
+                <p class="ml-1 text-xs font-medium text-red-400">{{ . }}</p>
+                {{ end }}
+              </div>
+
+              <div class="space-y-2">
+                <label class="ml-1 text-sm font-medium text-neutral-300" for="storage-endpoint">{{ t .I18n "settings.storage.field.endpoint" }}</label>
+                <input
+                  id="storage-endpoint"
+                  name="endpoint"
+                  type="text"
+                  value="{{ .StoragePage.Storage.Endpoint }}"
+                  placeholder="{{ t .I18n "settings.storage.placeholder.endpoint" }}"
+                  class="w-full rounded-xl border {{ if index .StoragePage.Storage.Errors "endpoint" }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:ring-4 placeholder:text-neutral-600"
+                >
+                {{ with index .StoragePage.Storage.Errors "endpoint" }}
+                <p class="ml-1 text-xs font-medium text-red-400">{{ . }}</p>
+                {{ end }}
+              </div>
+
+              <div class="space-y-2">
+                <label class="ml-1 text-sm font-medium text-neutral-300" for="storage-region">{{ t .I18n "settings.storage.field.region" }}</label>
+                <input
+                  id="storage-region"
+                  name="region"
+                  type="text"
+                  value="{{ .StoragePage.Storage.Region }}"
+                  placeholder="{{ t .I18n "settings.storage.placeholder.region" }}"
+                  class="w-full rounded-xl border {{ if index .StoragePage.Storage.Errors "region" }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:ring-4 placeholder:text-neutral-600"
+                >
+                {{ with index .StoragePage.Storage.Errors "region" }}
+                <p class="ml-1 text-xs font-medium text-red-400">{{ . }}</p>
+                {{ end }}
+              </div>
+
+              <div class="space-y-2">
+                <label class="ml-1 text-sm font-medium text-neutral-300" for="storage-bucket">{{ t .I18n "settings.storage.field.bucket" }}</label>
+                <input
+                  id="storage-bucket"
+                  name="bucket"
+                  type="text"
+                  value="{{ .StoragePage.Storage.Bucket }}"
+                  placeholder="{{ t .I18n "settings.storage.placeholder.bucket" }}"
+                  class="w-full rounded-xl border {{ if index .StoragePage.Storage.Errors "bucket" }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:ring-4 placeholder:text-neutral-600"
+                >
+                {{ with index .StoragePage.Storage.Errors "bucket" }}
+                <p class="ml-1 text-xs font-medium text-red-400">{{ . }}</p>
+                {{ end }}
+              </div>
+
+              <div class="space-y-2">
+                <label class="ml-1 text-sm font-medium text-neutral-300" for="storage-access-key">{{ t .I18n "settings.storage.field.access_key" }}</label>
+                <input
+                  id="storage-access-key"
+                  name="access_key"
+                  type="text"
+                  value="{{ .StoragePage.Storage.AccessKey }}"
+                  placeholder="{{ t .I18n "settings.storage.placeholder.access_key" }}"
+                  class="w-full rounded-xl border {{ if index .StoragePage.Storage.Errors "access_key" }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:ring-4 placeholder:text-neutral-600"
+                >
+                {{ with index .StoragePage.Storage.Errors "access_key" }}
+                <p class="ml-1 text-xs font-medium text-red-400">{{ . }}</p>
+                {{ end }}
+              </div>
+
+              <div class="space-y-2">
+                <label class="ml-1 text-sm font-medium text-neutral-300" for="storage-secret-key">{{ t .I18n "settings.storage.field.secret_key" }}</label>
+                <input
+                  id="storage-secret-key"
+                  name="secret_key"
+                  type="text"
+                  value="{{ .StoragePage.Storage.SecretKey }}"
+                  placeholder="{{ t .I18n "settings.storage.placeholder.secret_key" }}"
+                  class="w-full rounded-xl border {{ if index .StoragePage.Storage.Errors "secret_key" }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:ring-4 placeholder:text-neutral-600"
+                >
+                {{ with index .StoragePage.Storage.Errors "secret_key" }}
+                <p class="ml-1 text-xs font-medium text-red-400">{{ . }}</p>
+                {{ end }}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 border-t border-neutral-800 pt-2">
+              <div class="text-xs text-neutral-500">
+                {{ if .StoragePage.IsCreateMode }}
+                  {{ t .I18n "settings.storage.form.create_help" }}
+                {{ else }}
+                  {{ t .I18n "settings.storage.form.update_help" }}
+                {{ end }}
+              </div>
+              <div class="flex items-center gap-3">
+                {{ if .StoragePage.Storage.CanDelete }}
+                <button
+                  id="storage-delete-button"
+                  type="button"
+                  class="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-200 transition-colors hover:bg-red-500/20"
+                  hx-delete="/admin/settings/storage/{{ .StoragePage.Storage.ID }}"
+                  hx-confirm="{{ t .I18n "settings.storage.delete_confirm" }}"
+                  hx-target="#settings-content"
+                  hx-indicator="#storage-delete-button"
+                >
+                  <span class="[.htmx-request_&]:invisible">{{ t .I18n "common.delete" }}</span>
+                  <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+                    <span class="h-4 w-4">
+                      {{ template "partials/spinner" . }}
+                    </span>
+                  </span>
+                </button>
+                {{ end }}
+                <a
+                  id="storage-cancel-button"
+                  href="{{ .StoragePage.Storage.CancelURL }}"
+                  class="relative inline-flex cursor-pointer items-center rounded-xl border border-neutral-700 px-4 py-2.5 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white"
+                  hx-get="{{ .StoragePage.Storage.CancelURL }}"
+                  hx-target="#settings-content"
+                  hx-push-url="{{ .StoragePage.Storage.CancelURL }}"
+                  hx-indicator="#storage-cancel-button"
+                >
+                  <span class="[.htmx-request_&]:invisible">{{ t .I18n "common.cancel" }}</span>
+                  <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+                    <span class="h-4 w-4">
+                      {{ template "partials/spinner" . }}
+                    </span>
+                  </span>
+                </a>
+                <button
+                  id="storage-save-button"
+                  type="submit"
+                  class="relative inline-flex cursor-pointer items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-purple-500"
+                >
+                  <span class="[.htmx-request_&]:invisible">{{ t .I18n "common.save" }}</span>
+                  <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+                    <span class="h-4 w-4">
+                      {{ template "partials/spinner" . }}
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </form>
+          {{ end }}
+        </section>
+        {{ else }}
+        <section class="flex min-h-[420px] items-center justify-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/40 px-8 py-16 text-center">
+          <div class="max-w-md">
+            <h3 class="text-xl font-semibold text-neutral-100">{{ t .I18n "settings.storage.empty.title" }}</h3>
+            <p class="mt-3 text-sm leading-6 text-neutral-500">{{ t .I18n "settings.storage.empty.description" }}</p>
+            <a
+              id="storage-empty-create-button"
+              href="/admin/settings/storage/new"
+              class="relative mt-6 inline-flex cursor-pointer items-center rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-purple-500"
+              hx-get="/admin/settings/storage/new"
+              hx-target="#settings-content"
+              hx-push-url="/admin/settings/storage/new"
+              hx-indicator="#storage-empty-create-button"
+            >
+              <span class="[.htmx-request_&]:invisible">{{ t .I18n "settings.storage.create_cta" }}</span>
+              <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+                <span class="h-4 w-4">
+                  {{ template "partials/spinner" . }}
+                </span>
+              </span>
+            </a>
+          </div>
+        </section>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+</div>

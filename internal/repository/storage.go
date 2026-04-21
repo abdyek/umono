@@ -19,6 +19,12 @@ func (r *StorageRepository) GetByID(id string) models.Storage {
 	return storage
 }
 
+func (r *StorageRepository) GetAll() []models.Storage {
+	var storages []models.Storage
+	r.db.Model(&models.Storage{}).Order("created_at ASC").Find(&storages)
+	return storages
+}
+
 func (r *StorageRepository) Create(storage models.Storage) models.Storage {
 	r.db.Create(&storage)
 	return storage
@@ -27,4 +33,8 @@ func (r *StorageRepository) Create(storage models.Storage) models.Storage {
 func (r *StorageRepository) Update(storage models.Storage) models.Storage {
 	r.db.Model(&storage).Select("*").Updates(storage)
 	return storage
+}
+
+func (r *StorageRepository) Delete(id string) error {
+	return r.db.Delete(&models.Storage{}, "id = ?", id).Error
 }

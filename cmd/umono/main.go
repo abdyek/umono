@@ -82,6 +82,7 @@ func main() {
 	componentService.LoadAsGlobalComponent()
 
 	settingsService := service.NewSettingsService()
+	storageService := service.NewStorageService(storageRepo)
 	bundle, err := i18n.LoadBundle(umono.Locales(), service.DefaultLanguage)
 	if err != nil {
 		log.Fatal("i18n err", err)
@@ -103,7 +104,7 @@ func main() {
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService)
-	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService)
+	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
@@ -216,6 +217,21 @@ func main() {
 	adminProtected.Get("/settings", settingsHandler.Index)
 	adminProtected.Get("/settings/general", settingsHandler.RenderGeneral)
 	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
+	adminProtected.Get("/settings/storage", settingsHandler.RenderStorageIndex)
+	adminProtected.Get("/settings/storage/new", settingsHandler.RenderStorageNew)
+	adminProtected.Get("/settings/storage/:id", settingsHandler.RenderStorageShow)
+	adminProtected.Post("/settings/storage",
+		middleware.OnlyHTMX(),
+		settingsHandler.CreateStorage,
+	)
+	adminProtected.Put("/settings/storage/:id",
+		middleware.OnlyHTMX(),
+		settingsHandler.UpdateStorage,
+	)
+	adminProtected.Delete("/settings/storage/:id",
+		middleware.OnlyHTMX(),
+		settingsHandler.DeleteStorage,
+	)
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
 	adminProtected.Get("/media", mediaHandler.Index)
 	adminProtected.Get("/media/new", mediaHandler.RenderNew)

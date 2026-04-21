@@ -25,6 +25,11 @@ func (*SettingsService) MenuItems() []SettingsMenuItem {
 			Partial:  "settings-404-page",
 		},
 		{
+			TitleKey: "settings.menu.storage",
+			Slug:     "storage",
+			Partial:  "settings-storage",
+		},
+		{
 			TitleKey: "settings.menu.about",
 			Slug:     "about",
 			Partial:  "settings-about",
