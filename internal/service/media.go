@@ -60,23 +60,23 @@ type PendingUpload struct {
 }
 
 type MediaService struct {
-	repo           *repository.MediaRepository
-	storageRepo    *repository.StorageRepository
-	storageBackend media.Storage
-	pendingDir     string
+	repo        *repository.MediaRepository
+	storageRepo *repository.StorageRepository
+	optionRepo  *repository.OptionRepository
+	pendingDir  string
 }
 
 func NewMediaService(
 	repo *repository.MediaRepository,
 	storageRepo *repository.StorageRepository,
-	storageBackend media.Storage,
+	optionRepo *repository.OptionRepository,
 	pendingDir string,
 ) *MediaService {
 	return &MediaService{
-		repo:           repo,
-		storageRepo:    storageRepo,
-		storageBackend: storageBackend,
-		pendingDir:     pendingDir,
+		repo:        repo,
+		storageRepo: storageRepo,
+		optionRepo:  optionRepo,
+		pendingDir:  pendingDir,
 	}
 }
 
@@ -139,8 +139,12 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	hasher := sha256.New()
 	counter := &countingReader{reader: input.Reader}
 	reader := io.TeeReader(counter, hasher)
+	storageModel, storageBackend, err := s.defaultStorage(ctx)
+	if err != nil {
+		return UploadMediaResult{}, err
+	}
 
-	if err := s.storageBackend.Put(ctx, pathKey, reader, media.ObjectMeta{
+	if err := storageBackend.Put(ctx, pathKey, reader, media.ObjectMeta{
 		ContentType: input.MimeType,
 	}); err != nil {
 		return UploadMediaResult{}, err
@@ -148,7 +152,7 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 
 	record := models.Media{
 		ID:           id.String(),
-		StorageID:    DefaultLocalStorageID,
+		StorageID:    storageModel.ID,
 		OriginalName: strings.TrimSpace(input.OriginalName),
 		PathKey:      pathKey,
 		MimeType:     input.MimeType,
@@ -157,7 +161,7 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 		Metadata:     buildMediaMetadata(alias),
 	}
 
-	if width, height, err := s.readDimensions(ctx, record.PathKey, record.MimeType); err == nil {
+	if width, height, err := s.readDimensions(ctx, storageBackend, record.PathKey, record.MimeType); err == nil {
 		record.Metadata["width"] = width
 		record.Metadata["height"] = height
 	}
@@ -166,11 +170,11 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	if existing.ID != "" {
 		pending, err := s.savePendingUpload(record, existing.ID)
 		if err != nil {
-			_ = s.storageBackend.Delete(ctx, record.PathKey)
+			_ = storageBackend.Delete(ctx, record.PathKey)
 			return UploadMediaResult{}, err
 		}
 
-		existingURL, _ := s.PublicURL(existing)
+		existingURL, _ := s.DirectURL(ctx, existing)
 		pending.DuplicateURL = existingURL
 
 		return UploadMediaResult{
@@ -189,7 +193,13 @@ func (s *MediaService) ConfirmPendingUpload(ctx context.Context, token string) (
 		return models.Media{}, err
 	}
 
-	reader, _, storageErr := s.storageBackend.Get(ctx, pending.Media.PathKey)
+	_, storageBackend, err := s.storageByID(ctx, pending.Media.StorageID)
+	if err != nil {
+		_ = s.deletePendingUpload(token)
+		return models.Media{}, ErrPendingUploadMissing
+	}
+
+	reader, _, storageErr := storageBackend.Get(ctx, pending.Media.PathKey)
 	if storageErr == nil {
 		reader.Close()
 	}
@@ -217,7 +227,12 @@ func (s *MediaService) OpenPendingUpload(ctx context.Context, token string) (io.
 		return nil, media.ObjectMeta{}, err
 	}
 
-	reader, meta, err := s.storageBackend.Get(ctx, pending.Media.PathKey)
+	_, storageBackend, err := s.storageByID(ctx, pending.Media.StorageID)
+	if err != nil {
+		return nil, media.ObjectMeta{}, ErrPendingUploadMissing
+	}
+
+	reader, meta, err := storageBackend.Get(ctx, pending.Media.PathKey)
 	if err != nil {
 		return nil, media.ObjectMeta{}, ErrPendingUploadMissing
 	}
@@ -233,7 +248,12 @@ func (s *MediaService) CancelPendingUpload(ctx context.Context, token string) er
 		return err
 	}
 
-	if err := s.storageBackend.Delete(ctx, pending.Media.PathKey); err != nil {
+	_, storageBackend, err := s.storageByID(ctx, pending.Media.StorageID)
+	if err != nil {
+		return ErrPendingUploadMissing
+	}
+
+	if err := storageBackend.Delete(ctx, pending.Media.PathKey); err != nil {
 		return err
 	}
 
@@ -267,7 +287,12 @@ func (s *MediaService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 
-	if err := s.storageBackend.Delete(ctx, item.PathKey); err != nil {
+	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	if err != nil {
+		return err
+	}
+
+	if err := storageBackend.Delete(ctx, item.PathKey); err != nil {
 		return err
 	}
 
@@ -285,7 +310,12 @@ func (s *MediaService) OpenByIDAndExt(ctx context.Context, id, ext string) (io.R
 		return nil, media.ObjectMeta{}, ErrMediaNotFound
 	}
 
-	reader, meta, err := s.storageBackend.Get(ctx, item.PathKey)
+	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	if err != nil {
+		return nil, media.ObjectMeta{}, err
+	}
+
+	reader, meta, err := storageBackend.Get(ctx, item.PathKey)
 	if err != nil {
 		return nil, media.ObjectMeta{}, err
 	}
@@ -296,7 +326,21 @@ func (s *MediaService) OpenByIDAndExt(ctx context.Context, id, ext string) (io.R
 }
 
 func (s *MediaService) PublicURL(item models.Media) (string, error) {
-	return s.storageBackend.PublicURL(context.Background(), item.PathKey)
+	ext, ok := media.ExtensionByMimeType(item.MimeType)
+	if !ok {
+		return "", ErrMediaNotFound
+	}
+
+	return "/uploads/" + item.ID + "." + ext, nil
+}
+
+func (s *MediaService) DirectURL(ctx context.Context, item models.Media) (string, error) {
+	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	if err != nil {
+		return "", err
+	}
+
+	return storageBackend.PublicURL(ctx, item.PathKey)
 }
 
 func MediaAlias(item models.Media) string {
@@ -339,14 +383,67 @@ func (s *MediaService) aliasExists(alias, excludeID string) bool {
 	return found.ID != "" && found.ID != excludeID
 }
 
-func (s *MediaService) readDimensions(ctx context.Context, pathKey, mimeType string) (int, int, error) {
-	reader, _, err := s.storageBackend.Get(ctx, pathKey)
+func (s *MediaService) readDimensions(ctx context.Context, storageBackend media.Storage, pathKey, mimeType string) (int, int, error) {
+	reader, _, err := storageBackend.Get(ctx, pathKey)
 	if err != nil {
 		return 0, 0, err
 	}
 	defer reader.Close()
 
 	return media.DimensionsFromReader(mimeType, reader)
+}
+
+func (s *MediaService) defaultStorage(ctx context.Context) (models.Storage, media.Storage, error) {
+	return s.storageByID(ctx, s.defaultStorageID())
+}
+
+func (s *MediaService) defaultStorageID() string {
+	if s.optionRepo == nil {
+		return DefaultLocalStorageID
+	}
+
+	option := s.optionRepo.GetOptionByKey(DefaultStorageIDOptionKey)
+	if option.Value == "" {
+		return DefaultLocalStorageID
+	}
+
+	return option.Value
+}
+
+func (s *MediaService) storageByID(ctx context.Context, id string) (models.Storage, media.Storage, error) {
+	if strings.TrimSpace(id) == "" {
+		id = DefaultLocalStorageID
+	}
+
+	storageModel := s.storageRepo.GetByID(id)
+	if storageModel.ID == "" {
+		return models.Storage{}, nil, ErrStorageNotFound
+	}
+
+	storageBackend, err := s.storageBackend(ctx, storageModel)
+	if err != nil {
+		return models.Storage{}, nil, err
+	}
+
+	return storageModel, storageBackend, nil
+}
+
+func (s *MediaService) storageBackend(ctx context.Context, storageModel models.Storage) (media.Storage, error) {
+	switch storageModel.Type {
+	case models.StorageTypeLocal:
+		root := strings.TrimSpace(fmt.Sprint(storageModel.Config["root"]))
+		return media.NewLocalStorage(root), nil
+	case models.StorageTypeS3:
+		return media.NewS3Storage(ctx, media.S3Config{
+			Endpoint:  strings.TrimSpace(fmt.Sprint(storageModel.Config["endpoint"])),
+			Region:    strings.TrimSpace(fmt.Sprint(storageModel.Config["region"])),
+			Bucket:    strings.TrimSpace(fmt.Sprint(storageModel.Config["bucket"])),
+			AccessKey: strings.TrimSpace(fmt.Sprint(storageModel.Config["access_key"])),
+			SecretKey: strings.TrimSpace(fmt.Sprint(storageModel.Config["secret_key"])),
+		})
+	default:
+		return nil, ErrStorageNotFound
+	}
 }
 
 func (s *MediaService) savePendingUpload(item models.Media, duplicateID string) (*PendingUpload, error) {

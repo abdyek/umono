@@ -19,7 +19,6 @@ import (
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/handler/middleware"
 	"github.com/umono-cms/umono/internal/i18n"
-	umonomedia "github.com/umono-cms/umono/internal/media"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/service"
@@ -88,8 +87,7 @@ func main() {
 		log.Fatal("i18n err", err)
 	}
 	optionService := service.NewOptionService(optionRepo, bundle)
-	mediaStorage := umonomedia.NewLocalStorage("uploads")
-	mediaService := service.NewMediaService(mediaRepo, storageRepo, mediaStorage, "uploads/.pending")
+	mediaService := service.NewMediaService(mediaRepo, storageRepo, optionRepo, "uploads/.pending")
 	if err := mediaService.EnsureDefaultLocalStorage("uploads"); err != nil {
 		log.Fatal("media storage err", err)
 	}

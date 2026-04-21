@@ -79,6 +79,14 @@ func (*LocalStorage) PublicURL(_ context.Context, key string) (string, error) {
 	return "/uploads/" + url.PathEscape(key), nil
 }
 
+func (*LocalStorage) PresignPut(_ context.Context, _ string, _ ObjectMeta) (string, map[string]string, error) {
+	return "", nil, ErrPresignUnsupported
+}
+
+func (*LocalStorage) PresignGet(_ context.Context, _ string) (string, error) {
+	return "", ErrPresignUnsupported
+}
+
 func (s *LocalStorage) resolvePath(key string) (string, error) {
 	clean := filepath.Clean(strings.TrimSpace(key))
 	if clean == "." || clean == "" || filepath.IsAbs(clean) || strings.HasPrefix(clean, "..") {

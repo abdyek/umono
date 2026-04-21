@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -28,7 +29,7 @@ func (h *mediaHandler) Index(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": view.MediaList(items, ""),
+		"MediaList": h.buildMediaList(items, ""),
 	})
 }
 
@@ -36,7 +37,7 @@ func (h *mediaHandler) RenderNew(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 
 	return h.render(c, "partials/media-new", fiber.Map{
-		"MediaList": view.MediaList(items, ""),
+		"MediaList": h.buildMediaList(items, ""),
 	})
 }
 
@@ -49,8 +50,8 @@ func (h *mediaHandler) RenderShow(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 
 	return h.render(c, "partials/media-show", fiber.Map{
-		"MediaList": view.MediaList(items, item.ID),
-		"Media":     buildMediaDetail(item),
+		"MediaList": h.buildMediaList(items, item.ID),
+		"Media":     h.buildMediaDetail(item),
 	})
 }
 
@@ -118,7 +119,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 	c.Set("HX-Push-Url", "/admin/media")
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": view.MediaList(items, ""),
+		"MediaList": h.buildMediaList(items, ""),
 	})
 }
 
@@ -144,7 +145,7 @@ func (h *mediaHandler) ConfirmUpload(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 	c.Set("HX-Push-Url", "/admin/media")
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": view.MediaList(items, ""),
+		"MediaList": h.buildMediaList(items, ""),
 	})
 }
 
@@ -172,7 +173,7 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 
-		detail := buildMediaDetail(current)
+		detail := h.buildMediaDetail(current)
 		detail.Alias = submittedAlias
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
 			detail.ErrorMsg = "This alias is already in use."
@@ -189,8 +190,8 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 
 	items := h.mediaService.GetAll()
 	return h.render(c, "partials/media-show", fiber.Map{
-		"MediaList": view.MediaList(items, item.ID),
-		"Media":     buildMediaDetail(item),
+		"MediaList": h.buildMediaList(items, item.ID),
+		"Media":     h.buildMediaDetail(item),
 	})
 }
 
@@ -205,7 +206,7 @@ func (h *mediaHandler) Delete(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 	c.Set("HX-Push-Url", "/admin/media")
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": view.MediaList(items, ""),
+		"MediaList": h.buildMediaList(items, ""),
 	})
 }
 
@@ -258,13 +259,12 @@ type mediaDetailData struct {
 	ErrorMsg    string
 }
 
-func buildMediaDetail(item models.Media) mediaDetailData {
-	ext, _ := media.ExtensionByMimeType(item.MimeType)
+func (h *mediaHandler) buildMediaDetail(item models.Media) mediaDetailData {
 	return mediaDetailData{
 		ID:          item.ID,
 		Name:        item.OriginalName,
 		Alias:       service.MediaAlias(item),
-		URL:         "/uploads/" + item.ID + "." + ext,
+		URL:         h.directURL(item),
 		ContentType: item.MimeType,
 		Size:        item.Size,
 		Width:       metadataInt(item.Metadata, "width"),
@@ -329,6 +329,22 @@ func buildPendingDuplicate(pending *service.PendingUpload, duplicate models.Medi
 		Name:         pending.Media.OriginalName,
 		Alias:        service.MediaAlias(pending.Media),
 	}
+}
+
+func (h *mediaHandler) buildMediaList(items []models.Media, activeID string) []view.MediaListItem {
+	return view.MediaList(items, activeID, h.directURL)
+}
+
+func (h *mediaHandler) directURL(item models.Media) string {
+	url, err := h.mediaService.DirectURL(context.Background(), item)
+	if err != nil {
+		url, err = h.mediaService.PublicURL(item)
+		if err != nil {
+			return ""
+		}
+	}
+
+	return url
 }
 
 func sniffMedia(file io.Reader) (io.Reader, string, error) {
