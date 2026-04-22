@@ -7,8 +7,9 @@ import (
 )
 
 type ObjectMeta struct {
-	ContentType string
-	Size        int64
+	ContentType  string
+	CacheControl string
+	Size         int64
 }
 
 var ErrPresignUnsupported = errors.New("presign unsupported")

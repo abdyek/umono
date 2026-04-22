@@ -71,6 +71,9 @@ func (s *S3Storage) Put(ctx context.Context, key string, r io.Reader, meta Objec
 	if meta.ContentType != "" {
 		input.ContentType = aws.String(meta.ContentType)
 	}
+	if meta.CacheControl != "" {
+		input.CacheControl = aws.String(meta.CacheControl)
+	}
 
 	_, err := s.uploader.Upload(ctx, input)
 	return err
@@ -114,6 +117,9 @@ func (s *S3Storage) PresignPut(ctx context.Context, key string, meta ObjectMeta)
 	}
 	if meta.ContentType != "" {
 		input.ContentType = aws.String(meta.ContentType)
+	}
+	if meta.CacheControl != "" {
+		input.CacheControl = aws.String(meta.CacheControl)
 	}
 	if meta.Size > 0 {
 		input.ContentLength = aws.Int64(meta.Size)

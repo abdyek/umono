@@ -23,6 +23,8 @@ type mediaHandler struct {
 	optionService  *service.OptionService
 }
 
+const mediaCacheControl = "public, max-age=31536000, immutable"
+
 func NewMediaHandler(ms *service.MediaService, ss *service.StorageService, os *service.OptionService) *mediaHandler {
 	return &mediaHandler{
 		mediaService:   ms,
@@ -358,9 +360,19 @@ func (h *mediaHandler) Serve(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusNotFound)
 	}
 
+	item, err := h.mediaService.GetByID(id)
+	if err != nil {
+		return c.SendStatus(fiber.StatusNotFound)
+	}
+
 	reader, meta, err := h.mediaService.OpenByIDAndExt(c.UserContext(), id, ext)
 	if err != nil {
 		return c.SendStatus(fiber.StatusNotFound)
+	}
+
+	storage, err := h.storageService.GetByID(item.StorageID)
+	if err == nil && storage.Type == models.StorageTypeLocal {
+		c.Set(fiber.HeaderCacheControl, mediaCacheControl)
 	}
 
 	c.Type(ext)

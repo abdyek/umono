@@ -76,7 +76,7 @@ func (s *LocalStorage) Delete(_ context.Context, key string) error {
 }
 
 func (*LocalStorage) PublicURL(_ context.Context, key string) (string, error) {
-	return "/uploads/" + url.PathEscape(key), nil
+	return "/uploads/" + url.PathEscape(strings.TrimPrefix(normalizeLocalKey(key), "uploads/")), nil
 }
 
 func (*LocalStorage) PresignPut(_ context.Context, _ string, _ ObjectMeta) (string, map[string]string, error) {
@@ -88,10 +88,15 @@ func (*LocalStorage) PresignGet(_ context.Context, _ string) (string, error) {
 }
 
 func (s *LocalStorage) resolvePath(key string) (string, error) {
-	clean := filepath.Clean(strings.TrimSpace(key))
+	clean := filepath.Clean(normalizeLocalKey(key))
 	if clean == "." || clean == "" || filepath.IsAbs(clean) || strings.HasPrefix(clean, "..") {
 		return "", os.ErrPermission
 	}
 
 	return filepath.Join(s.root, clean), nil
+}
+
+func normalizeLocalKey(key string) string {
+	key = filepath.ToSlash(strings.TrimSpace(key))
+	return strings.TrimPrefix(key, "uploads/")
 }

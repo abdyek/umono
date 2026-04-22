@@ -28,6 +28,8 @@ var (
 	ErrPendingUploadMissing = errors.New("pending upload not found")
 )
 
+const mediaCacheControl = "public, max-age=31536000, immutable"
+
 type countingReader struct {
 	reader io.Reader
 	count  int64
@@ -151,7 +153,7 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 		return UploadMediaResult{}, err
 	}
 
-	pathKey := id.String() + "." + ext
+	pathKey := mediaPathKey(id.String(), ext)
 	hasher := sha256.New()
 	counter := &countingReader{reader: input.Reader}
 	reader := io.TeeReader(counter, hasher)
@@ -161,7 +163,8 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	}
 
 	if err := storageBackend.Put(ctx, pathKey, reader, media.ObjectMeta{
-		ContentType: input.MimeType,
+		ContentType:  input.MimeType,
+		CacheControl: mediaCacheControl,
 	}); err != nil {
 		return UploadMediaResult{}, err
 	}
@@ -234,7 +237,7 @@ func (s *MediaService) PrepareUpload(ctx context.Context, input PrepareUploadInp
 		ID:           id.String(),
 		StorageID:    storageModel.ID,
 		OriginalName: strings.TrimSpace(input.OriginalName),
-		PathKey:      id.String() + "." + ext,
+		PathKey:      mediaPathKey(id.String(), ext),
 		MimeType:     input.MimeType,
 		Size:         input.Size,
 		Hash:         strings.TrimSpace(strings.ToLower(input.Hash)),
@@ -247,8 +250,9 @@ func (s *MediaService) PrepareUpload(ctx context.Context, input PrepareUploadInp
 	}
 
 	url, headers, err := storageBackend.PresignPut(ctx, record.PathKey, media.ObjectMeta{
-		ContentType: record.MimeType,
-		Size:        record.Size,
+		ContentType:  record.MimeType,
+		CacheControl: mediaCacheControl,
+		Size:         record.Size,
 	})
 	if err != nil {
 		_ = s.deletePendingUpload(pending.Token)
@@ -461,12 +465,19 @@ func (s *MediaService) PublicURL(item models.Media) (string, error) {
 }
 
 func (s *MediaService) DirectURL(ctx context.Context, item models.Media) (string, error) {
-	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	storageModel, storageBackend, err := s.storageByID(ctx, item.StorageID)
 	if err != nil {
 		return "", err
 	}
+	if storageModel.Type == models.StorageTypeLocal {
+		return s.PublicURL(item)
+	}
 
 	return storageBackend.PublicURL(ctx, item.PathKey)
+}
+
+func mediaPathKey(id, ext string) string {
+	return filepath.Join("uploads", id+"."+ext)
 }
 
 func MediaAlias(item models.Media) string {
