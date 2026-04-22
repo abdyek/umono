@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -23,6 +25,7 @@ type S3Config struct {
 }
 
 type S3Storage struct {
+	endpoint  string
 	bucket    string
 	client    *s3.Client
 	presigner *s3.PresignClient
@@ -30,6 +33,7 @@ type S3Storage struct {
 }
 
 func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
+	endpoint := strings.TrimSpace(cfg.Endpoint)
 	awsCfg, err := config.LoadDefaultConfig(
 		ctx,
 		config.WithRegion(strings.TrimSpace(cfg.Region)),
@@ -45,12 +49,13 @@ func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
 
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.UsePathStyle = true
-		if endpoint := strings.TrimSpace(cfg.Endpoint); endpoint != "" {
+		if endpoint != "" {
 			o.BaseEndpoint = aws.String(endpoint)
 		}
 	})
 
 	return &S3Storage{
+		endpoint:  endpoint,
 		bucket:    strings.TrimSpace(cfg.Bucket),
 		client:    client,
 		presigner: s3.NewPresignClient(client),
@@ -107,7 +112,18 @@ func (s *S3Storage) Delete(ctx context.Context, key string) error {
 }
 
 func (s *S3Storage) PublicURL(ctx context.Context, key string) (string, error) {
-	return s.PresignGet(ctx, key)
+	baseURL, err := url.Parse(s.endpoint)
+	if err != nil {
+		return "", err
+	}
+
+	basePath := baseURL.Path
+	baseURL.Path = joinURLPath(basePath, s.bucket, key)
+	baseURL.RawPath = joinEscapedURLPath(basePath, s.bucket, key)
+	baseURL.RawQuery = ""
+	baseURL.Fragment = ""
+
+	return baseURL.String(), nil
 }
 
 func (s *S3Storage) PresignPut(ctx context.Context, key string, meta ObjectMeta) (string, map[string]string, error) {
@@ -163,4 +179,50 @@ func flattenHeaders(headers http.Header) map[string]string {
 
 func (s *S3Storage) String() string {
 	return fmt.Sprintf("s3:%s", s.bucket)
+}
+
+func joinURLPath(parts ...string) string {
+	joined := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		for _, segment := range strings.Split(strings.Trim(part, "/"), "/") {
+			if segment == "" {
+				continue
+			}
+			joined = append(joined, segment)
+		}
+	}
+
+	if len(joined) == 0 {
+		return "/"
+	}
+
+	return "/" + path.Join(joined...)
+}
+
+func joinEscapedURLPath(parts ...string) string {
+	escaped := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		for _, segment := range strings.Split(strings.Trim(part, "/"), "/") {
+			if segment == "" {
+				continue
+			}
+			escaped = append(escaped, url.PathEscape(segment))
+		}
+	}
+
+	if len(escaped) == 0 {
+		return "/"
+	}
+
+	return "/" + path.Join(escaped...)
 }
