@@ -65,7 +65,6 @@ func main() {
 		&models.Storage{},
 		&models.Media{},
 		&models.MediaVariant{},
-		&models.MediaJob{},
 	)
 
 	// TODO: Refactor: move DI another file
