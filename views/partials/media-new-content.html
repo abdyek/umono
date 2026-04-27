@@ -1,0 +1,110 @@
+<div id="media-content" class="flex-1 flex flex-col overflow-hidden">
+  <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "media.upload.title" }}</h2>
+        <p class="text-sm text-neutral-500">{{ t .I18n "media.upload.description" }}</p>
+      </div>
+    </div>
+  </header>
+  <form
+    class="flex-1 overflow-y-auto p-6"
+    hx-post="/admin/media"
+    hx-target="#media-content"
+    hx-swap="outerHTML"
+    hx-encoding="multipart/form-data"
+    data-media-upload-form
+    data-media-upload-error-required="{{ t .I18n "media.errors.file_required" }}"
+    data-media-upload-error-failed="{{ t .I18n "media.errors.upload_failed" }}"
+    data-media-upload-progress-local="{{ t .I18n "media.upload.progress.local" }}"
+    data-media-upload-progress-preparing="{{ t .I18n "media.upload.progress.preparing" }}"
+    data-media-upload-progress-direct="{{ t .I18n "media.upload.progress.direct" }}"
+    data-media-upload-progress-finalizing="{{ t .I18n "media.upload.progress.finalizing" }}"
+  >
+    <div class="mx-auto max-w-2xl space-y-6">
+      <div class="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-5">
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-neutral-300 ml-1" for="media-storage">{{ t .I18n "media.upload.storage" }}</label>
+          <select
+            id="media-storage"
+            name="storage_id"
+            class="w-full appearance-none rounded-xl border border-neutral-700 bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10"
+            data-media-storage-select
+          >
+            {{ range .MediaUpload.Storages }}
+            <option value="{{ .ID }}" data-storage-type="{{ .Type }}" {{ if .IsSelected }}selected{{ end }}>
+              {{ .Name }} · {{ .TypeLabel }}{{ if .IsDefault }} · {{ t $.I18n "settings.storage.default_badge" }}{{ end }}
+            </option>
+            {{ end }}
+          </select>
+          <p class="ml-1 text-xs text-neutral-500">{{ t .I18n "media.upload.storage_help" }}</p>
+        </div>
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-neutral-300 ml-1" for="media-file">{{ t .I18n "media.upload.image_file" }}</label>
+          <input
+            id="media-file"
+            name="file"
+            type="file"
+            accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg"
+            class="w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 file:mr-4 file:rounded-lg file:border-0 file:bg-neutral-800 file:px-3 file:py-2 file:text-sm file:font-medium file:text-neutral-200 hover:file:bg-neutral-700"
+            required
+          >
+        </div>
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-neutral-300 ml-1" for="media-alias">{{ t .I18n "media.alias" }}</label>
+          <input
+            id="media-alias"
+            name="alias"
+            type="text"
+            value="{{ .MediaUpload.Alias }}"
+            placeholder="{{ t .I18n "media.alias_placeholder" }}"
+            data-media-alias-input
+            data-media-alias-mode="create"
+            data-media-alias-has-server-error="{{ if .MediaUpload.AliasError }}true{{ else }}false{{ end }}"
+            class="w-full bg-neutral-900/50 border {{ if .MediaUpload.AliasError }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-4 transition-all duration-200 placeholder:text-neutral-600"
+          >
+          <div class="{{ if .MediaUpload.AliasError }}flex{{ else }}hidden{{ end }} items-center gap-1.5 ml-1 mt-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2" data-media-alias-error>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            <p class="text-xs font-medium text-red-400" data-media-alias-error-text>{{ .MediaUpload.ErrorMsg }}</p>
+          </div>
+          <div class="ml-1 mt-1 rounded-lg border px-3 py-2 text-xs transition-all duration-200 {{ if .MediaUpload.AliasError }}hidden border-transparent bg-transparent{{ else }}flex items-center gap-1.5 border-neutral-800 bg-neutral-900/40 text-neutral-500{{ end }}" data-media-alias-helper>
+            <span class="h-1.5 w-1.5 rounded-full bg-neutral-600 transition-colors duration-200" data-media-alias-helper-dot></span>
+            <p>{{ t .I18n "media.alias_helper" }}</p>
+          </div>
+        </div>
+        <div class="hidden rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100" data-media-upload-progress>
+          <div class="flex items-center justify-between gap-3">
+            <p data-media-upload-progress-label>{{ t .I18n "media.upload.progress.direct" }}</p>
+            <span class="text-xs text-amber-200" data-media-upload-progress-value>0%</span>
+          </div>
+          <div class="mt-3 h-2 overflow-hidden rounded-full bg-neutral-950/60">
+            <div class="h-full w-0 rounded-full bg-amber-400 transition-all duration-200" data-media-upload-progress-bar></div>
+          </div>
+        </div>
+        <div class="{{ if or (eq .MediaUpload.ErrorMsg "") (.MediaUpload.AliasError) }}hidden {{ end }}rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200" data-media-upload-server-error>
+          {{ .MediaUpload.ErrorMsg }}
+        </div>
+      </div>
+      <div class="flex items-center justify-end">
+        <button
+          type="submit"
+          class="relative flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-purple-900/20 active:scale-[0.98] cursor-pointer"
+        >
+          <span class="flex items-center gap-2 [.htmx-request_&]:invisible">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>{{ t .I18n "media.upload.button" }}</span>
+          </span>
+          <span class="absolute inset-0 flex items-center justify-center invisible [.htmx-request_&]:visible text-white">
+            <span class="h-4 w-4">
+              {{ template "partials/spinner" . }}
+            </span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

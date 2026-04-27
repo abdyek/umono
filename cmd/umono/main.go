@@ -58,10 +58,19 @@ func main() {
 
 	comp := compono.New()
 
-	db.AutoMigrate(&models.Component{}, &models.SitePage{}, &models.Option{})
+	db.AutoMigrate(
+		&models.Component{},
+		&models.SitePage{},
+		&models.Option{},
+		&models.Storage{},
+		&models.Media{},
+		&models.MediaVariant{},
+	)
 
 	// TODO: Refactor: move DI another file
 	optionRepo := repository.NewOptionRepository(db)
+	storageRepo := repository.NewStorageRepository(db)
+	mediaRepo := repository.NewMediaRepository(db)
 
 	sitePageRepo := repository.NewSitePageRepository(db)
 	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, comp)
@@ -71,11 +80,16 @@ func main() {
 	componentService.LoadAsGlobalComponent()
 
 	settingsService := service.NewSettingsService()
+	storageService := service.NewStorageService(storageRepo)
 	bundle, err := i18n.LoadBundle(umono.Locales(), service.DefaultLanguage)
 	if err != nil {
 		log.Fatal("i18n err", err)
 	}
 	optionService := service.NewOptionService(optionRepo, bundle)
+	mediaService := service.NewMediaService(mediaRepo, storageRepo, optionRepo, "uploads/.pending")
+	if err := mediaService.EnsureDefaultLocalStorage("uploads"); err != nil {
+		log.Fatal("media storage err", err)
+	}
 
 	adminHandler := handler.NewAdminHandler(
 		sitePageService,
@@ -86,7 +100,8 @@ func main() {
 	siteHandler := handler.NewSiteHandler(sitePageService)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
-	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService)
+	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
+	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
@@ -199,7 +214,58 @@ func main() {
 	adminProtected.Get("/settings", settingsHandler.Index)
 	adminProtected.Get("/settings/general", settingsHandler.RenderGeneral)
 	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
+	adminProtected.Get("/settings/storage", settingsHandler.RenderStorageIndex)
+	adminProtected.Get("/settings/storage/new", settingsHandler.RenderStorageNew)
+	adminProtected.Get("/settings/storage/:id", settingsHandler.RenderStorageShow)
+	adminProtected.Post("/settings/storage",
+		middleware.OnlyHTMX(),
+		settingsHandler.CreateStorage,
+	)
+	adminProtected.Put("/settings/storage/:id",
+		middleware.OnlyHTMX(),
+		settingsHandler.UpdateStorage,
+	)
+	adminProtected.Post("/settings/storage/:id/test",
+		middleware.OnlyHTMX(),
+		settingsHandler.TestStorage,
+	)
+	adminProtected.Delete("/settings/storage/:id",
+		middleware.OnlyHTMX(),
+		settingsHandler.DeleteStorage,
+	)
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
+	adminProtected.Get("/media", mediaHandler.Index)
+	adminProtected.Get("/media/new", mediaHandler.RenderNew)
+	adminProtected.Get("/media/pending/:token/preview", mediaHandler.ServePending)
+	adminProtected.Get("/media/:id", mediaHandler.RenderShow)
+	adminProtected.Post("/media",
+		middleware.OnlyHTMX(),
+		mediaHandler.Upload,
+	)
+	adminProtected.Post("/media/presign",
+		middleware.OnlyHTMX(),
+		mediaHandler.PresignUpload,
+	)
+	adminProtected.Post("/media/complete",
+		middleware.OnlyHTMX(),
+		mediaHandler.CompleteUpload,
+	)
+	adminProtected.Post("/media/confirm",
+		middleware.OnlyHTMX(),
+		mediaHandler.ConfirmUpload,
+	)
+	adminProtected.Post("/media/cancel",
+		middleware.OnlyHTMX(),
+		mediaHandler.CancelUpload,
+	)
+	adminProtected.Put("/media/:id/alias",
+		middleware.OnlyHTMX(),
+		mediaHandler.UpdateAlias,
+	)
+	adminProtected.Delete("/media/:id",
+		middleware.OnlyHTMX(),
+		mediaHandler.Delete,
+	)
 
 	adminProtected.Post("/options/language",
 		middleware.OnlyHTMX(),
@@ -213,6 +279,7 @@ func main() {
 
 	app.Post("/login", authHandler.Login)
 	app.Post("/logout", middleware.Logged(store), authHandler.Logout)
+	app.Get("/uploads/:filename", mediaHandler.Serve)
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 

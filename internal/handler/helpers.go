@@ -25,6 +25,7 @@ func Render(c *fiber.Ctx, view string, data fiber.Map, layouts ...string) error 
 	data["IsAlreadyOnSettings"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/settings")
 	data["IsAlreadyOnSitePages"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/site-pages")
 	data["IsAlreadyOnComponents"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/components")
+	data["IsAlreadyOnMedia"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/media")
 	return c.Render(view, data, layouts...)
 }
 
@@ -58,6 +59,20 @@ func translatedValidationError(c *fiber.Ctx, err error) string {
 		return translate(c, "admin.components.errors.invalid_name")
 	case errors.Is(err, service.ErrComponentNameAlreadyExists):
 		return translate(c, "admin.components.errors.name_exists")
+	case errors.Is(err, service.ErrStorageNameRequired):
+		return translate(c, "settings.storage.errors.name_required")
+	case errors.Is(err, service.ErrStorageEndpointRequired):
+		return translate(c, "settings.storage.errors.endpoint_required")
+	case errors.Is(err, service.ErrStorageRegionRequired):
+		return translate(c, "settings.storage.errors.region_required")
+	case errors.Is(err, service.ErrStorageBucketRequired):
+		return translate(c, "settings.storage.errors.bucket_required")
+	case errors.Is(err, service.ErrStorageAccessKeyRequired):
+		return translate(c, "settings.storage.errors.access_key_required")
+	case errors.Is(err, service.ErrStorageSecretKeyRequired):
+		return translate(c, "settings.storage.errors.secret_key_required")
+	case errors.Is(err, service.ErrStorageTestBodyMismatch):
+		return translate(c, "settings.storage.test.errors.body_mismatch")
 	default:
 		return err.Error()
 	}
