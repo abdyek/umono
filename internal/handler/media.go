@@ -60,7 +60,7 @@ func (h *mediaHandler) RenderShow(c *fiber.Ctx) error {
 
 	return h.render(c, "partials/media-show", fiber.Map{
 		"MediaList": h.buildMediaList(items, item.ID),
-		"Media":     h.buildMediaDetail(item),
+		"Media":     h.buildMediaDetail(item, c.Locals("I18n")),
 	})
 }
 
@@ -301,7 +301,7 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 
-		detail := h.buildMediaDetail(current)
+		detail := h.buildMediaDetail(current, c.Locals("I18n"))
 		detail.Alias = submittedAlias
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
 			detail.ErrorMsg = translate(c, "media.errors.alias_exists")
@@ -319,7 +319,7 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 	items := h.mediaService.GetAll()
 	return h.render(c, "partials/media-show", fiber.Map{
 		"MediaList": h.buildMediaList(items, item.ID),
-		"Media":     h.buildMediaDetail(item),
+		"Media":     h.buildMediaDetail(item, c.Locals("I18n")),
 	})
 }
 
@@ -416,7 +416,7 @@ type mediaUploadFormData struct {
 	Storages        []mediaStorageOption
 }
 
-func (h *mediaHandler) buildMediaDetail(item models.Media) mediaDetailData {
+func (h *mediaHandler) buildMediaDetail(item models.Media, translator any) mediaDetailData {
 	storageName := item.StorageID
 	if storage, err := h.storageService.GetByID(item.StorageID); err == nil && strings.TrimSpace(storage.Name) != "" {
 		storageName = storage.Name
@@ -432,7 +432,7 @@ func (h *mediaHandler) buildMediaDetail(item models.Media) mediaDetailData {
 		Size:        item.Size,
 		Width:       metadataInt(item.Metadata, "width"),
 		Height:      metadataInt(item.Metadata, "height"),
-		CreatedAt:   item.CreatedAt.Format("2006-01-02 15:04"),
+		CreatedAt:   view.RelativeTimeWithTranslator(&item.CreatedAt, translator),
 	}
 }
 
