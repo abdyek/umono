@@ -222,6 +222,14 @@ function findMediaUploadElements(root) {
 
   return {
     form,
+    text: {
+      fileRequired: form.dataset.mediaUploadErrorRequired || 'Select a PNG, JPEG, or WEBP image to continue.',
+      uploadFailed: form.dataset.mediaUploadErrorFailed || 'Upload failed.',
+      progressLocal: form.dataset.mediaUploadProgressLocal || 'Uploading to local storage…',
+      progressPreparing: form.dataset.mediaUploadProgressPreparing || 'Preparing direct upload…',
+      progressDirect: form.dataset.mediaUploadProgressDirect || 'Uploading directly to storage…',
+      progressFinalizing: form.dataset.mediaUploadProgressFinalizing || 'Finalizing media record…',
+    },
     fileInput: form.querySelector('#media-file'),
     aliasInput: form.querySelector('#media-alias'),
     storageSelect: form.querySelector('[data-media-storage-select]'),
@@ -310,7 +318,7 @@ async function sha256Hex(file) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function uploadFileWithXHR(url, headers, file, onProgress) {
+function uploadFileWithXHR(url, headers, file, onProgress, failureMessage) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url, true);
@@ -329,27 +337,27 @@ function uploadFileWithXHR(url, headers, file, onProgress) {
       onProgress((event.loaded / event.total) * 100);
     });
 
-    xhr.onerror = () => reject(new Error('upload_failed'));
+    xhr.onerror = () => reject(new Error(failureMessage));
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
         return;
       }
-      reject(new Error('upload_failed'));
+      reject(new Error(failureMessage));
     };
 
     xhr.send(file);
   });
 }
 
-function applyMediaContentResponse(html, pushUrl) {
+function applyMediaContentResponse(html, pushUrl, failureMessage) {
   const parser = new DOMParser();
   const nextDocument = parser.parseFromString(html, 'text/html');
   const nextContent = nextDocument.querySelector('#media-content');
   const currentContent = document.querySelector('#media-content');
 
   if (!nextContent || !currentContent) {
-    throw new Error('Upload failed.');
+    throw new Error(failureMessage);
   }
 
   currentContent.outerHTML = nextContent.outerHTML;
@@ -383,13 +391,13 @@ async function submitLocalMediaUpload(elements) {
   if (!response.ok) {
     if (contentType.includes('application/json')) {
       const uploadError = await response.json();
-      throw { message: uploadError.error || 'Upload failed.', aliasError: uploadError.alias_error === true };
+      throw { message: uploadError.error || elements.text.uploadFailed, aliasError: uploadError.alias_error === true };
     }
-    throw new Error('Upload failed.');
+    throw new Error(elements.text.uploadFailed);
   }
 
   const html = await response.text();
-  applyMediaContentResponse(html, response.headers.get('HX-Push-Url'));
+  applyMediaContentResponse(html, response.headers.get('HX-Push-Url'), elements.text.uploadFailed);
 }
 
 function initMediaUpload(root = document) {
@@ -411,7 +419,7 @@ function initMediaUpload(root = document) {
 
     const file = elements.fileInput && elements.fileInput.files ? elements.fileInput.files[0] : null;
     if (!file) {
-      setMediaUploadError(elements, 'Select a PNG, JPEG, or WEBP image to continue.');
+      setMediaUploadError(elements, elements.text.fileRequired);
       return;
     }
 
@@ -420,12 +428,12 @@ function initMediaUpload(root = document) {
 
     try {
       if (storageType !== 's3') {
-        setMediaUploadProgress(elements, 20, 'Uploading to local storage…');
+        setMediaUploadProgress(elements, 20, elements.text.progressLocal);
         await submitLocalMediaUpload(elements);
         return;
       }
 
-      setMediaUploadProgress(elements, 5, 'Preparing direct upload…');
+      setMediaUploadProgress(elements, 5, elements.text.progressPreparing);
       const hash = await sha256Hex(file);
       const payload = new URLSearchParams({
         storage_id: elements.storageSelect ? elements.storageSelect.value : '',
@@ -447,15 +455,15 @@ function initMediaUpload(root = document) {
 
       const presignData = await presignResponse.json();
       if (!presignResponse.ok) {
-        throw { message: presignData.error || 'Upload failed.', aliasError: presignData.alias_error === true };
+        throw { message: presignData.error || elements.text.uploadFailed, aliasError: presignData.alias_error === true };
       }
 
-      setMediaUploadProgress(elements, 15, 'Uploading directly to storage…');
+      setMediaUploadProgress(elements, 15, elements.text.progressDirect);
       await uploadFileWithXHR(presignData.url, presignData.headers, file, (progress) => {
-        setMediaUploadProgress(elements, progress, 'Uploading directly to storage…');
-      });
+        setMediaUploadProgress(elements, progress, elements.text.progressDirect);
+      }, elements.text.uploadFailed);
 
-      setMediaUploadProgress(elements, 100, 'Finalizing media record…');
+      setMediaUploadProgress(elements, 100, elements.text.progressFinalizing);
       const completeResponse = await fetch('/admin/media/complete', {
         method: 'POST',
         headers: {
@@ -470,17 +478,17 @@ function initMediaUpload(root = document) {
       if (!completeResponse.ok) {
         if (contentType.includes('application/json')) {
           const completeError = await completeResponse.json();
-          throw { message: completeError.error || 'Upload failed.', aliasError: completeError.alias_error === true };
+          throw { message: completeError.error || elements.text.uploadFailed, aliasError: completeError.alias_error === true };
         }
-        throw new Error('Upload failed.');
+        throw new Error(elements.text.uploadFailed);
       }
 
       const html = await completeResponse.text();
-      applyMediaContentResponse(html, completeResponse.headers.get('HX-Push-Url'));
+      applyMediaContentResponse(html, completeResponse.headers.get('HX-Push-Url'), elements.text.uploadFailed);
     } catch (error) {
       hideMediaUploadProgress(elements);
       setMediaUploadBusy(elements, false);
-      setMediaUploadError(elements, error.message || 'Upload failed.', error.aliasError === true);
+      setMediaUploadError(elements, error.message || elements.text.uploadFailed, error.aliasError === true);
     }
   }, true);
 }

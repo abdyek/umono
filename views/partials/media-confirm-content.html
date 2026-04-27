@@ -2,15 +2,15 @@
   <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-lg font-semibold text-neutral-200">Duplicate detected</h2>
-        <p class="text-sm text-neutral-500">This exact file hash already exists. Decide whether to keep the new upload.</p>
+        <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "media.confirm.title" }}</h2>
+        <p class="text-sm text-neutral-500">{{ t .I18n "media.confirm.description" }}</p>
       </div>
     </div>
   </header>
   <div class="flex-1 overflow-y-auto p-6">
     <div class="mx-auto max-w-3xl space-y-6">
       <div class="rounded-3xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-100">
-        A file with the same content was found. Uploading already finished, but the database record has not been created yet.
+        {{ t .I18n "media.confirm.notice" }}
       </div>
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-3xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
@@ -18,18 +18,18 @@
             <img src="{{ .Pending.NewURL }}" alt="{{ .Pending.Name }}" class="h-full w-full object-cover">
           </div>
           <div class="px-4 py-4">
-            <p class="text-sm font-medium text-neutral-200">New upload</p>
+            <p class="text-sm font-medium text-neutral-200">{{ t .I18n "media.confirm.new_upload" }}</p>
             <p class="mt-1 text-xs text-neutral-500">{{ .Pending.Name }}</p>
-            {{ if .Pending.Alias }}<p class="mt-1 text-xs text-neutral-500">Alias: {{ .Pending.Alias }}</p>{{ end }}
+            {{ if .Pending.Alias }}<p class="mt-1 text-xs text-neutral-500">{{ t .I18n "media.alias" }}: {{ .Pending.Alias }}</p>{{ end }}
           </div>
         </div>
         <div class="rounded-3xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
           <div class="aspect-[4/3] bg-neutral-950/60">
-            <img src="{{ .Pending.DuplicateURL }}" alt="Existing duplicate" class="h-full w-full object-cover">
+            <img src="{{ .Pending.DuplicateURL }}" alt="{{ t .I18n "media.confirm.existing_duplicate_alt" }}" class="h-full w-full object-cover">
           </div>
           <div class="px-4 py-4">
-            <p class="text-sm font-medium text-neutral-200">Existing file</p>
-            <p class="mt-1 text-xs text-neutral-500">The stored hash matches the uploaded image.</p>
+            <p class="text-sm font-medium text-neutral-200">{{ t .I18n "media.confirm.existing_file" }}</p>
+            <p class="mt-1 text-xs text-neutral-500">{{ t .I18n "media.confirm.existing_file_description" }}</p>
           </div>
         </div>
       </div>
@@ -44,7 +44,7 @@
             type="submit"
             class="relative px-4 py-2.5 rounded-xl border border-neutral-700 bg-neutral-900/50 text-sm font-medium text-neutral-200 hover:bg-neutral-800/60 transition-all duration-200 cursor-pointer"
           >
-            <span class="[.htmx-request_&]:invisible">Cancel</span>
+            <span class="[.htmx-request_&]:invisible">{{ t .I18n "common.cancel" }}</span>
             <span class="absolute inset-0 flex items-center justify-center invisible [.htmx-request_&]:visible">
               <span class="h-4 w-4">
                 {{ template "partials/spinner" . }}
@@ -66,7 +66,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Continue</span>
+              <span>{{ t .I18n "common.continue" }}</span>
             </span>
             <span class="absolute inset-0 flex items-center justify-center invisible [.htmx-request_&]:visible text-white">
               <span class="h-4 w-4">

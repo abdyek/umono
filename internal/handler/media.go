@@ -71,7 +71,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		if wantsMediaUploadJSON(c) {
 			c.Status(fiber.StatusBadRequest)
 			return c.JSON(fiber.Map{
-				"error": "Select a valid storage before uploading.",
+				"error": translate(c, "media.errors.invalid_storage"),
 			})
 		}
 		return Render(c, "partials/media-new-content", fiber.Map{
@@ -79,7 +79,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 				Alias:           strings.TrimSpace(c.FormValue("alias")),
 				StorageID:       storageID,
 				SelectedStorage: storageID,
-				ErrorMsg:        "Select a valid storage before uploading.",
+				ErrorMsg:        translate(c, "media.errors.invalid_storage"),
 			}),
 		})
 	}
@@ -87,7 +87,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		if wantsMediaUploadJSON(c) {
 			c.Status(fiber.StatusBadRequest)
 			return c.JSON(fiber.Map{
-				"error": "This storage uses direct upload. Try again with JavaScript enabled.",
+				"error": translate(c, "media.errors.direct_upload_requires_js"),
 			})
 		}
 		return Render(c, "partials/media-new-content", fiber.Map{
@@ -95,7 +95,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 				Alias:           strings.TrimSpace(c.FormValue("alias")),
 				StorageID:       storageID,
 				SelectedStorage: storageID,
-				ErrorMsg:        "This storage uses direct upload. Try again with JavaScript enabled.",
+				ErrorMsg:        translate(c, "media.errors.direct_upload_requires_js"),
 			}),
 		})
 	}
@@ -105,7 +105,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		if wantsMediaUploadJSON(c) {
 			c.Status(fiber.StatusBadRequest)
 			return c.JSON(fiber.Map{
-				"error": "Select a PNG, JPEG, or WEBP image to continue.",
+				"error": translate(c, "media.errors.file_required"),
 			})
 		}
 		return Render(c, "partials/media-new-content", fiber.Map{
@@ -113,7 +113,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 				Alias:           strings.TrimSpace(c.FormValue("alias")),
 				StorageID:       storageID,
 				SelectedStorage: storageID,
-				ErrorMsg:        "Select a PNG, JPEG, or WEBP image to continue.",
+				ErrorMsg:        translate(c, "media.errors.file_required"),
 			}),
 		})
 	}
@@ -133,7 +133,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		if wantsMediaUploadJSON(c) {
 			c.Status(fiber.StatusBadRequest)
 			return c.JSON(fiber.Map{
-				"error": "Only PNG, JPEG, and WEBP files are allowed.",
+				"error": translate(c, "media.errors.unsupported_type"),
 			})
 		}
 		return Render(c, "partials/media-new-content", fiber.Map{
@@ -141,7 +141,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 				Alias:           strings.TrimSpace(c.FormValue("alias")),
 				StorageID:       storageID,
 				SelectedStorage: storageID,
-				ErrorMsg:        "Only PNG, JPEG, and WEBP files are allowed.",
+				ErrorMsg:        translate(c, "media.errors.unsupported_type"),
 			}),
 		})
 	}
@@ -154,16 +154,16 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		Reader:       reader,
 	})
 	if err != nil {
-		errMsg := "Upload failed."
+		errMsg := translate(c, "media.errors.upload_failed")
 		aliasError := false
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
-			errMsg = "This alias is already in use."
+			errMsg = translate(c, "media.errors.alias_exists")
 			aliasError = true
 		} else if errors.Is(err, service.ErrInvalidAlias) {
-			errMsg = "Alias must be kebab-case."
+			errMsg = translate(c, "media.errors.invalid_alias")
 			aliasError = true
 		} else if errors.Is(err, service.ErrUnsupportedMediaType) {
-			errMsg = "Only PNG, JPEG, and WEBP files are allowed."
+			errMsg = translate(c, "media.errors.unsupported_type")
 		}
 
 		if wantsMediaUploadJSON(c) {
@@ -214,7 +214,7 @@ func (h *mediaHandler) PresignUpload(c *fiber.Ctx) error {
 	if err != nil {
 		c.Status(fiber.StatusBadRequest)
 		return c.JSON(fiber.Map{
-			"error":       mediaUploadErrorMessage(err),
+			"error":       mediaUploadErrorMessage(c, err),
 			"alias_error": errors.Is(err, service.ErrAliasAlreadyExists) || errors.Is(err, service.ErrInvalidAlias),
 		})
 	}
@@ -227,7 +227,7 @@ func (h *mediaHandler) CompleteUpload(c *fiber.Ctx) error {
 	if err != nil {
 		c.Status(fiber.StatusBadRequest)
 		return c.JSON(fiber.Map{
-			"error":       mediaUploadErrorMessage(err),
+			"error":       mediaUploadErrorMessage(c, err),
 			"alias_error": errors.Is(err, service.ErrAliasAlreadyExists) || errors.Is(err, service.ErrInvalidAlias),
 		})
 	}
@@ -248,13 +248,13 @@ func (h *mediaHandler) CompleteUpload(c *fiber.Ctx) error {
 func (h *mediaHandler) ConfirmUpload(c *fiber.Ctx) error {
 	_, err := h.mediaService.ConfirmPendingUpload(c.UserContext(), c.FormValue("token"))
 	if err != nil {
-		errMsg := "The pending upload could not be completed."
+		errMsg := translate(c, "media.errors.pending_complete_failed")
 		aliasError := false
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
-			errMsg = "This alias is already in use."
+			errMsg = translate(c, "media.errors.alias_exists")
 			aliasError = true
 		} else if errors.Is(err, service.ErrInvalidAlias) {
-			errMsg = "Alias must be kebab-case."
+			errMsg = translate(c, "media.errors.invalid_alias")
 			aliasError = true
 		}
 
@@ -277,7 +277,7 @@ func (h *mediaHandler) CancelUpload(c *fiber.Ctx) error {
 	if err := h.mediaService.CancelPendingUpload(c.UserContext(), c.FormValue("token")); err != nil {
 		return Render(c, "partials/media-new-content", fiber.Map{
 			"MediaUpload": h.buildUploadForm(c, mediaUploadFormData{
-				ErrorMsg: "The pending upload could not be canceled cleanly.",
+				ErrorMsg: translate(c, "media.errors.pending_cancel_failed"),
 			}),
 		})
 	}
@@ -304,11 +304,11 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 		detail := h.buildMediaDetail(current)
 		detail.Alias = submittedAlias
 		if errors.Is(err, service.ErrAliasAlreadyExists) {
-			detail.ErrorMsg = "This alias is already in use."
+			detail.ErrorMsg = translate(c, "media.errors.alias_exists")
 		} else if errors.Is(err, service.ErrInvalidAlias) {
-			detail.ErrorMsg = "Alias must be kebab-case."
+			detail.ErrorMsg = translate(c, "media.errors.invalid_alias")
 		} else {
-			detail.ErrorMsg = "Alias update failed."
+			detail.ErrorMsg = translate(c, "media.errors.alias_update_failed")
 		}
 
 		return Render(c, "partials/media-show-content", fiber.Map{
@@ -496,7 +496,7 @@ func buildPendingDuplicate(pending *service.PendingUpload, duplicate models.Medi
 
 func (h *mediaHandler) buildUploadForm(c *fiber.Ctx, form mediaUploadFormData) mediaUploadFormData {
 	defaultStorageID := h.optionService.GetDefaultStorageID()
-	form.Storages = h.buildStorageOptions(defaultStorageID, firstNonEmpty(form.SelectedStorage, form.StorageID, defaultStorageID))
+	form.Storages = h.buildStorageOptions(c, defaultStorageID, firstNonEmpty(form.SelectedStorage, form.StorageID, defaultStorageID))
 	if len(form.Storages) > 0 && firstNonEmpty(form.SelectedStorage, form.StorageID) == "" {
 		form.StorageID = form.Storages[0].ID
 		form.SelectedStorage = form.Storages[0].ID
@@ -504,7 +504,7 @@ func (h *mediaHandler) buildUploadForm(c *fiber.Ctx, form mediaUploadFormData) m
 	return form
 }
 
-func (h *mediaHandler) buildStorageOptions(defaultStorageID, selectedStorageID string) []mediaStorageOption {
+func (h *mediaHandler) buildStorageOptions(c *fiber.Ctx, defaultStorageID, selectedStorageID string) []mediaStorageOption {
 	storages := h.storageService.GetAll()
 	options := make([]mediaStorageOption, 0, len(storages))
 
@@ -513,7 +513,7 @@ func (h *mediaHandler) buildStorageOptions(defaultStorageID, selectedStorageID s
 			ID:         storage.ID,
 			Name:       storage.Name,
 			Type:       storage.Type,
-			TypeLabel:  mediaStorageTypeLabel(storage.Type),
+			TypeLabel:  storageTypeLabel(c, storage.Type),
 			IsDefault:  storage.ID == defaultStorageID,
 			IsSelected: storage.ID == selectedStorageID,
 		})
@@ -549,17 +549,6 @@ func (h *mediaHandler) buildStorageOptions(defaultStorageID, selectedStorageID s
 	return options
 }
 
-func mediaStorageTypeLabel(storageType string) string {
-	switch storageType {
-	case models.StorageTypeLocal:
-		return "Local"
-	case models.StorageTypeS3:
-		return "S3-compatible"
-	default:
-		return storageType
-	}
-}
-
 func (h *mediaHandler) buildMediaList(items []models.Media, activeID string) []view.MediaListItem {
 	return view.MediaList(items, activeID, h.directURL)
 }
@@ -576,20 +565,20 @@ func (h *mediaHandler) directURL(item models.Media) string {
 	return url
 }
 
-func mediaUploadErrorMessage(err error) string {
+func mediaUploadErrorMessage(c *fiber.Ctx, err error) string {
 	switch {
 	case errors.Is(err, service.ErrAliasAlreadyExists):
-		return "This alias is already in use."
+		return translate(c, "media.errors.alias_exists")
 	case errors.Is(err, service.ErrInvalidAlias):
-		return "Alias must be kebab-case."
+		return translate(c, "media.errors.invalid_alias")
 	case errors.Is(err, service.ErrUnsupportedMediaType):
-		return "Only PNG, JPEG, and WEBP files are allowed."
+		return translate(c, "media.errors.unsupported_type")
 	case errors.Is(err, service.ErrStorageNotFound):
-		return "Select a valid storage before uploading."
+		return translate(c, "media.errors.invalid_storage")
 	case errors.Is(err, service.ErrPendingUploadMissing):
-		return "The direct upload session expired or the file is missing."
+		return translate(c, "media.errors.pending_missing")
 	default:
-		return "Upload failed."
+		return translate(c, "media.errors.upload_failed")
 	}
 }
 

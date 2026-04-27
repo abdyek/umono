@@ -2,8 +2,8 @@
   <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-lg font-semibold text-neutral-200">Library</h2>
-        <p class="text-sm text-neutral-500">Browse uploaded assets and open a file for details.</p>
+        <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "media.library.title" }}</h2>
+        <p class="text-sm text-neutral-500">{{ t .I18n "media.library.description" }}</p>
       </div>
     </div>
   </header>
@@ -36,8 +36,8 @@
     </div>
     {{ else }}
     <div class="mx-auto flex max-w-xl flex-col items-center justify-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/40 px-8 py-16 text-center">
-      <h3 class="text-lg font-semibold text-neutral-200">No media yet</h3>
-      <p class="mt-2 text-sm text-neutral-500">Upload your first PNG, JPEG, or WEBP asset from the left panel.</p>
+      <h3 class="text-lg font-semibold text-neutral-200">{{ t .I18n "media.library.empty_title" }}</h3>
+      <p class="mt-2 text-sm text-neutral-500">{{ t .I18n "media.library.empty_description" }}</p>
     </div>
     {{ end }}
   </div>
