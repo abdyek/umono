@@ -14,8 +14,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/umono-cms/compono v0.4.0
-	golang.org/x/crypto v0.45.0
-	golang.org/x/net v0.47.0
+	github.com/umono-cms/crypto v0.1.0
+	golang.org/x/crypto v0.50.0
+	golang.org/x/net v0.52.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
 )
@@ -49,6 +50,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.59.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 )

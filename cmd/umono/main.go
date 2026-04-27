@@ -1,12 +1,13 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +15,7 @@ import (
 	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/compono"
+	umonocrypto "github.com/umono-cms/crypto"
 	"github.com/umono-cms/umono"
 	"github.com/umono-cms/umono/internal/config"
 	"github.com/umono-cms/umono/internal/handler"
@@ -28,20 +30,17 @@ import (
 	"gorm.io/gorm"
 )
 
+var errUmonoSecretNotSet = errors.New("UMONO_SECRET is not set. Run: umono secret init")
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		panic("Error loading .env file!")
 	}
 
-	if os.Getenv("SECRET") == "" {
-
-		bytes := make([]byte, 32)
-		_, err := rand.Read(bytes)
-		if err != nil {
-			panic("SECRET could not generate.")
-		}
-
-		os.Setenv("SECRET", hex.EncodeToString(bytes))
+	umonoSecret, err := newUmonoSecretFromEnv()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	if os.Getenv("USERNAME") != "" && os.Getenv("PASSWORD") != "" {
@@ -65,12 +64,14 @@ func main() {
 		&models.Storage{},
 		&models.Media{},
 		&models.MediaVariant{},
+		&models.Secret{},
 	)
 
 	// TODO: Refactor: move DI another file
 	optionRepo := repository.NewOptionRepository(db)
 	storageRepo := repository.NewStorageRepository(db)
 	mediaRepo := repository.NewMediaRepository(db)
+	secretRepo := repository.NewSecretRepository(db)
 
 	sitePageRepo := repository.NewSitePageRepository(db)
 	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, comp)
@@ -81,6 +82,7 @@ func main() {
 
 	settingsService := service.NewSettingsService()
 	storageService := service.NewStorageService(storageRepo)
+	_ = service.NewSecretService(secretRepo, umonoSecret)
 	bundle, err := i18n.LoadBundle(umono.Locales(), service.DefaultLanguage)
 	if err != nil {
 		log.Fatal("i18n err", err)
@@ -289,6 +291,21 @@ func main() {
 	}
 
 	log.Fatal(app.Listen(port))
+}
+
+func newUmonoSecretFromEnv() (*umonocrypto.Secret, error) {
+	secretValue := strings.TrimSpace(os.Getenv("UMONO_SECRET"))
+	if secretValue == "" {
+		return nil, errUmonoSecretNotSet
+	}
+	defer os.Unsetenv("UMONO_SECRET")
+
+	key, err := umonocrypto.ParseHexString(secretValue)
+	if err != nil {
+		return nil, err
+	}
+
+	return umonocrypto.New(key, []byte("umono-secrets"))
 }
 
 func updateEnvFile() error {
