@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -47,10 +49,17 @@ type storageFormData struct {
 	DeleteHint  string
 	Errors      map[string]string
 	GlobalError string
+	TestResult  *storageTestResult
 	SubmitURL   string
 	CancelURL   string
 	BackURL     string
 	PushURL     string
+}
+
+type storageTestResult struct {
+	Success bool
+	Title   string
+	Message string
 }
 
 func (h *settingsHandler) RenderStorageIndex(c *fiber.Ctx) error {
@@ -107,12 +116,16 @@ func (h *settingsHandler) CreateStorage(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
+	testResult := h.runStorageTest(c, storage.ID)
+	form := h.buildStorageFormData(c, storage, map[string]string{}, "")
+	form.TestResult = &testResult
+
 	c.Set("HX-Push-Url", "/admin/settings/storage/"+storage.ID)
 
 	return h.renderStorage(c, storagePageData{
 		List:         h.buildStorageList(c, storage.ID, ""),
 		HasSelection: true,
-		Storage:      h.buildStorageFormData(c, storage, map[string]string{}, ""),
+		Storage:      form,
 	})
 }
 
@@ -171,6 +184,30 @@ func (h *settingsHandler) UpdateStorage(c *fiber.Ctx) error {
 		List:         h.buildStorageList(c, storage.ID, ""),
 		HasSelection: true,
 		Storage:      h.buildStorageFormData(c, storage, map[string]string{}, ""),
+	})
+}
+
+func (h *settingsHandler) TestStorage(c *fiber.Ctx) error {
+	id := c.Params("id")
+	storage, err := h.storageService.GetByID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrStorageNotFound) {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		return fiber.ErrInternalServerError
+	}
+	if storage.Type != models.StorageTypeS3 {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	form := h.buildStorageFormData(c, storage, map[string]string{}, "")
+	testResult := h.runStorageTest(c, id)
+	form.TestResult = &testResult
+
+	return h.renderStorage(c, storagePageData{
+		List:         h.buildStorageList(c, storage.ID, ""),
+		HasSelection: true,
+		Storage:      form,
 	})
 }
 
@@ -414,4 +451,50 @@ func (h *settingsHandler) persistDefaultStorageSelection(isDefault bool, storage
 		return h.optionService.SaveDefaultStorageID(service.DefaultLocalStorageID)
 	}
 	return nil
+}
+
+func (h *settingsHandler) runStorageTest(c *fiber.Ctx, id string) storageTestResult {
+	ctx, cancel := context.WithTimeout(c.UserContext(), 20*time.Second)
+	defer cancel()
+
+	err := h.storageService.TestS3(ctx, id)
+	if err == nil {
+		return storageTestResult{
+			Success: true,
+			Title:   translate(c, "settings.storage.test.success_title"),
+			Message: translate(c, "settings.storage.test.success_description"),
+		}
+	}
+
+	return storageTestResult{
+		Success: false,
+		Title:   translate(c, "settings.storage.test.failure_title"),
+		Message: storageTestErrorMessage(c, err),
+	}
+}
+
+func storageTestErrorMessage(c *fiber.Ctx, err error) string {
+	testErr := &service.StorageTestError{}
+	if errors.As(err, &testErr) {
+		return fmt.Sprintf(
+			"%s: %s",
+			storageTestStepLabel(c, testErr.Step),
+			translatedValidationError(c, testErr.Err),
+		)
+	}
+
+	return translatedValidationError(c, err)
+}
+
+func storageTestStepLabel(c *fiber.Ctx, step string) string {
+	switch step {
+	case "put":
+		return translate(c, "settings.storage.test.step.put")
+	case "get":
+		return translate(c, "settings.storage.test.step.get")
+	case "delete":
+		return translate(c, "settings.storage.test.step.delete")
+	default:
+		return step
+	}
 }

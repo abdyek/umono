@@ -225,6 +225,10 @@ func main() {
 		middleware.OnlyHTMX(),
 		settingsHandler.UpdateStorage,
 	)
+	adminProtected.Post("/settings/storage/:id/test",
+		middleware.OnlyHTMX(),
+		settingsHandler.TestStorage,
+	)
 	adminProtected.Delete("/settings/storage/:id",
 		middleware.OnlyHTMX(),
 		settingsHandler.DeleteStorage,

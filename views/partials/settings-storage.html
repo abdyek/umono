@@ -149,6 +149,12 @@
               {{ .StoragePage.Storage.GlobalError }}
             </div>
             {{ end }}
+            {{ with .StoragePage.Storage.TestResult }}
+            <div class="rounded-2xl border px-4 py-3 text-sm {{ if .Success }}border-emerald-500/20 bg-emerald-500/10 text-emerald-100{{ else }}border-red-500/20 bg-red-500/10 text-red-200{{ end }}">
+              <p class="font-medium">{{ .Title }}</p>
+              <p class="mt-1 text-xs leading-5 {{ if .Success }}text-emerald-100/80{{ else }}text-red-200/80{{ end }}">{{ .Message }}</p>
+            </div>
+            {{ end }}
 
             <div class="grid gap-5 md:grid-cols-2">
               <div class="space-y-2 md:col-span-2">
@@ -241,6 +247,27 @@
                 {{ end }}
               </div>
 
+              {{ if not .StoragePage.IsCreateMode }}
+              <div class="md:col-span-2 flex flex-col gap-4 rounded-2xl border border-neutral-800 bg-neutral-950/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-xs leading-5 text-neutral-500">{{ t .I18n "settings.storage.form.update_help" }}</p>
+                <button
+                  id="storage-test-button"
+                  type="button"
+                  class="relative inline-flex w-full cursor-pointer items-center justify-center whitespace-nowrap rounded-xl border border-neutral-700 px-4 py-2.5 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white sm:w-auto"
+                  hx-post="/admin/settings/storage/{{ .StoragePage.Storage.ID }}/test"
+                  hx-target="#settings-content"
+                  hx-indicator="#storage-test-button"
+                >
+                  <span class="[.htmx-request_&]:invisible">{{ t .I18n "settings.storage.test.button" }}</span>
+                  <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+                    <span class="h-4 w-4">
+                      {{ template "partials/spinner" . }}
+                    </span>
+                  </span>
+                </button>
+              </div>
+              {{ end }}
+
               <label for="storage-is-default" class="md:col-span-2 flex cursor-pointer items-start gap-3 rounded-2xl border border-neutral-800 bg-neutral-950/40 px-4 py-3">
                 <input
                   id="storage-is-default"
@@ -261,8 +288,6 @@
               <div class="text-xs text-neutral-500">
                 {{ if .StoragePage.IsCreateMode }}
                   {{ t .I18n "settings.storage.form.create_help" }}
-                {{ else }}
-                  {{ t .I18n "settings.storage.form.update_help" }}
                 {{ end }}
               </div>
               <div class="flex items-center gap-3">

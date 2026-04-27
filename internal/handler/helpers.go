@@ -71,6 +71,8 @@ func translatedValidationError(c *fiber.Ctx, err error) string {
 		return translate(c, "settings.storage.errors.access_key_required")
 	case errors.Is(err, service.ErrStorageSecretKeyRequired):
 		return translate(c, "settings.storage.errors.secret_key_required")
+	case errors.Is(err, service.ErrStorageTestBodyMismatch):
+		return translate(c, "settings.storage.test.errors.body_mismatch")
 	default:
 		return err.Error()
 	}

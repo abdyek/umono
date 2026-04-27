@@ -1,12 +1,16 @@
 package service
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/umono-cms/umono/internal/media"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
@@ -21,7 +25,10 @@ var (
 	ErrStorageBucketRequired    = errors.New("storage bucket required")
 	ErrStorageAccessKeyRequired = errors.New("storage access key required")
 	ErrStorageSecretKeyRequired = errors.New("storage secret key required")
+	ErrStorageTestBodyMismatch  = errors.New("storage test body mismatch")
 )
+
+const storageTestBody = "umono-storage-test"
 
 type StorageService struct {
 	repo *repository.StorageRepository
@@ -47,6 +54,11 @@ type StorageDeleteState struct {
 	ReasonKey  string
 }
 
+type StorageTestError struct {
+	Step string
+	Err  error
+}
+
 func (e *StorageValidationError) Error() string {
 	return "storage validation failed"
 }
@@ -60,6 +72,14 @@ func (e *StorageValidationError) add(field string, err error) {
 
 func (e *StorageValidationError) Empty() bool {
 	return len(e.FieldErrors) == 0
+}
+
+func (e *StorageTestError) Error() string {
+	return fmt.Sprintf("%s: %v", e.Step, e.Err)
+}
+
+func (e *StorageTestError) Unwrap() error {
+	return e.Err
 }
 
 func NewStorageService(repo *repository.StorageRepository) *StorageService {
@@ -168,6 +188,32 @@ func (s *StorageService) DeleteState(storage models.Storage, defaultStorageID st
 	return state
 }
 
+func (s *StorageService) TestS3(ctx context.Context, id string) error {
+	storage, err := s.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if storage.Type != models.StorageTypeS3 {
+		return ErrStorageReadonly
+	}
+
+	return testS3Config(ctx, s3ConfigFromStorage(storage))
+}
+
+func (s *StorageService) TestS3Input(ctx context.Context, input StorageInput) error {
+	if validationErr := validateStorageInput(input); validationErr != nil {
+		return validationErr
+	}
+
+	return testS3Config(ctx, media.S3Config{
+		Endpoint:  strings.TrimSpace(input.Endpoint),
+		Region:    strings.TrimSpace(input.Region),
+		Bucket:    strings.TrimSpace(input.Bucket),
+		AccessKey: strings.TrimSpace(input.AccessKey),
+		SecretKey: strings.TrimSpace(input.SecretKey),
+	})
+}
+
 func storageConfig(input StorageInput) models.JSONMap {
 	return models.JSONMap{
 		"endpoint":   strings.TrimSpace(input.Endpoint),
@@ -218,4 +264,55 @@ func StorageConfigValue(storage models.Storage, key string) string {
 	}
 
 	return fmt.Sprint(value)
+}
+
+func s3ConfigFromStorage(storage models.Storage) media.S3Config {
+	return media.S3Config{
+		Endpoint:  strings.TrimSpace(StorageConfigValue(storage, "endpoint")),
+		Region:    strings.TrimSpace(StorageConfigValue(storage, "region")),
+		Bucket:    strings.TrimSpace(StorageConfigValue(storage, "bucket")),
+		AccessKey: strings.TrimSpace(StorageConfigValue(storage, "access_key")),
+		SecretKey: strings.TrimSpace(StorageConfigValue(storage, "secret_key")),
+	}
+}
+
+func testS3Config(ctx context.Context, cfg media.S3Config) error {
+	storage, err := media.NewS3Storage(ctx, cfg)
+	if err != nil {
+		return &StorageTestError{Step: "put", Err: err}
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		return &StorageTestError{Step: "put", Err: err}
+	}
+
+	key := "umono-test/" + id.String()
+	if err := storage.Put(ctx, key, strings.NewReader(storageTestBody), media.ObjectMeta{
+		ContentType: "text/plain; charset=utf-8",
+	}); err != nil {
+		return &StorageTestError{Step: "put", Err: err}
+	}
+
+	body, _, err := storage.Get(ctx, key)
+	if err != nil {
+		return &StorageTestError{Step: "get", Err: err}
+	}
+
+	data, readErr := io.ReadAll(body)
+	closeErr := body.Close()
+	switch {
+	case readErr != nil:
+		return &StorageTestError{Step: "get", Err: readErr}
+	case closeErr != nil:
+		return &StorageTestError{Step: "get", Err: closeErr}
+	case !bytes.Equal(data, []byte(storageTestBody)):
+		return &StorageTestError{Step: "get", Err: ErrStorageTestBodyMismatch}
+	}
+
+	if err := storage.Delete(ctx, key); err != nil {
+		return &StorageTestError{Step: "delete", Err: err}
+	}
+
+	return nil
 }
