@@ -84,6 +84,7 @@ func main() {
 	componentService.LoadAsGlobalComponent()
 
 	settingsService := service.NewSettingsService()
+	systemService := service.NewSystemService()
 	secretService := service.NewSecretService(secretRepo, umonoSecret)
 	storageService := service.NewStorageService(storageRepo, secretService)
 	bundle, err := i18n.LoadBundle(umono.Locales(), service.DefaultLanguage)
@@ -111,6 +112,7 @@ func main() {
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
 	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
+	systemHandler := handler.NewSystemHandler(systemService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
@@ -243,6 +245,8 @@ func main() {
 		settingsHandler.DeleteStorage,
 	)
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
+	adminProtected.Get("/system", systemHandler.Index)
+	adminProtected.Get("/system/jobs", systemHandler.RenderJobs)
 	adminProtected.Get("/media", mediaHandler.Index)
 	adminProtected.Get("/media/new", mediaHandler.RenderNew)
 	adminProtected.Get("/media/pending/:token/preview", mediaHandler.ServePending)

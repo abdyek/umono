@@ -24,6 +24,24 @@
             </span>
           </a>
           <a
+            href="/admin/system"
+            class="group p-2 rounded-xl text-neutral-500 hover:text-neutral-200 hover:bg-neutral-500/10 transition-all duration-300 cursor-pointer"
+            hx-get="/admin/system"
+            hx-target="body"
+            hx-push-url="true"
+            title="{{ t .I18n "admin.nav.system" }}"
+          >
+            <span class="relative h-5 w-5 block">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-500 [.htmx-request_&]:invisible" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 16h.01M11 7h6M11 16h6" />
+              </svg>
+              <span class="absolute inset-0 invisible [.htmx-request_&]:visible">
+                {{ template "partials/spinner" . }}
+              </span>
+            </span>
+          </a>
+          <a
             href="/admin/settings"
             class="group p-2 rounded-xl text-neutral-500 hover:text-neutral-200 hover:bg-neutral-500/10 transition-all duration-300 cursor-pointer"
             hx-get="/admin/settings" 
