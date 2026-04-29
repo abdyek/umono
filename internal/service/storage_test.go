@@ -199,6 +199,52 @@ func TestStorageServiceUpdateS3ReusesCredentialRef(t *testing.T) {
 	}
 }
 
+func TestStorageServiceUpdateS3KeepsSecretKeyWhenInputIsBlank(t *testing.T) {
+	db := newStorageTestDB(t)
+	secrets := newSecretTestService(t, db)
+	svc := NewStorageService(repository.NewStorageRepository(db), secrets)
+
+	storage, err := svc.CreateS3(StorageInput{
+		Name:      "Object storage",
+		Endpoint:  "https://s3.example.com",
+		Region:    "us-east-1",
+		Bucket:    "bucket",
+		AccessKey: "access",
+		SecretKey: "secret",
+	})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	credentialRef := StorageConfigValue(storage, "credential_ref")
+
+	updated, err := svc.UpdateS3(storage.ID, StorageInput{
+		Name:      "Updated storage",
+		Endpoint:  "https://s3.updated.example.com",
+		Region:    "eu-central-1",
+		Bucket:    "updated-bucket",
+		AccessKey: "updated-access",
+		SecretKey: "",
+	})
+	if err != nil {
+		t.Fatalf("update storage with blank secret key: %v", err)
+	}
+
+	if got := StorageConfigValue(updated, "credential_ref"); got != credentialRef {
+		t.Fatalf("expected credential_ref to be reused, got %q want %q", got, credentialRef)
+	}
+
+	credentials, err := svc.S3Credentials(updated)
+	if err != nil {
+		t.Fatalf("read updated credentials: %v", err)
+	}
+	if credentials.AccessKey != "updated-access" {
+		t.Fatalf("unexpected access key: got %q want updated-access", credentials.AccessKey)
+	}
+	if credentials.SecretKey != "secret" {
+		t.Fatalf("secret key should be preserved, got %q", credentials.SecretKey)
+	}
+}
+
 func newStorageTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 

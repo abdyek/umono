@@ -237,8 +237,9 @@
                 <input
                   id="storage-secret-key"
                   name="secret_key"
-                  type="text"
-                  value="{{ .StoragePage.Storage.SecretKey }}"
+                  type="password"
+                  value=""
+                  autocomplete="new-password"
                   placeholder="{{ t .I18n "settings.storage.placeholder.secret_key" }}"
                   class="w-full rounded-xl border {{ if index .StoragePage.Storage.Errors "secret_key" }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }} bg-neutral-900/50 px-4 py-3 text-sm text-neutral-200 outline-none transition-all duration-200 focus:ring-4 placeholder:text-neutral-600"
                 >

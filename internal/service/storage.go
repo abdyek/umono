@@ -121,7 +121,7 @@ func (s *StorageService) GetByID(id string) (models.Storage, error) {
 }
 
 func (s *StorageService) CreateS3(input StorageInput) (models.Storage, error) {
-	if validationErr := validateStorageInput(input); validationErr != nil {
+	if validationErr := validateStorageInput(input, true); validationErr != nil {
 		return models.Storage{}, validationErr
 	}
 
@@ -154,7 +154,7 @@ func (s *StorageService) UpdateS3(id string, input StorageInput) (models.Storage
 		return models.Storage{}, ErrStorageReadonly
 	}
 
-	if validationErr := validateStorageInput(input); validationErr != nil {
+	if validationErr := validateStorageInput(input, false); validationErr != nil {
 		return models.Storage{}, validationErr
 	}
 
@@ -235,7 +235,7 @@ func (s *StorageService) TestS3(ctx context.Context, id string) error {
 }
 
 func (s *StorageService) TestS3Input(ctx context.Context, input StorageInput) error {
-	if validationErr := validateStorageInput(input); validationErr != nil {
+	if validationErr := validateStorageInput(input, true); validationErr != nil {
 		return validationErr
 	}
 
@@ -261,7 +261,7 @@ func storageConfig(input StorageInput, credentialRef string) models.JSONMap {
 	}
 }
 
-func validateStorageInput(input StorageInput) error {
+func validateStorageInput(input StorageInput, requireSecretKey bool) error {
 	errs := &StorageValidationError{}
 
 	if strings.TrimSpace(input.Name) == "" {
@@ -279,7 +279,7 @@ func validateStorageInput(input StorageInput) error {
 	if strings.TrimSpace(input.AccessKey) == "" {
 		errs.add("access_key", ErrStorageAccessKeyRequired)
 	}
-	if strings.TrimSpace(input.SecretKey) == "" {
+	if requireSecretKey && strings.TrimSpace(input.SecretKey) == "" {
 		errs.add("secret_key", ErrStorageSecretKeyRequired)
 	}
 
@@ -319,6 +319,14 @@ func (s *StorageService) createS3CredentialsSecret(input StorageInput) (models.S
 func (s *StorageService) saveS3Credentials(storage models.Storage, input StorageInput) (string, error) {
 	if s.secretService == nil {
 		return "", ErrSecretNotFound
+	}
+
+	if strings.TrimSpace(input.SecretKey) == "" {
+		credentials, err := s3CredentialsFromStorage(storage, s.secretService)
+		if err != nil {
+			return "", err
+		}
+		input.SecretKey = credentials.SecretKey
 	}
 
 	plaintext, err := s3CredentialsPlaintext(input)
