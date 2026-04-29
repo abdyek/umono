@@ -81,14 +81,14 @@ func main() {
 	componentService.LoadAsGlobalComponent()
 
 	settingsService := service.NewSettingsService()
-	storageService := service.NewStorageService(storageRepo)
-	_ = service.NewSecretService(secretRepo, umonoSecret)
+	secretService := service.NewSecretService(secretRepo, umonoSecret)
+	storageService := service.NewStorageService(storageRepo, secretService)
 	bundle, err := i18n.LoadBundle(umono.Locales(), service.DefaultLanguage)
 	if err != nil {
 		log.Fatal("i18n err", err)
 	}
 	optionService := service.NewOptionService(optionRepo, bundle)
-	mediaService := service.NewMediaService(mediaRepo, storageRepo, optionRepo, "uploads/.pending")
+	mediaService := service.NewMediaService(mediaRepo, storageRepo, optionRepo, secretService, "uploads/.pending")
 	if err := mediaService.EnsureDefaultLocalStorage("uploads"); err != nil {
 		log.Fatal("media storage err", err)
 	}

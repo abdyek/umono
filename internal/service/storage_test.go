@@ -2,12 +2,18 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/umono-cms/umono/internal/models"
+	"github.com/umono-cms/umono/internal/repository"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestStorageServiceTestS3InputRunsPutGetDelete(t *testing.T) {
@@ -47,7 +53,7 @@ func TestStorageServiceTestS3InputRunsPutGetDelete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	err := NewStorageService(nil).TestS3Input(context.Background(), StorageInput{
+	err := NewStorageService(nil, nil).TestS3Input(context.Background(), StorageInput{
 		Name:      "Object storage",
 		Endpoint:  server.URL,
 		Region:    "us-east-1",
@@ -86,7 +92,7 @@ func TestStorageServiceTestS3InputStopsBeforeDeleteWhenGetFails(t *testing.T) {
 	}))
 	defer server.Close()
 
-	err := NewStorageService(nil).TestS3Input(context.Background(), StorageInput{
+	err := NewStorageService(nil, nil).TestS3Input(context.Background(), StorageInput{
 		Name:      "Object storage",
 		Endpoint:  server.URL,
 		Region:    "us-east-1",
@@ -108,4 +114,147 @@ func TestStorageServiceTestS3InputStopsBeforeDeleteWhenGetFails(t *testing.T) {
 	if testErr.Step != "get" {
 		t.Fatalf("unexpected failed step: got %q want get", testErr.Step)
 	}
+}
+
+func TestStorageServiceCreateS3StoresCredentialsInSecret(t *testing.T) {
+	db := newStorageTestDB(t)
+	secrets := newSecretTestService(t, db)
+	svc := NewStorageService(repository.NewStorageRepository(db), secrets)
+
+	storage, err := svc.CreateS3(StorageInput{
+		Name:      "Object storage",
+		Endpoint:  "https://s3.example.com",
+		Region:    "us-east-1",
+		Bucket:    "bucket",
+		AccessKey: "access",
+		SecretKey: "secret",
+	})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+
+	if storage.Config["access_key"] != nil || storage.Config["secret_key"] != nil {
+		t.Fatalf("storage config must not contain plaintext credentials: %#v", storage.Config)
+	}
+
+	credentialRef := StorageConfigValue(storage, "credential_ref")
+	if credentialRef == "" {
+		t.Fatal("expected credential_ref")
+	}
+
+	plaintext, err := secrets.DecryptByID(credentialRef)
+	if err != nil {
+		t.Fatalf("decrypt credentials: %v", err)
+	}
+
+	var credentials StorageS3Credentials
+	if err := json.Unmarshal(plaintext, &credentials); err != nil {
+		t.Fatalf("decode credentials json: %v", err)
+	}
+	if credentials.AccessKey != "access" || credentials.SecretKey != "secret" {
+		t.Fatalf("unexpected credentials: %#v", credentials)
+	}
+}
+
+func TestStorageServiceUpdateS3ReusesCredentialRef(t *testing.T) {
+	db := newStorageTestDB(t)
+	secrets := newSecretTestService(t, db)
+	svc := NewStorageService(repository.NewStorageRepository(db), secrets)
+
+	storage, err := svc.CreateS3(StorageInput{
+		Name:      "Object storage",
+		Endpoint:  "https://s3.example.com",
+		Region:    "us-east-1",
+		Bucket:    "bucket",
+		AccessKey: "access",
+		SecretKey: "secret",
+	})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	credentialRef := StorageConfigValue(storage, "credential_ref")
+
+	updated, err := svc.UpdateS3(storage.ID, StorageInput{
+		Name:      "Updated storage",
+		Endpoint:  "https://s3.example.com",
+		Region:    "us-east-1",
+		Bucket:    "updated-bucket",
+		AccessKey: "updated-access",
+		SecretKey: "updated-secret",
+	})
+	if err != nil {
+		t.Fatalf("update storage: %v", err)
+	}
+
+	if got := StorageConfigValue(updated, "credential_ref"); got != credentialRef {
+		t.Fatalf("expected credential_ref to be reused, got %q want %q", got, credentialRef)
+	}
+
+	credentials, err := svc.S3Credentials(updated)
+	if err != nil {
+		t.Fatalf("read updated credentials: %v", err)
+	}
+	if credentials.AccessKey != "updated-access" || credentials.SecretKey != "updated-secret" {
+		t.Fatalf("unexpected updated credentials: %#v", credentials)
+	}
+}
+
+func TestStorageServiceUpdateS3KeepsSecretKeyWhenInputIsBlank(t *testing.T) {
+	db := newStorageTestDB(t)
+	secrets := newSecretTestService(t, db)
+	svc := NewStorageService(repository.NewStorageRepository(db), secrets)
+
+	storage, err := svc.CreateS3(StorageInput{
+		Name:      "Object storage",
+		Endpoint:  "https://s3.example.com",
+		Region:    "us-east-1",
+		Bucket:    "bucket",
+		AccessKey: "access",
+		SecretKey: "secret",
+	})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	credentialRef := StorageConfigValue(storage, "credential_ref")
+
+	updated, err := svc.UpdateS3(storage.ID, StorageInput{
+		Name:      "Updated storage",
+		Endpoint:  "https://s3.updated.example.com",
+		Region:    "eu-central-1",
+		Bucket:    "updated-bucket",
+		AccessKey: "updated-access",
+		SecretKey: "",
+	})
+	if err != nil {
+		t.Fatalf("update storage with blank secret key: %v", err)
+	}
+
+	if got := StorageConfigValue(updated, "credential_ref"); got != credentialRef {
+		t.Fatalf("expected credential_ref to be reused, got %q want %q", got, credentialRef)
+	}
+
+	credentials, err := svc.S3Credentials(updated)
+	if err != nil {
+		t.Fatalf("read updated credentials: %v", err)
+	}
+	if credentials.AccessKey != "updated-access" {
+		t.Fatalf("unexpected access key: got %q want updated-access", credentials.AccessKey)
+	}
+	if credentials.SecretKey != "secret" {
+		t.Fatalf("secret key should be preserved, got %q", credentials.SecretKey)
+	}
+}
+
+func newStorageTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(&models.Storage{}, &models.Secret{}); err != nil {
+		t.Fatalf("migrate storage and secrets: %v", err)
+	}
+
+	return db
 }

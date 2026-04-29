@@ -81,6 +81,7 @@ type MediaService struct {
 	repo        *repository.MediaRepository
 	storageRepo *repository.StorageRepository
 	optionRepo  *repository.OptionRepository
+	secrets     *SecretService
 	pendingDir  string
 }
 
@@ -88,12 +89,14 @@ func NewMediaService(
 	repo *repository.MediaRepository,
 	storageRepo *repository.StorageRepository,
 	optionRepo *repository.OptionRepository,
+	secrets *SecretService,
 	pendingDir string,
 ) *MediaService {
 	return &MediaService{
 		repo:        repo,
 		storageRepo: storageRepo,
 		optionRepo:  optionRepo,
+		secrets:     secrets,
 		pendingDir:  pendingDir,
 	}
 }
@@ -571,12 +574,17 @@ func (s *MediaService) storageBackend(ctx context.Context, storageModel models.S
 		root := strings.TrimSpace(fmt.Sprint(storageModel.Config["root"]))
 		return media.NewLocalStorage(root), nil
 	case models.StorageTypeS3:
+		credentials, err := s3CredentialsFromStorage(storageModel, s.secrets)
+		if err != nil {
+			return nil, err
+		}
+
 		return media.NewS3Storage(ctx, media.S3Config{
 			Endpoint:  strings.TrimSpace(fmt.Sprint(storageModel.Config["endpoint"])),
 			Region:    strings.TrimSpace(fmt.Sprint(storageModel.Config["region"])),
 			Bucket:    strings.TrimSpace(fmt.Sprint(storageModel.Config["bucket"])),
-			AccessKey: strings.TrimSpace(fmt.Sprint(storageModel.Config["access_key"])),
-			SecretKey: strings.TrimSpace(fmt.Sprint(storageModel.Config["secret_key"])),
+			AccessKey: strings.TrimSpace(credentials.AccessKey),
+			SecretKey: strings.TrimSpace(credentials.SecretKey),
 		})
 	default:
 		return nil, ErrStorageNotFound

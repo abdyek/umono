@@ -39,7 +39,6 @@ type storageFormData struct {
 	Region      string
 	Bucket      string
 	AccessKey   string
-	SecretKey   string
 	LocalRoot   string
 	MediaCount  int64
 	CreatedAt   string
@@ -166,7 +165,6 @@ func (h *settingsHandler) UpdateStorage(c *fiber.Ctx) error {
 		form.Region = input.Region
 		form.Bucket = input.Bucket
 		form.AccessKey = input.AccessKey
-		form.SecretKey = input.SecretKey
 
 		return h.renderStorage(c, storagePageData{
 			List:         h.buildStorageList(c, current.ID, ""),
@@ -272,7 +270,6 @@ func (h *settingsHandler) renderStorageCreateError(c *fiber.Ctx, input service.S
 		Region:      input.Region,
 		Bucket:      input.Bucket,
 		AccessKey:   input.AccessKey,
-		SecretKey:   input.SecretKey,
 		SubmitURL:   "/admin/settings/storage",
 		CancelURL:   "/admin/settings/storage",
 		BackURL:     "/admin/settings/storage",
@@ -361,8 +358,9 @@ func (h *settingsHandler) buildStorageFormData(c *fiber.Ctx, storage models.Stor
 		form.Endpoint = service.StorageConfigValue(storage, "endpoint")
 		form.Region = service.StorageConfigValue(storage, "region")
 		form.Bucket = service.StorageConfigValue(storage, "bucket")
-		form.AccessKey = service.StorageConfigValue(storage, "access_key")
-		form.SecretKey = service.StorageConfigValue(storage, "secret_key")
+		if credentials, err := h.storageService.S3Credentials(storage); err == nil {
+			form.AccessKey = credentials.AccessKey
+		}
 		form.SubmitURL = "/admin/settings/storage/" + storage.ID
 		form.CancelURL = "/admin/settings/storage"
 		return form

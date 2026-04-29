@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -31,7 +32,8 @@ var (
 const storageTestBody = "umono-storage-test"
 
 type StorageService struct {
-	repo *repository.StorageRepository
+	repo          *repository.StorageRepository
+	secretService *SecretService
 }
 
 type StorageInput struct {
@@ -42,6 +44,11 @@ type StorageInput struct {
 	Bucket    string
 	AccessKey string
 	SecretKey string
+}
+
+type StorageS3Credentials struct {
+	AccessKey string `json:"access_key"`
+	SecretKey string `json:"secret_key"`
 }
 
 type StorageValidationError struct {
@@ -82,8 +89,11 @@ func (e *StorageTestError) Unwrap() error {
 	return e.Err
 }
 
-func NewStorageService(repo *repository.StorageRepository) *StorageService {
-	return &StorageService{repo: repo}
+func NewStorageService(repo *repository.StorageRepository, secretService *SecretService) *StorageService {
+	return &StorageService{
+		repo:          repo,
+		secretService: secretService,
+	}
 }
 
 func (s *StorageService) GetAll() []models.Storage {
@@ -111,7 +121,7 @@ func (s *StorageService) GetByID(id string) (models.Storage, error) {
 }
 
 func (s *StorageService) CreateS3(input StorageInput) (models.Storage, error) {
-	if validationErr := validateStorageInput(input); validationErr != nil {
+	if validationErr := validateStorageInput(input, true); validationErr != nil {
 		return models.Storage{}, validationErr
 	}
 
@@ -120,11 +130,16 @@ func (s *StorageService) CreateS3(input StorageInput) (models.Storage, error) {
 		return models.Storage{}, err
 	}
 
+	secret, err := s.createS3CredentialsSecret(input)
+	if err != nil {
+		return models.Storage{}, err
+	}
+
 	storage := models.Storage{
 		ID:     id.String(),
 		Name:   strings.TrimSpace(input.Name),
 		Type:   models.StorageTypeS3,
-		Config: storageConfig(input),
+		Config: storageConfig(input, secret.ID),
 	}
 
 	return s.repo.Create(storage), nil
@@ -139,12 +154,17 @@ func (s *StorageService) UpdateS3(id string, input StorageInput) (models.Storage
 		return models.Storage{}, ErrStorageReadonly
 	}
 
-	if validationErr := validateStorageInput(input); validationErr != nil {
+	if validationErr := validateStorageInput(input, false); validationErr != nil {
 		return models.Storage{}, validationErr
 	}
 
+	credentialRef, err := s.saveS3Credentials(storage, input)
+	if err != nil {
+		return models.Storage{}, err
+	}
+
 	storage.Name = strings.TrimSpace(input.Name)
-	storage.Config = storageConfig(input)
+	storage.Config = storageConfig(input, credentialRef)
 
 	return s.repo.Update(storage), nil
 }
@@ -158,7 +178,16 @@ func (s *StorageService) Delete(id string) error {
 		return ErrStorageDeleteRestricted
 	}
 
-	return s.repo.Delete(id)
+	credentialRef := StorageConfigValue(storage, "credential_ref")
+	if err := s.repo.Delete(id); err != nil {
+		return err
+	}
+
+	if credentialRef != "" && s.secretService != nil {
+		return s.secretService.Delete(credentialRef)
+	}
+
+	return nil
 }
 
 func (s *StorageService) DeleteState(storage models.Storage, defaultStorageID string) StorageDeleteState {
@@ -197,11 +226,16 @@ func (s *StorageService) TestS3(ctx context.Context, id string) error {
 		return ErrStorageReadonly
 	}
 
-	return testS3Config(ctx, s3ConfigFromStorage(storage))
+	cfg, err := s.s3ConfigFromStorage(storage)
+	if err != nil {
+		return err
+	}
+
+	return testS3Config(ctx, cfg)
 }
 
 func (s *StorageService) TestS3Input(ctx context.Context, input StorageInput) error {
-	if validationErr := validateStorageInput(input); validationErr != nil {
+	if validationErr := validateStorageInput(input, true); validationErr != nil {
 		return validationErr
 	}
 
@@ -214,17 +248,20 @@ func (s *StorageService) TestS3Input(ctx context.Context, input StorageInput) er
 	})
 }
 
-func storageConfig(input StorageInput) models.JSONMap {
+func (s *StorageService) S3Credentials(storage models.Storage) (StorageS3Credentials, error) {
+	return s3CredentialsFromStorage(storage, s.secretService)
+}
+
+func storageConfig(input StorageInput, credentialRef string) models.JSONMap {
 	return models.JSONMap{
-		"endpoint":   strings.TrimSpace(input.Endpoint),
-		"region":     strings.TrimSpace(input.Region),
-		"bucket":     strings.TrimSpace(input.Bucket),
-		"access_key": strings.TrimSpace(input.AccessKey),
-		"secret_key": strings.TrimSpace(input.SecretKey),
+		"endpoint":       strings.TrimSpace(input.Endpoint),
+		"region":         strings.TrimSpace(input.Region),
+		"bucket":         strings.TrimSpace(input.Bucket),
+		"credential_ref": strings.TrimSpace(credentialRef),
 	}
 }
 
-func validateStorageInput(input StorageInput) error {
+func validateStorageInput(input StorageInput, requireSecretKey bool) error {
 	errs := &StorageValidationError{}
 
 	if strings.TrimSpace(input.Name) == "" {
@@ -242,7 +279,7 @@ func validateStorageInput(input StorageInput) error {
 	if strings.TrimSpace(input.AccessKey) == "" {
 		errs.add("access_key", ErrStorageAccessKeyRequired)
 	}
-	if strings.TrimSpace(input.SecretKey) == "" {
+	if requireSecretKey && strings.TrimSpace(input.SecretKey) == "" {
 		errs.add("secret_key", ErrStorageSecretKeyRequired)
 	}
 
@@ -266,14 +303,93 @@ func StorageConfigValue(storage models.Storage, key string) string {
 	return fmt.Sprint(value)
 }
 
-func s3ConfigFromStorage(storage models.Storage) media.S3Config {
+func (s *StorageService) createS3CredentialsSecret(input StorageInput) (models.Secret, error) {
+	if s.secretService == nil {
+		return models.Secret{}, ErrSecretNotFound
+	}
+
+	plaintext, err := s3CredentialsPlaintext(input)
+	if err != nil {
+		return models.Secret{}, err
+	}
+
+	return s.secretService.Create(plaintext)
+}
+
+func (s *StorageService) saveS3Credentials(storage models.Storage, input StorageInput) (string, error) {
+	if s.secretService == nil {
+		return "", ErrSecretNotFound
+	}
+
+	if strings.TrimSpace(input.SecretKey) == "" {
+		credentials, err := s3CredentialsFromStorage(storage, s.secretService)
+		if err != nil {
+			return "", err
+		}
+		input.SecretKey = credentials.SecretKey
+	}
+
+	plaintext, err := s3CredentialsPlaintext(input)
+	if err != nil {
+		return "", err
+	}
+
+	credentialRef := StorageConfigValue(storage, "credential_ref")
+	if credentialRef != "" {
+		if _, err := s.secretService.Update(credentialRef, plaintext); err == nil {
+			return credentialRef, nil
+		} else if !errors.Is(err, ErrSecretNotFound) {
+			return "", err
+		}
+	}
+
+	secret, err := s.createS3CredentialsSecret(input)
+	if err != nil {
+		return "", err
+	}
+
+	return secret.ID, nil
+}
+
+func s3CredentialsPlaintext(input StorageInput) ([]byte, error) {
+	return json.Marshal(StorageS3Credentials{
+		AccessKey: strings.TrimSpace(input.AccessKey),
+		SecretKey: strings.TrimSpace(input.SecretKey),
+	})
+}
+
+func s3CredentialsFromStorage(storage models.Storage, secretService *SecretService) (StorageS3Credentials, error) {
+	credentialRef := strings.TrimSpace(StorageConfigValue(storage, "credential_ref"))
+	if credentialRef == "" || secretService == nil {
+		return StorageS3Credentials{}, ErrSecretNotFound
+	}
+
+	plaintext, err := secretService.DecryptByID(credentialRef)
+	if err != nil {
+		return StorageS3Credentials{}, err
+	}
+
+	var credentials StorageS3Credentials
+	if err := json.Unmarshal(plaintext, &credentials); err != nil {
+		return StorageS3Credentials{}, err
+	}
+
+	return credentials, nil
+}
+
+func (s *StorageService) s3ConfigFromStorage(storage models.Storage) (media.S3Config, error) {
+	credentials, err := s3CredentialsFromStorage(storage, s.secretService)
+	if err != nil {
+		return media.S3Config{}, err
+	}
+
 	return media.S3Config{
 		Endpoint:  strings.TrimSpace(StorageConfigValue(storage, "endpoint")),
 		Region:    strings.TrimSpace(StorageConfigValue(storage, "region")),
 		Bucket:    strings.TrimSpace(StorageConfigValue(storage, "bucket")),
-		AccessKey: strings.TrimSpace(StorageConfigValue(storage, "access_key")),
-		SecretKey: strings.TrimSpace(StorageConfigValue(storage, "secret_key")),
-	}
+		AccessKey: strings.TrimSpace(credentials.AccessKey),
+		SecretKey: strings.TrimSpace(credentials.SecretKey),
+	}, nil
 }
 
 func testS3Config(ctx context.Context, cfg media.S3Config) error {
