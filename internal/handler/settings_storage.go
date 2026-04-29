@@ -361,8 +361,10 @@ func (h *settingsHandler) buildStorageFormData(c *fiber.Ctx, storage models.Stor
 		form.Endpoint = service.StorageConfigValue(storage, "endpoint")
 		form.Region = service.StorageConfigValue(storage, "region")
 		form.Bucket = service.StorageConfigValue(storage, "bucket")
-		form.AccessKey = service.StorageConfigValue(storage, "access_key")
-		form.SecretKey = service.StorageConfigValue(storage, "secret_key")
+		if credentials, err := h.storageService.S3Credentials(storage); err == nil {
+			form.AccessKey = credentials.AccessKey
+			form.SecretKey = credentials.SecretKey
+		}
 		form.SubmitURL = "/admin/settings/storage/" + storage.ID
 		form.CancelURL = "/admin/settings/storage"
 		return form
