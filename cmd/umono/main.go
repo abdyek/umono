@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -65,6 +66,7 @@ func main() {
 		&models.Media{},
 		&models.MediaVariant{},
 		&models.Secret{},
+		&models.Job{},
 	)
 
 	// TODO: Refactor: move DI another file
@@ -72,6 +74,7 @@ func main() {
 	storageRepo := repository.NewStorageRepository(db)
 	mediaRepo := repository.NewMediaRepository(db)
 	secretRepo := repository.NewSecretRepository(db)
+	jobRepo := repository.NewJobRepository(db)
 
 	sitePageRepo := repository.NewSitePageRepository(db)
 	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, comp)
@@ -91,6 +94,10 @@ func main() {
 	mediaService := service.NewMediaService(mediaRepo, storageRepo, optionRepo, secretService, "uploads/.pending")
 	if err := mediaService.EnsureDefaultLocalStorage("uploads"); err != nil {
 		log.Fatal("media storage err", err)
+	}
+	jobService := service.NewJobService(jobRepo)
+	if err := jobService.Start(context.Background()); err != nil {
+		log.Fatal("job service err", err)
 	}
 
 	adminHandler := handler.NewAdminHandler(
