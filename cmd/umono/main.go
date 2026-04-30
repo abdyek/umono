@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -65,6 +66,7 @@ func main() {
 		&models.Media{},
 		&models.MediaVariant{},
 		&models.Secret{},
+		&models.Job{},
 	)
 
 	// TODO: Refactor: move DI another file
@@ -72,6 +74,7 @@ func main() {
 	storageRepo := repository.NewStorageRepository(db)
 	mediaRepo := repository.NewMediaRepository(db)
 	secretRepo := repository.NewSecretRepository(db)
+	jobRepo := repository.NewJobRepository(db)
 
 	sitePageRepo := repository.NewSitePageRepository(db)
 	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, comp)
@@ -81,6 +84,7 @@ func main() {
 	componentService.LoadAsGlobalComponent()
 
 	settingsService := service.NewSettingsService()
+	systemService := service.NewSystemService()
 	secretService := service.NewSecretService(secretRepo, umonoSecret)
 	storageService := service.NewStorageService(storageRepo, secretService)
 	bundle, err := i18n.LoadBundle(umono.Locales(), service.DefaultLanguage)
@@ -91,6 +95,10 @@ func main() {
 	mediaService := service.NewMediaService(mediaRepo, storageRepo, optionRepo, secretService, "uploads/.pending")
 	if err := mediaService.EnsureDefaultLocalStorage("uploads"); err != nil {
 		log.Fatal("media storage err", err)
+	}
+	jobService := service.NewJobService(jobRepo)
+	if err := jobService.Start(context.Background()); err != nil {
+		log.Fatal("job service err", err)
 	}
 
 	adminHandler := handler.NewAdminHandler(
@@ -104,6 +112,7 @@ func main() {
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
 	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
+	systemHandler := handler.NewSystemHandler(systemService, jobService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
@@ -236,6 +245,12 @@ func main() {
 		settingsHandler.DeleteStorage,
 	)
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
+	adminProtected.Get("/system", systemHandler.Index)
+	adminProtected.Get("/system/jobs", systemHandler.RenderJobs)
+	adminProtected.Post("/system/jobs/:id/retry",
+		middleware.OnlyHTMX(),
+		systemHandler.RetryJob,
+	)
 	adminProtected.Get("/media", mediaHandler.Index)
 	adminProtected.Get("/media/new", mediaHandler.RenderNew)
 	adminProtected.Get("/media/pending/:token/preview", mediaHandler.ServePending)

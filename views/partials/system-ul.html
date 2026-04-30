@@ -1,0 +1,5 @@
+<ul id="system-ul" class="space-y-1"{{if and .IsHTMX .IsAlreadyOnSystem}} hx-swap-oob="outerHTML"{{end}}>
+  {{ range .SystemUl }}
+    {{ template "partials/system-li" . }}
+  {{ end }}
+</ul>

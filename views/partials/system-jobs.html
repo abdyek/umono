@@ -1,0 +1,76 @@
+<div id="system-jobs-content" class="flex-1 flex overflow-hidden h-full">
+  <div class="flex-1 flex flex-col min-h-0">
+    <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "system.jobs.title" }}</h2>
+          <p class="text-sm text-neutral-500">{{ t .I18n "system.jobs.description" }}</p>
+        </div>
+      </div>
+    </header>
+    <div class="flex-1 overflow-y-auto p-6">
+      {{ if .Jobs }}
+      <div class="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900/40">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-neutral-800 text-left">
+            <thead class="bg-neutral-950/30">
+              <tr>
+                <th class="px-4 py-3 text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.type" }}</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.status" }}</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.attempts" }}</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.run_at" }}</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.last_error" }}</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.updated_at" }}</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.created_at" }}</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-neutral-500">{{ t .I18n "system.jobs.field.actions" }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-800">
+              {{ range .Jobs }}
+              <tr class="transition-colors hover:bg-neutral-800/30">
+                <td class="whitespace-nowrap px-4 py-4 align-top font-mono text-xs text-neutral-200">{{ .Type }}</td>
+                <td class="whitespace-nowrap px-4 py-4 align-top">
+                  <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium {{ .StatusClasses }}">{{ .StatusLabel }}</span>
+                </td>
+                <td class="whitespace-nowrap px-4 py-4 align-top text-sm text-neutral-300">{{ .Attempts }}</td>
+                <td class="whitespace-nowrap px-4 py-4 align-top text-sm text-neutral-400">{{ .RunAt }}</td>
+                <td class="max-w-sm px-4 py-4 align-top text-sm text-neutral-400">
+                  <p class="line-clamp-3 break-words">{{ .LastError }}</p>
+                </td>
+                <td class="whitespace-nowrap px-4 py-4 align-top text-sm text-neutral-400">{{ .UpdatedAt }}</td>
+                <td class="whitespace-nowrap px-4 py-4 align-top text-sm text-neutral-400">{{ .CreatedAt }}</td>
+                <td class="whitespace-nowrap px-4 py-4 text-right align-top">
+                  {{ if .CanRetry }}
+                  <form class="inline-flex" hx-post="{{ .RetryURL }}" hx-target="#system-jobs-content" hx-swap="outerHTML">
+                    <button
+                      type="submit"
+                      aria-label="{{ .RetryAriaLabel }}"
+                      class="group relative inline-flex cursor-pointer items-center justify-center rounded-xl border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm font-medium text-neutral-200 transition-colors hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-purple-200"
+                    >
+                      <span class="[.htmx-request_&]:invisible">{{ $.RetryLabel }}</span>
+                      <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+                        <span class="h-4 w-4">
+                          {{ template "partials/spinner" $ }}
+                        </span>
+                      </span>
+                    </button>
+                  </form>
+                  {{ else }}
+                  <span class="text-sm text-neutral-600">{{ t $.I18n "system.jobs.empty_value" }}</span>
+                  {{ end }}
+                </td>
+              </tr>
+              {{ end }}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {{ else }}
+      <div class="mx-auto flex max-w-xl flex-col items-center justify-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900/40 px-8 py-16 text-center">
+        <h3 class="text-lg font-semibold text-neutral-200">{{ t .I18n "system.jobs.empty_title" }}</h3>
+        <p class="mt-2 text-sm text-neutral-500">{{ t .I18n "system.jobs.empty_description" }}</p>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</div>
