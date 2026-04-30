@@ -112,7 +112,7 @@ func main() {
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
 	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
-	systemHandler := handler.NewSystemHandler(systemService)
+	systemHandler := handler.NewSystemHandler(systemService, jobService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
@@ -247,6 +247,10 @@ func main() {
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
 	adminProtected.Get("/system", systemHandler.Index)
 	adminProtected.Get("/system/jobs", systemHandler.RenderJobs)
+	adminProtected.Post("/system/jobs/:id/retry",
+		middleware.OnlyHTMX(),
+		systemHandler.RetryJob,
+	)
 	adminProtected.Get("/media", mediaHandler.Index)
 	adminProtected.Get("/media/new", mediaHandler.RenderNew)
 	adminProtected.Get("/media/pending/:token/preview", mediaHandler.ServePending)

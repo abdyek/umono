@@ -23,6 +23,14 @@ func (r *JobRepository) GetByID(ctx context.Context, id string) (models.Job, err
 	return job, err
 }
 
+func (r *JobRepository) ListAll(ctx context.Context) ([]models.Job, error) {
+	var jobs []models.Job
+	err := r.db.WithContext(ctx).Model(&models.Job{}).
+		Order("CASE status WHEN 'failed' THEN 0 WHEN 'processing' THEN 1 WHEN 'pending' THEN 2 WHEN 'done' THEN 3 ELSE 4 END, updated_at DESC, created_at DESC").
+		Find(&jobs).Error
+	return jobs, err
+}
+
 func (r *JobRepository) Create(ctx context.Context, job models.Job) (models.Job, error) {
 	err := r.db.WithContext(ctx).Create(&job).Error
 	return job, err
@@ -105,6 +113,20 @@ func (r *JobRepository) MarkFailed(ctx context.Context, id, message string, fail
 			"last_error_at": failedAt,
 			"finished_at":   failedAt,
 		}).Error
+}
+
+func (r *JobRepository) RetryFailed(ctx context.Context, id string, runAt time.Time) (bool, error) {
+	result := r.db.WithContext(ctx).Model(&models.Job{}).
+		Where("id = ? AND status = ?", id, models.JobStatusFailed).
+		Updates(map[string]any{
+			"status":        models.JobStatusPending,
+			"attempts":      0,
+			"run_at":        runAt,
+			"last_error":    nil,
+			"last_error_at": nil,
+			"finished_at":   nil,
+		})
+	return result.RowsAffected > 0, result.Error
 }
 
 func (r *JobRepository) ResetProcessing(ctx context.Context, runAt time.Time) error {

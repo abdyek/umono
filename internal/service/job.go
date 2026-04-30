@@ -30,6 +30,7 @@ var (
 	ErrJobAlreadyStarted   = errors.New("job service already started")
 	ErrJobMaxRetryInvalid  = errors.New("job max retry invalid")
 	ErrJobRetentionInvalid = errors.New("job retention invalid")
+	ErrJobRetryNotAllowed  = errors.New("job retry not allowed")
 )
 
 type JobHandler func(context.Context, models.Job) error
@@ -147,6 +148,36 @@ func (s *JobService) GetByID(ctx context.Context, id string) (models.Job, error)
 	}
 
 	return job, nil
+}
+
+func (s *JobService) ListAll(ctx context.Context) ([]models.Job, error) {
+	return s.repo.ListAll(ctx)
+}
+
+func (s *JobService) RetryFailed(ctx context.Context, id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ErrJobNotFound
+	}
+
+	job, err := s.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if job.Status != models.JobStatusFailed {
+		return ErrJobRetryNotAllowed
+	}
+
+	updated, err := s.repo.RetryFailed(ctx, id, s.now())
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrJobRetryNotAllowed
+	}
+
+	s.notify()
+	return nil
 }
 
 func (s *JobService) Start(ctx context.Context) error {

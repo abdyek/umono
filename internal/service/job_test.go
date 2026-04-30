@@ -211,6 +211,115 @@ func TestJobServiceCleanupDoneDeletesOnlyExpiredDoneJobs(t *testing.T) {
 	}
 }
 
+func TestJobServiceListAllUsesAdminOrder(t *testing.T) {
+	db := newJobTestDB(t)
+	svc := newJobTestService(db)
+	ctx := context.Background()
+	now := time.Date(2026, 4, 29, 12, 0, 0, 0, time.UTC)
+
+	jobs := []models.Job{
+		{ID: "done", Type: "test", Payload: []byte("{}"), Status: models.JobStatusDone, MaxRetry: 3, RunAt: now},
+		{ID: "pending", Type: "test", Payload: []byte("{}"), Status: models.JobStatusPending, MaxRetry: 3, RunAt: now},
+		{ID: "failed", Type: "test", Payload: []byte("{}"), Status: models.JobStatusFailed, MaxRetry: 3, RunAt: now},
+		{ID: "processing", Type: "test", Payload: []byte("{}"), Status: models.JobStatusProcessing, MaxRetry: 3, RunAt: now},
+	}
+	if err := db.Create(&jobs).Error; err != nil {
+		t.Fatalf("seed jobs: %v", err)
+	}
+
+	got, err := svc.ListAll(ctx)
+	if err != nil {
+		t.Fatalf("list jobs: %v", err)
+	}
+
+	wantIDs := []string{"failed", "processing", "pending", "done"}
+	if len(got) != len(wantIDs) {
+		t.Fatalf("expected %d jobs, got %d", len(wantIDs), len(got))
+	}
+	for i, wantID := range wantIDs {
+		if got[i].ID != wantID {
+			t.Fatalf("expected job %d to be %q, got %q", i, wantID, got[i].ID)
+		}
+	}
+}
+
+func TestJobServiceRetryFailedResetsExistingJob(t *testing.T) {
+	db := newJobTestDB(t)
+	svc := newJobTestService(db)
+	ctx := context.Background()
+	now := time.Date(2026, 4, 29, 12, 0, 0, 0, time.UTC)
+	failedAt := now.Add(-time.Hour)
+	message := "boom"
+	svc.now = func() time.Time { return now }
+
+	job := models.Job{
+		ID:          "failed-job",
+		Type:        "test.retry",
+		Payload:     []byte("{}"),
+		Status:      models.JobStatusFailed,
+		Attempts:    3,
+		MaxRetry:    3,
+		RunAt:       failedAt,
+		LastError:   &message,
+		LastErrorAt: &failedAt,
+		FinishedAt:  &failedAt,
+	}
+	if err := db.Create(&job).Error; err != nil {
+		t.Fatalf("seed job: %v", err)
+	}
+
+	if err := svc.RetryFailed(ctx, job.ID); err != nil {
+		t.Fatalf("retry failed job: %v", err)
+	}
+
+	got, err := svc.GetByID(ctx, job.ID)
+	if err != nil {
+		t.Fatalf("get job: %v", err)
+	}
+	if got.Status != models.JobStatusPending {
+		t.Fatalf("expected pending status, got %q", got.Status)
+	}
+	if got.Attempts != 0 {
+		t.Fatalf("expected attempts to reset, got %d", got.Attempts)
+	}
+	if !got.RunAt.Equal(now) {
+		t.Fatalf("expected run_at %s, got %s", now, got.RunAt)
+	}
+	if got.LastError != nil {
+		t.Fatalf("expected last_error to be cleared, got %v", got.LastError)
+	}
+	if got.LastErrorAt != nil {
+		t.Fatalf("expected last_error_at to be cleared, got %v", got.LastErrorAt)
+	}
+	if got.FinishedAt != nil {
+		t.Fatalf("expected finished_at to be cleared, got %v", got.FinishedAt)
+	}
+}
+
+func TestJobServiceRetryFailedRejectsNonFailedJob(t *testing.T) {
+	db := newJobTestDB(t)
+	svc := newJobTestService(db)
+	ctx := context.Background()
+	now := time.Date(2026, 4, 29, 12, 0, 0, 0, time.UTC)
+
+	job := models.Job{
+		ID:       "pending-job",
+		Type:     "test.retry",
+		Payload:  []byte("{}"),
+		Status:   models.JobStatusPending,
+		MaxRetry: 3,
+		RunAt:    now,
+	}
+	if err := db.Create(&job).Error; err != nil {
+		t.Fatalf("seed job: %v", err)
+	}
+
+	err := svc.RetryFailed(ctx, job.ID)
+	if !errors.Is(err, ErrJobRetryNotAllowed) {
+		t.Fatalf("expected retry not allowed, got %v", err)
+	}
+}
+
 func newJobTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
