@@ -58,10 +58,11 @@ type JobService struct {
 }
 
 type EnqueueJobInput struct {
-	Type     string
-	Payload  []byte
-	RunAt    *time.Time
-	MaxRetry int
+	Type      string
+	UniqueKey string
+	Payload   []byte
+	RunAt     *time.Time
+	MaxRetry  int
 }
 
 type jobEnqueuer struct {
@@ -108,6 +109,12 @@ func (s *JobService) Enqueue(ctx context.Context, input EnqueueJobInput) (models
 		return models.Job{}, ErrJobTypeRequired
 	}
 
+	var uniqueKey *string
+	trimmedUniqueKey := strings.TrimSpace(input.UniqueKey)
+	if trimmedUniqueKey != "" {
+		uniqueKey = &trimmedUniqueKey
+	}
+
 	payload := input.Payload
 	if len(payload) == 0 {
 		payload = []byte("{}")
@@ -135,12 +142,13 @@ func (s *JobService) Enqueue(ctx context.Context, input EnqueueJobInput) (models
 	}
 
 	job := models.Job{
-		ID:       id.String(),
-		Type:     jobType,
-		Payload:  payload,
-		Status:   models.JobStatusPending,
-		MaxRetry: maxRetry,
-		RunAt:    runAt,
+		ID:        id.String(),
+		Type:      jobType,
+		UniqueKey: uniqueKey,
+		Payload:   payload,
+		Status:    models.JobStatusPending,
+		MaxRetry:  maxRetry,
+		RunAt:     runAt,
 	}
 
 	job, err = s.repo.Create(ctx, job)
