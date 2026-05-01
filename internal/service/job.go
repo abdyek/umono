@@ -33,7 +33,13 @@ var (
 	ErrJobRetryNotAllowed  = errors.New("job retry not allowed")
 )
 
-type JobHandler func(context.Context, models.Job) error
+type JobEnqueuer interface {
+	Enqueue(context.Context, EnqueueJobInput) (models.Job, error)
+}
+
+type JobHandler func(context.Context, models.Job, JobEnqueuer) error
+
+var _ JobEnqueuer = jobEnqueuer{}
 
 type JobService struct {
 	repo *repository.JobRepository
@@ -56,6 +62,14 @@ type EnqueueJobInput struct {
 	Payload  []byte
 	RunAt    *time.Time
 	MaxRetry int
+}
+
+type jobEnqueuer struct {
+	service *JobService
+}
+
+func (e jobEnqueuer) Enqueue(ctx context.Context, input EnqueueJobInput) (models.Job, error) {
+	return e.service.Enqueue(ctx, input)
 }
 
 func NewJobService(repo *repository.JobRepository) *JobService {
@@ -262,7 +276,7 @@ func (s *JobService) processNext(ctx context.Context) (bool, error) {
 	if handler == nil {
 		err = ErrJobHandlerNotFound
 	} else {
-		err = handler(ctx, job)
+		err = handler(ctx, job, jobEnqueuer{service: s})
 	}
 
 	finishedAt := s.now()
