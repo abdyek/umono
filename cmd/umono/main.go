@@ -58,7 +58,7 @@ func main() {
 
 	comp := compono.New()
 
-	db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&models.Component{},
 		&models.SitePage{},
 		&models.Option{},
@@ -67,7 +67,9 @@ func main() {
 		&models.MediaVariant{},
 		&models.Secret{},
 		&models.Job{},
-	)
+	); err != nil {
+		log.Fatal("migrate err", err)
+	}
 
 	// TODO: Refactor: move DI another file
 	optionRepo := repository.NewOptionRepository(db)

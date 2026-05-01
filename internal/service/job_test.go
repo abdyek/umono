@@ -35,8 +35,42 @@ func TestJobServiceEnqueueCreatesPendingJob(t *testing.T) {
 	if job.MaxRetry != DefaultJobMaxRetry {
 		t.Fatalf("expected default max retry, got %d", job.MaxRetry)
 	}
+	if job.UniqueKey != nil {
+		t.Fatalf("expected nil unique key, got %q", *job.UniqueKey)
+	}
 	if !job.RunAt.Equal(now) {
 		t.Fatalf("expected run_at %s, got %s", now, job.RunAt)
+	}
+}
+
+func TestJobServiceEnqueueStoresUniqueKey(t *testing.T) {
+	db := newJobTestDB(t)
+	svc := newJobTestService(db)
+
+	job, err := svc.Enqueue(context.Background(), EnqueueJobInput{
+		Type:      "media.variant.generate",
+		UniqueKey: " media:1:variant:large ",
+	})
+	if err != nil {
+		t.Fatalf("enqueue job: %v", err)
+	}
+
+	if job.UniqueKey == nil {
+		t.Fatal("expected unique key")
+	}
+	if *job.UniqueKey != "media:1:variant:large" {
+		t.Fatalf("expected trimmed unique key, got %q", *job.UniqueKey)
+	}
+
+	got, err := svc.GetByID(context.Background(), job.ID)
+	if err != nil {
+		t.Fatalf("get job: %v", err)
+	}
+	if got.UniqueKey == nil {
+		t.Fatal("expected persisted unique key")
+	}
+	if *got.UniqueKey != "media:1:variant:large" {
+		t.Fatalf("expected persisted unique key, got %q", *got.UniqueKey)
 	}
 }
 

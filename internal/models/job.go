@@ -12,6 +12,7 @@ const (
 type Job struct {
 	ID          string     `gorm:"primaryKey;type:text" json:"id" db:"id"`
 	Type        string     `gorm:"not null;index" json:"type" db:"type"`
+	UniqueKey   *string    `gorm:"type:text;uniqueIndex" json:"unique_key,omitempty" db:"unique_key"`
 	Payload     []byte     `gorm:"not null" json:"payload" db:"payload"`
 	Status      string     `gorm:"not null;index" json:"status" db:"status"`
 	Attempts    int        `gorm:"not null;default:0" json:"attempts" db:"attempts"`
