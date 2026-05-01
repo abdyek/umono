@@ -46,7 +46,7 @@ func TestJobServiceProcessReadyJobMarksDone(t *testing.T) {
 	ctx := context.Background()
 	var handled bool
 
-	if err := svc.RegisterHandler("test.done", func(_ context.Context, job models.Job) error {
+	if err := svc.RegisterHandler("test.done", func(_ context.Context, job models.Job, _ JobEnqueuer) error {
 		handled = true
 		if job.Attempts != 1 {
 			t.Fatalf("expected first attempt, got %d", job.Attempts)
@@ -84,6 +84,64 @@ func TestJobServiceProcessReadyJobMarksDone(t *testing.T) {
 	}
 }
 
+func TestJobServiceHandlerCanEnqueueJob(t *testing.T) {
+	db := newJobTestDB(t)
+	svc := newJobTestService(db)
+	ctx := context.Background()
+
+	if err := svc.RegisterHandler("test.parent", func(ctx context.Context, _ models.Job, enqueuer JobEnqueuer) error {
+		_, err := enqueuer.Enqueue(ctx, EnqueueJobInput{
+			Type:    "test.child",
+			Payload: []byte(`{"source":"parent"}`),
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("register handler: %v", err)
+	}
+
+	created, err := svc.Enqueue(ctx, EnqueueJobInput{Type: "test.parent"})
+	if err != nil {
+		t.Fatalf("enqueue parent job: %v", err)
+	}
+
+	processed, err := svc.processNext(ctx)
+	if err != nil {
+		t.Fatalf("process parent job: %v", err)
+	}
+	if !processed {
+		t.Fatal("expected parent job to be processed")
+	}
+
+	parent, err := svc.GetByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("get parent job: %v", err)
+	}
+	if parent.Status != models.JobStatusDone {
+		t.Fatalf("expected parent job done, got %q", parent.Status)
+	}
+
+	jobs, err := svc.ListAll(ctx)
+	if err != nil {
+		t.Fatalf("list jobs: %v", err)
+	}
+	var child models.Job
+	for _, job := range jobs {
+		if job.Type == "test.child" {
+			child = job
+			break
+		}
+	}
+	if child.ID == "" {
+		t.Fatal("expected child job to be enqueued")
+	}
+	if child.Status != models.JobStatusPending {
+		t.Fatalf("expected child job pending, got %q", child.Status)
+	}
+	if string(child.Payload) != `{"source":"parent"}` {
+		t.Fatalf("expected child payload from parent, got %s", child.Payload)
+	}
+}
+
 func TestJobServiceProcessFailedJobRetriesThenFails(t *testing.T) {
 	db := newJobTestDB(t)
 	svc := newJobTestService(db)
@@ -91,7 +149,7 @@ func TestJobServiceProcessFailedJobRetriesThenFails(t *testing.T) {
 	handlerErr := errors.New("boom")
 	svc.retryDelay = func(int) time.Duration { return 0 }
 
-	if err := svc.RegisterHandler("test.fail", func(context.Context, models.Job) error {
+	if err := svc.RegisterHandler("test.fail", func(context.Context, models.Job, JobEnqueuer) error {
 		return handlerErr
 	}); err != nil {
 		t.Fatalf("register handler: %v", err)
