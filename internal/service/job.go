@@ -112,6 +112,13 @@ func (s *JobService) Enqueue(ctx context.Context, input EnqueueJobInput) (models
 	var uniqueKey *string
 	trimmedUniqueKey := strings.TrimSpace(input.UniqueKey)
 	if trimmedUniqueKey != "" {
+		existing, err := s.repo.GetByUniqueKey(ctx, trimmedUniqueKey)
+		if err == nil {
+			return existing, nil
+		}
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.Job{}, err
+		}
 		uniqueKey = &trimmedUniqueKey
 	}
 
@@ -153,6 +160,12 @@ func (s *JobService) Enqueue(ctx context.Context, input EnqueueJobInput) (models
 
 	job, err = s.repo.Create(ctx, job)
 	if err != nil {
+		if uniqueKey != nil {
+			existing, getErr := s.repo.GetByUniqueKey(ctx, *uniqueKey)
+			if getErr == nil {
+				return existing, nil
+			}
+		}
 		return models.Job{}, err
 	}
 

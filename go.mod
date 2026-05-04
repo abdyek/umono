@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.5
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.19.11
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.89.0
+	github.com/deepteams/webp v1.2.1
 	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/gofiber/storage/sqlite3 v1.3.8
 	github.com/gofiber/template/html/v2 v2.1.3
@@ -16,6 +17,7 @@ require (
 	github.com/umono-cms/compono v0.4.0
 	github.com/umono-cms/crypto v0.1.0
 	golang.org/x/crypto v0.50.0
+	golang.org/x/image v0.39.0
 	golang.org/x/net v0.52.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12

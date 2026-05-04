@@ -23,6 +23,18 @@ func (r *JobRepository) GetByID(ctx context.Context, id string) (models.Job, err
 	return job, err
 }
 
+func (r *JobRepository) GetByUniqueKey(ctx context.Context, uniqueKey string) (models.Job, error) {
+	var job models.Job
+	result := r.db.WithContext(ctx).Model(&models.Job{}).Where("unique_key = ?", uniqueKey).Find(&job)
+	if result.Error != nil {
+		return models.Job{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return models.Job{}, gorm.ErrRecordNotFound
+	}
+	return job, nil
+}
+
 func (r *JobRepository) ListAll(ctx context.Context) ([]models.Job, error) {
 	var jobs []models.Job
 	err := r.db.WithContext(ctx).Model(&models.Job{}).

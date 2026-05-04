@@ -43,3 +43,15 @@ func TestLocalStoragePublicURLTrimsStoragePrefix(t *testing.T) {
 		t.Fatalf("unexpected url: %s", url)
 	}
 }
+
+func TestLocalStoragePublicURLPreservesVariantPathSegments(t *testing.T) {
+	t.Parallel()
+
+	url, err := NewLocalStorage("uploads").PublicURL(context.Background(), "uploads/variants/hero image_w640.webp")
+	if err != nil {
+		t.Fatalf("public url failed: %v", err)
+	}
+	if url != "/uploads/variants/hero%20image_w640.webp" {
+		t.Fatalf("unexpected url: %s", url)
+	}
+}

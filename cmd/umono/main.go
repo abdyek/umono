@@ -99,6 +99,9 @@ func main() {
 		log.Fatal("media storage err", err)
 	}
 	jobService := service.NewJobService(jobRepo)
+	if err := mediaService.RegisterVariantJobHandlers(jobService); err != nil {
+		log.Fatal("media variant job handler err", err)
+	}
 	if err := jobService.Start(context.Background()); err != nil {
 		log.Fatal("job service err", err)
 	}
@@ -298,6 +301,7 @@ func main() {
 
 	app.Post("/login", authHandler.Login)
 	app.Post("/logout", middleware.Logged(store), authHandler.Logout)
+	app.Get("/uploads/variants/*", mediaHandler.Serve)
 	app.Get("/uploads/:filename", mediaHandler.Serve)
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
