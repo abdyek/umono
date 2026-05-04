@@ -6,6 +6,9 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/umono-cms/umono/internal/models"
@@ -68,6 +71,83 @@ func TestMediaVariantJobsGenerateVariantsAfterUpload(t *testing.T) {
 	}
 }
 
+func TestMediaDeleteRemovesVariantRecords(t *testing.T) {
+	db := newMediaVariantTestDB(t)
+	mediaRepo := repository.NewMediaRepository(db)
+	storageRepo := repository.NewStorageRepository(db)
+	mediaSvc := NewMediaService(mediaRepo, storageRepo, nil, nil, t.TempDir())
+
+	storageRoot := t.TempDir()
+	if err := mediaSvc.EnsureDefaultLocalStorage(storageRoot); err != nil {
+		t.Fatalf("ensure local storage: %v", err)
+	}
+
+	writeStorageFile(t, storageRoot, "uploads/original.png")
+	writeStorageFile(t, storageRoot, "uploads/variants/original_w320.webp")
+	writeStorageFile(t, storageRoot, "uploads/variants/original_w640.webp")
+
+	item := mediaRepo.Create(models.Media{
+		ID:           "media-delete-test",
+		StorageID:    DefaultLocalStorageID,
+		OriginalName: "original.png",
+		PathKey:      "uploads/original.png",
+		MimeType:     "image/png",
+		Size:         10,
+		Hash:         "delete-test-hash",
+		Metadata:     models.JSONMap{},
+	})
+	if err := db.Create(&[]models.MediaVariant{
+		{
+			ID:       "variant-320",
+			MediaID:  item.ID,
+			PathKey:  "uploads/variants/original_w320.webp",
+			Size:     5,
+			MimeType: "image/webp",
+			Metadata: models.JSONMap{"width": 320, "config_version": 1},
+		},
+		{
+			ID:       "variant-640",
+			MediaID:  item.ID,
+			PathKey:  "uploads/variants/original_w640.webp",
+			Size:     6,
+			MimeType: "image/webp",
+			Metadata: models.JSONMap{"width": 640, "config_version": 1},
+		},
+	}).Error; err != nil {
+		t.Fatalf("create variants: %v", err)
+	}
+
+	if err := mediaSvc.Delete(context.Background(), item.ID); err != nil {
+		t.Fatalf("delete media: %v", err)
+	}
+
+	var variantCount int64
+	if err := db.Model(&models.MediaVariant{}).Where("media_id = ?", item.ID).Count(&variantCount).Error; err != nil {
+		t.Fatalf("count variants: %v", err)
+	}
+	if variantCount != 0 {
+		t.Fatalf("expected variant records to be deleted, got %d", variantCount)
+	}
+
+	var mediaCount int64
+	if err := db.Model(&models.Media{}).Where("id = ?", item.ID).Count(&mediaCount).Error; err != nil {
+		t.Fatalf("count media: %v", err)
+	}
+	if mediaCount != 0 {
+		t.Fatalf("expected media record to be deleted, got %d", mediaCount)
+	}
+
+	for _, key := range []string{
+		"original.png",
+		"variants/original_w320.webp",
+		"variants/original_w640.webp",
+	} {
+		if _, err := os.Stat(filepath.Join(storageRoot, key)); !os.IsNotExist(err) {
+			t.Fatalf("expected storage file %q to be deleted, stat err: %v", key, err)
+		}
+	}
+}
+
 func processAllJobs(t *testing.T, svc *JobService) {
 	t.Helper()
 
@@ -98,6 +178,19 @@ func testPNG(t *testing.T, width, height int) []byte {
 		t.Fatalf("encode png: %v", err)
 	}
 	return buf.Bytes()
+}
+
+func writeStorageFile(t *testing.T, root, key string) {
+	t.Helper()
+
+	key = strings.TrimPrefix(filepath.ToSlash(key), "uploads/")
+	path := filepath.Join(root, filepath.FromSlash(key))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("create storage dir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte("test"), 0o644); err != nil {
+		t.Fatalf("write storage file: %v", err)
+	}
 }
 
 func newMediaVariantTestDB(t *testing.T) *gorm.DB {

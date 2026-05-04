@@ -117,5 +117,10 @@ func (r *MediaRepository) DeleteVariant(id string) error {
 }
 
 func (r *MediaRepository) Delete(id string) error {
-	return r.db.Delete(&models.Media{}, "id = ?", id).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete(&models.MediaVariant{}, "media_id = ?", id).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&models.Media{}, "id = ?", id).Error
+	})
 }
