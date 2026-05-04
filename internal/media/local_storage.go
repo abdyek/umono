@@ -76,7 +76,16 @@ func (s *LocalStorage) Delete(_ context.Context, key string) error {
 }
 
 func (*LocalStorage) PublicURL(_ context.Context, key string) (string, error) {
-	return "/uploads/" + url.PathEscape(strings.TrimPrefix(normalizeLocalKey(key), "uploads/")), nil
+	clean := strings.TrimPrefix(normalizeLocalKey(key), "uploads/")
+	escaped := make([]string, 0)
+	for _, segment := range strings.Split(clean, "/") {
+		segment = strings.TrimSpace(segment)
+		if segment == "" {
+			continue
+		}
+		escaped = append(escaped, url.PathEscape(segment))
+	}
+	return "/uploads/" + strings.Join(escaped, "/"), nil
 }
 
 func (*LocalStorage) PresignPut(_ context.Context, _ string, _ ObjectMeta) (string, map[string]string, error) {

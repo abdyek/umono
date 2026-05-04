@@ -354,10 +354,30 @@ func (h *mediaHandler) ServePending(c *fiber.Ctx) error {
 
 func (h *mediaHandler) Serve(c *fiber.Ctx) error {
 	filename := c.Params("filename")
+	if filename == "" {
+		filename = c.Params("*")
+		if filename != "" && !strings.HasPrefix(filepath.ToSlash(filename), "variants/") {
+			filename = filepath.Join("variants", filename)
+		}
+	}
 	ext := strings.TrimPrefix(filepath.Ext(filename), ".")
 	id := strings.TrimSuffix(filename, "."+ext)
 	if id == "" || ext == "" {
 		return c.SendStatus(fiber.StatusNotFound)
+	}
+
+	if strings.HasPrefix(filepath.ToSlash(filename), "variants/") {
+		reader, meta, err := h.mediaService.OpenVariantByPathKey(c.UserContext(), filepath.Join("uploads", filepath.ToSlash(filename)))
+		if err != nil {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		c.Set(fiber.HeaderCacheControl, mediaCacheControl)
+		c.Type(ext)
+		c.Set(fiber.HeaderContentType, meta.ContentType)
+		if meta.Size > 0 {
+			c.Set(fiber.HeaderContentLength, strconv.FormatInt(meta.Size, 10))
+		}
+		return c.SendStream(reader, int(meta.Size))
 	}
 
 	item, err := h.mediaService.GetByID(id)

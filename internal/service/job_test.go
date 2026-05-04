@@ -74,6 +74,42 @@ func TestJobServiceEnqueueStoresUniqueKey(t *testing.T) {
 	}
 }
 
+func TestJobServiceEnqueueReturnsExistingJobForUniqueKey(t *testing.T) {
+	db := newJobTestDB(t)
+	svc := newJobTestService(db)
+	ctx := context.Background()
+
+	first, err := svc.Enqueue(ctx, EnqueueJobInput{
+		Type:      "media.variant.plan",
+		UniqueKey: "media.variant.plan:media-id",
+		Payload:   []byte(`{"media_id":"media-id"}`),
+	})
+	if err != nil {
+		t.Fatalf("enqueue first job: %v", err)
+	}
+
+	second, err := svc.Enqueue(ctx, EnqueueJobInput{
+		Type:      "media.variant.plan",
+		UniqueKey: "media.variant.plan:media-id",
+		Payload:   []byte(`{"media_id":"media-id"}`),
+	})
+	if err != nil {
+		t.Fatalf("enqueue second job: %v", err)
+	}
+
+	if second.ID != first.ID {
+		t.Fatalf("expected existing job, got %q want %q", second.ID, first.ID)
+	}
+
+	jobs, err := svc.ListAll(ctx)
+	if err != nil {
+		t.Fatalf("list jobs: %v", err)
+	}
+	if len(jobs) != 1 {
+		t.Fatalf("expected one job, got %d", len(jobs))
+	}
+}
+
 func TestJobServiceProcessReadyJobMarksDone(t *testing.T) {
 	db := newJobTestDB(t)
 	svc := newJobTestService(db)

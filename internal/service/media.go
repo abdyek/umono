@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	umonoimage "github.com/umono-cms/umono/internal/image"
 	"github.com/umono-cms/umono/internal/media"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
@@ -29,6 +31,11 @@ var (
 )
 
 const mediaCacheControl = "public, max-age=31536000, immutable"
+
+const (
+	JobTypeMediaVariantPlan     = "media.variant.plan"
+	JobTypeMediaVariantGenerate = "media.variant.generate"
+)
 
 type countingReader struct {
 	reader io.Reader
@@ -82,6 +89,7 @@ type MediaService struct {
 	storageRepo *repository.StorageRepository
 	optionRepo  *repository.OptionRepository
 	secrets     *SecretService
+	jobs        JobEnqueuer
 	pendingDir  string
 }
 
@@ -91,14 +99,36 @@ func NewMediaService(
 	optionRepo *repository.OptionRepository,
 	secrets *SecretService,
 	pendingDir string,
+	jobEnqueuers ...JobEnqueuer,
 ) *MediaService {
+	var jobs JobEnqueuer
+	if len(jobEnqueuers) > 0 {
+		jobs = jobEnqueuers[0]
+	}
+
 	return &MediaService{
 		repo:        repo,
 		storageRepo: storageRepo,
 		optionRepo:  optionRepo,
 		secrets:     secrets,
+		jobs:        jobs,
 		pendingDir:  pendingDir,
 	}
+}
+
+func (s *MediaService) SetJobEnqueuer(jobs JobEnqueuer) {
+	s.jobs = jobs
+}
+
+func (s *MediaService) RegisterVariantJobHandlers(jobs *JobService) error {
+	if jobs == nil {
+		return ErrJobHandlerRequired
+	}
+	s.SetJobEnqueuer(jobEnqueuer{service: jobs})
+	if err := jobs.RegisterHandler(JobTypeMediaVariantPlan, s.HandleVariantPlanJob); err != nil {
+		return err
+	}
+	return jobs.RegisterHandler(JobTypeMediaVariantGenerate, s.HandleVariantGenerateJob)
 }
 
 func (s *MediaService) EnsureDefaultLocalStorage(root string) error {
@@ -206,6 +236,7 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	}
 
 	record = s.repo.Create(record)
+	_ = s.EnqueueVariantPlan(ctx, record.ID)
 	return UploadMediaResult{Media: record}, nil
 }
 
@@ -317,6 +348,7 @@ func (s *MediaService) CompletePreparedUpload(ctx context.Context, token string)
 
 	record := s.repo.Create(pending.Media)
 	_ = s.deletePendingUpload(token)
+	_ = s.EnqueueVariantPlan(ctx, record.ID)
 	return UploadMediaResult{Media: record}, nil
 }
 
@@ -351,6 +383,7 @@ func (s *MediaService) ConfirmPendingUpload(ctx context.Context, token string) (
 
 	created := s.repo.Create(pending.Media)
 	_ = s.deletePendingUpload(token)
+	_ = s.EnqueueVariantPlan(ctx, created.ID)
 	return created, nil
 }
 
@@ -408,21 +441,30 @@ func (s *MediaService) UpdateAlias(id, alias string) (models.Media, error) {
 	}
 
 	metadata := buildMediaMetadata(alias)
-	copyDimensionMetadata(metadata, item.Metadata)
+	copyMediaMetadata(metadata, item.Metadata)
 	item.Metadata = metadata
 	item = s.repo.Update(item)
 	return item, nil
 }
 
 func (s *MediaService) Delete(ctx context.Context, id string) error {
-	item, err := s.GetByID(id)
-	if err != nil {
-		return err
+	item := s.repo.GetByIDWithVariants(id)
+	if item.ID == "" {
+		return ErrMediaNotFound
 	}
 
 	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
 	if err != nil {
 		return err
+	}
+
+	for _, variant := range item.Variants {
+		if variant.PathKey == "" {
+			continue
+		}
+		if err := storageBackend.Delete(ctx, variant.PathKey); err != nil {
+			return err
+		}
 	}
 
 	if err := storageBackend.Delete(ctx, item.PathKey); err != nil {
@@ -458,6 +500,32 @@ func (s *MediaService) OpenByIDAndExt(ctx context.Context, id, ext string) (io.R
 	return reader, meta, nil
 }
 
+func (s *MediaService) OpenVariantByPathKey(ctx context.Context, pathKey string) (io.ReadCloser, media.ObjectMeta, error) {
+	variant := s.repo.GetVariantByPathKey(pathKey)
+	if variant.ID == "" {
+		return nil, media.ObjectMeta{}, ErrMediaNotFound
+	}
+
+	item, err := s.GetByID(variant.MediaID)
+	if err != nil {
+		return nil, media.ObjectMeta{}, err
+	}
+
+	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	if err != nil {
+		return nil, media.ObjectMeta{}, err
+	}
+
+	reader, meta, err := storageBackend.Get(ctx, variant.PathKey)
+	if err != nil {
+		return nil, media.ObjectMeta{}, err
+	}
+
+	meta.ContentType = variant.MimeType
+	meta.Size = variant.Size
+	return reader, meta, nil
+}
+
 func (s *MediaService) PublicURL(item models.Media) (string, error) {
 	ext, ok := media.ExtensionByMimeType(item.MimeType)
 	if !ok {
@@ -465,6 +533,14 @@ func (s *MediaService) PublicURL(item models.Media) (string, error) {
 	}
 
 	return "/uploads/" + item.ID + "." + ext, nil
+}
+
+func (s *MediaService) VariantPublicURL(variant models.MediaVariant) (string, error) {
+	if _, ok := media.ExtensionByMimeType(variant.MimeType); !ok {
+		return "", ErrMediaNotFound
+	}
+
+	return "/" + filepath.ToSlash(variant.PathKey), nil
 }
 
 func (s *MediaService) DirectURL(ctx context.Context, item models.Media) (string, error) {
@@ -479,8 +555,214 @@ func (s *MediaService) DirectURL(ctx context.Context, item models.Media) (string
 	return storageBackend.PublicURL(ctx, item.PathKey)
 }
 
+func (s *MediaService) VariantDirectURL(ctx context.Context, variant models.MediaVariant) (string, error) {
+	item, err := s.GetByID(variant.MediaID)
+	if err != nil {
+		return "", err
+	}
+	storageModel, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	if err != nil {
+		return "", err
+	}
+	if storageModel.Type == models.StorageTypeLocal {
+		return s.VariantPublicURL(variant)
+	}
+
+	return storageBackend.PublicURL(ctx, variant.PathKey)
+}
+
+type mediaVariantPlanPayload struct {
+	MediaID string `json:"media_id"`
+}
+
+type mediaVariantGeneratePayload struct {
+	MediaID       string `json:"media_id"`
+	Width         int    `json:"width"`
+	MimeType      string `json:"mime_type"`
+	ConfigVersion int    `json:"config_version"`
+}
+
+func (s *MediaService) EnqueueVariantPlan(ctx context.Context, mediaID string) error {
+	if s.jobs == nil {
+		return nil
+	}
+
+	mediaID = strings.TrimSpace(mediaID)
+	if mediaID == "" {
+		return ErrMediaNotFound
+	}
+
+	payload, err := json.Marshal(mediaVariantPlanPayload{MediaID: mediaID})
+	if err != nil {
+		return err
+	}
+
+	_, err = s.jobs.Enqueue(ctx, EnqueueJobInput{
+		Type:      JobTypeMediaVariantPlan,
+		UniqueKey: fmt.Sprintf("%s:%s", JobTypeMediaVariantPlan, mediaID),
+		Payload:   payload,
+	})
+	return err
+}
+
+func (s *MediaService) HandleVariantPlanJob(ctx context.Context, job models.Job, enqueuer JobEnqueuer) error {
+	var payload mediaVariantPlanPayload
+	if err := json.Unmarshal(job.Payload, &payload); err != nil {
+		return err
+	}
+
+	item, err := s.GetByID(payload.MediaID)
+	if err != nil {
+		return err
+	}
+
+	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	if err != nil {
+		return err
+	}
+
+	reader, _, err := storageBackend.Get(ctx, item.PathKey)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	info, _, err := umonoimage.Inspect(reader, item.MimeType)
+	if err != nil {
+		return err
+	}
+
+	metadata := item.Metadata
+	if metadata == nil {
+		metadata = models.JSONMap{}
+	}
+	metadata["width"] = info.Width
+	metadata["height"] = info.Height
+	metadata["animated"] = info.Animated
+	metadata["alpha"] = info.HasAlpha
+	metadata["exif_orientation"] = info.Orientation
+	metadata["variant_config_version"] = umonoimage.DefaultVariantGenerationConfig.Version
+	item.Metadata = metadata
+	s.repo.Update(item)
+
+	for _, target := range umonoimage.PlanVariants(info, umonoimage.DefaultVariantGenerationConfig) {
+		if s.repo.GetVariantByTarget(item.ID, target.Width, target.MimeType, umonoimage.DefaultVariantGenerationConfig.Version).ID != "" {
+			continue
+		}
+
+		payload, err := json.Marshal(mediaVariantGeneratePayload{
+			MediaID:       item.ID,
+			Width:         target.Width,
+			MimeType:      target.MimeType,
+			ConfigVersion: umonoimage.DefaultVariantGenerationConfig.Version,
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = enqueuer.Enqueue(ctx, EnqueueJobInput{
+			Type:      JobTypeMediaVariantGenerate,
+			UniqueKey: variantGenerateUniqueKey(item.ID, target.Width, target.MimeType, umonoimage.DefaultVariantGenerationConfig.Version),
+			Payload:   payload,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *MediaService) HandleVariantGenerateJob(ctx context.Context, job models.Job, _ JobEnqueuer) error {
+	var payload mediaVariantGeneratePayload
+	if err := json.Unmarshal(job.Payload, &payload); err != nil {
+		return err
+	}
+	if payload.ConfigVersion == 0 {
+		payload.ConfigVersion = umonoimage.DefaultVariantGenerationConfig.Version
+	}
+	if s.repo.GetVariantByTarget(payload.MediaID, payload.Width, payload.MimeType, payload.ConfigVersion).ID != "" {
+		return nil
+	}
+
+	item, err := s.GetByID(payload.MediaID)
+	if err != nil {
+		return err
+	}
+
+	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	if err != nil {
+		return err
+	}
+
+	reader, _, err := storageBackend.Get(ctx, item.PathKey)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	result, err := umonoimage.GenerateVariant(reader, item.MimeType, umonoimage.VariantTarget{
+		Width:    payload.Width,
+		MimeType: payload.MimeType,
+	}, umonoimage.DefaultVariantGenerationConfig)
+	if err != nil {
+		return err
+	}
+
+	ext, ok := umonoimage.ExtensionByMimeType(payload.MimeType)
+	if !ok {
+		return ErrUnsupportedMediaType
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+
+	pathKey := mediaVariantPathKey(id.String(), result.Width, ext)
+	if err := storageBackend.Put(ctx, pathKey, bytes.NewReader(result.Data), media.ObjectMeta{
+		ContentType:  payload.MimeType,
+		CacheControl: mediaCacheControl,
+		Size:         int64(len(result.Data)),
+	}); err != nil {
+		return err
+	}
+
+	variant, err := s.repo.CreateVariant(models.MediaVariant{
+		ID:       id.String(),
+		MediaID:  item.ID,
+		PathKey:  pathKey,
+		Size:     int64(len(result.Data)),
+		MimeType: payload.MimeType,
+		Metadata: models.JSONMap{
+			"width":            result.Width,
+			"height":           result.Height,
+			"source_media_id":  item.ID,
+			"config_version":   payload.ConfigVersion,
+			"resize_algorithm": umonoimage.DefaultVariantGenerationConfig.ResizeAlgorithm,
+		},
+	})
+	if err != nil {
+		_ = storageBackend.Delete(ctx, pathKey)
+		return err
+	}
+	if variant.PathKey != pathKey {
+		_ = storageBackend.Delete(ctx, pathKey)
+	}
+
+	return nil
+}
+
+func variantGenerateUniqueKey(mediaID string, width int, mimeType string, configVersion int) string {
+	return fmt.Sprintf("%s:%s:%d:%s:v%d", JobTypeMediaVariantGenerate, mediaID, width, mimeType, configVersion)
+}
+
 func mediaPathKey(id, ext string) string {
 	return filepath.Join("uploads", id+"."+ext)
+}
+
+func mediaVariantPathKey(id string, width int, ext string) string {
+	return filepath.Join("uploads", "variants", fmt.Sprintf("%s_w%d.%s", id, width, ext))
 }
 
 func MediaAlias(item models.Media) string {
@@ -505,16 +787,16 @@ func buildMediaMetadata(alias string) models.JSONMap {
 	return metadata
 }
 
-func copyDimensionMetadata(dst, src models.JSONMap) {
+func copyMediaMetadata(dst, src models.JSONMap) {
 	if src == nil {
 		return
 	}
 
-	if width, ok := src["width"]; ok {
-		dst["width"] = width
-	}
-	if height, ok := src["height"]; ok {
-		dst["height"] = height
+	for key, value := range src {
+		if key == "alias" {
+			continue
+		}
+		dst[key] = value
 	}
 }
 
