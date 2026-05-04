@@ -393,7 +393,7 @@ func (s *MediaService) OpenPendingUpload(ctx context.Context, token string) (io.
 		return nil, media.ObjectMeta{}, err
 	}
 
-	_, storageBackend, err := s.storageByID(ctx, pending.Media.StorageID)
+	storageBackend, err := s.localStorageByID(ctx, pending.Media.StorageID)
 	if err != nil {
 		return nil, media.ObjectMeta{}, ErrPendingUploadMissing
 	}
@@ -485,7 +485,7 @@ func (s *MediaService) OpenByIDAndExt(ctx context.Context, id, ext string) (io.R
 		return nil, media.ObjectMeta{}, ErrMediaNotFound
 	}
 
-	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	storageBackend, err := s.localStorageByID(ctx, item.StorageID)
 	if err != nil {
 		return nil, media.ObjectMeta{}, err
 	}
@@ -511,7 +511,7 @@ func (s *MediaService) OpenVariantByPathKey(ctx context.Context, pathKey string)
 		return nil, media.ObjectMeta{}, err
 	}
 
-	_, storageBackend, err := s.storageByID(ctx, item.StorageID)
+	storageBackend, err := s.localStorageByID(ctx, item.StorageID)
 	if err != nil {
 		return nil, media.ObjectMeta{}, err
 	}
@@ -833,13 +833,9 @@ func (s *MediaService) defaultStorageID() string {
 }
 
 func (s *MediaService) storageByID(ctx context.Context, id string) (models.Storage, media.Storage, error) {
-	if strings.TrimSpace(id) == "" {
-		id = DefaultLocalStorageID
-	}
-
-	storageModel := s.storageRepo.GetByID(id)
-	if storageModel.ID == "" {
-		return models.Storage{}, nil, ErrStorageNotFound
+	storageModel, err := s.storageModelByID(id)
+	if err != nil {
+		return models.Storage{}, nil, err
 	}
 
 	storageBackend, err := s.storageBackend(ctx, storageModel)
@@ -848,6 +844,36 @@ func (s *MediaService) storageByID(ctx context.Context, id string) (models.Stora
 	}
 
 	return storageModel, storageBackend, nil
+}
+
+func (s *MediaService) localStorageByID(ctx context.Context, id string) (media.Storage, error) {
+	storageModel, err := s.storageModelByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if storageModel.Type != models.StorageTypeLocal {
+		return nil, ErrMediaNotFound
+	}
+
+	storageBackend, err := s.storageBackend(ctx, storageModel)
+	if err != nil {
+		return nil, err
+	}
+
+	return storageBackend, nil
+}
+
+func (s *MediaService) storageModelByID(id string) (models.Storage, error) {
+	if strings.TrimSpace(id) == "" {
+		id = DefaultLocalStorageID
+	}
+
+	storageModel := s.storageRepo.GetByID(id)
+	if storageModel.ID == "" {
+		return models.Storage{}, ErrStorageNotFound
+	}
+
+	return storageModel, nil
 }
 
 func (s *MediaService) storageBackend(ctx context.Context, storageModel models.Storage) (media.Storage, error) {

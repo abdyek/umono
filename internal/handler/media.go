@@ -187,7 +187,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 
 	if result.Pending != nil && result.Duplicate != nil {
 		return Render(c, "partials/media-confirm-content", fiber.Map{
-			"Pending": buildPendingDuplicate(result.Pending, *result.Duplicate),
+			"Pending": h.buildPendingDuplicate(c.UserContext(), result.Pending),
 		})
 	}
 
@@ -234,7 +234,7 @@ func (h *mediaHandler) CompleteUpload(c *fiber.Ctx) error {
 
 	if result.Pending != nil && result.Duplicate != nil {
 		return Render(c, "partials/media-confirm-content", fiber.Map{
-			"Pending": buildPendingDuplicate(result.Pending, *result.Duplicate),
+			"Pending": h.buildPendingDuplicate(c.UserContext(), result.Pending),
 		})
 	}
 
@@ -504,10 +504,19 @@ type pendingDuplicateData struct {
 	Alias        string
 }
 
-func buildPendingDuplicate(pending *service.PendingUpload, duplicate models.Media) pendingDuplicateData {
+func (h *mediaHandler) buildPendingDuplicate(ctx context.Context, pending *service.PendingUpload) pendingDuplicateData {
+	newURL := "/admin/media/pending/" + pending.Token + "/preview"
+	if storage, err := h.storageService.GetByID(pending.Media.StorageID); err == nil && storage.Type != models.StorageTypeLocal {
+		if directURL, err := h.mediaService.DirectURL(ctx, pending.Media); err == nil {
+			newURL = directURL
+		} else {
+			newURL = ""
+		}
+	}
+
 	return pendingDuplicateData{
 		Token:        pending.Token,
-		NewURL:       "/admin/media/pending/" + pending.Token + "/preview",
+		NewURL:       newURL,
 		DuplicateURL: pending.DuplicateURL,
 		Name:         pending.Media.OriginalName,
 		Alias:        service.MediaAlias(pending.Media),
@@ -576,6 +585,11 @@ func (h *mediaHandler) buildMediaList(items []models.Media, activeID string) []v
 func (h *mediaHandler) directURL(item models.Media) string {
 	url, err := h.mediaService.DirectURL(context.Background(), item)
 	if err != nil {
+		storage, storageErr := h.storageService.GetByID(item.StorageID)
+		if storageErr != nil || storage.Type != models.StorageTypeLocal {
+			return ""
+		}
+
 		url, err = h.mediaService.PublicURL(item)
 		if err != nil {
 			return ""
