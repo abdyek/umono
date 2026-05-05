@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"time"
@@ -31,7 +32,7 @@ func NewSitePageService(r *repository.SitePageRepository, or *repository.OptionR
 	}
 }
 
-func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error) {
+func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (models.SitePage, error) {
 	// TODO: Put here cache
 	sitePage, err := s.GetBySlug(slug)
 	if err != nil {
@@ -42,7 +43,7 @@ func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 		return models.SitePage{}, ErrSitePageNotFound
 	}
 
-	output, err := s.convert(sitePage.Content)
+	output, err := s.convert(ctx, sitePage.Content)
 	if err != nil {
 		return models.SitePage{}, err
 	}
@@ -51,7 +52,7 @@ func (s *SitePageService) GetRenderedBySlug(slug string) (models.SitePage, error
 	return sitePage, nil
 }
 
-func (s *SitePageService) GetNotFoundPage(defaultTitle, defaultContent string) (models.SitePage, error) {
+func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (models.SitePage, error) {
 	title := defaultTitle
 	content := defaultContent
 
@@ -65,7 +66,7 @@ func (s *SitePageService) GetNotFoundPage(defaultTitle, defaultContent string) (
 		}
 	}
 
-	rendered, err := s.convert(content)
+	rendered, err := s.convert(ctx, content)
 	if err != nil {
 		return models.SitePage{}, err
 	}
@@ -96,16 +97,16 @@ func (s *SitePageService) GetAll() []models.SitePage {
 	return s.repo.GetAll()
 }
 
-func (s *SitePageService) Preview(source string) (string, error) {
-	output, err := s.convert(source)
+func (s *SitePageService) Preview(ctx context.Context, source string) (string, error) {
+	output, err := s.convert(ctx, source)
 	if err != nil {
 		return "", err
 	}
 	return output, nil
 }
 
-func (s *SitePageService) MustPreview(source string) string {
-	output, _ := s.Preview(source)
+func (s *SitePageService) MustPreview(ctx context.Context, source string) string {
+	output, _ := s.Preview(ctx, source)
 	return output
 }
 
@@ -173,8 +174,8 @@ func (s *SitePageService) CheckSlug(slug string, exclude uint) error {
 	return nil
 }
 
-func (s *SitePageService) convert(source string) (string, error) {
-	return s.contentCompiler.Compile(source)
+func (s *SitePageService) convert(ctx context.Context, source string) (string, error) {
+	return s.contentCompiler.CompileWithProviderContext(ctx, source)
 }
 
 func (s *SitePageService) isSlugValid(slug string) bool {

@@ -32,7 +32,7 @@ func (h *previewHandler) RenderSitePagePreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	output, err := h.sitePageService.Preview(req.Content)
+	output, err := h.sitePageService.Preview(c.UserContext(), req.Content)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	output, err := h.componentService.Preview(strings.TrimSpace(req.Name), req.Content)
+	output, err := h.componentService.Preview(c.UserContext(), strings.TrimSpace(req.Name), req.Content)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
 		_, content = localizedNotFoundDefaults(c)
 	}
 
-	output, err := h.sitePageService.Preview(content)
+	output, err := h.sitePageService.Preview(c.UserContext(), content)
 	if err != nil {
 		return err
 	}

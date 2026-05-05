@@ -47,7 +47,7 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
+		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(c.UserContext(), comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 	})
@@ -80,7 +80,7 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
+		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(c.UserContext(), comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
 		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
 	})

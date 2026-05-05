@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"html/template"
 	"strconv"
 
@@ -44,7 +45,7 @@ func (h *adminHandler) Index(c *fiber.Ctx) error {
 	c.Set("HX-Push-Url", target)
 
 	return Render(c, "pages/admin", fiber.Map{
-		"SitePageEditor": h.buildSitePageEditor(sitePage, translator),
+		"SitePageEditor": h.buildSitePageEditor(c.UserContext(), sitePage, translator),
 		"SitePageUl":     h.buildSitePageUl(sitePages, sitePage.ID),
 		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
 	})
@@ -65,7 +66,7 @@ func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {
 	sitePages := h.sitePageService.GetAll()
 
 	return Render(c, "pages/admin", fiber.Map{
-		"SitePageEditor": h.buildSitePageEditor(sitePage, c.Locals("I18n")),
+		"SitePageEditor": h.buildSitePageEditor(c.UserContext(), sitePage, c.Locals("I18n")),
 		"SitePageUl":     h.buildSitePageUl(sitePages, sitePage.ID),
 		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
 	}, "layouts/admin")
@@ -84,7 +85,7 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
-		"SitePageEditor": h.buildSitePageEditor(sitePage, c.Locals("I18n")),
+		"SitePageEditor": h.buildSitePageEditor(c.UserContext(), sitePage, c.Locals("I18n")),
 		"SitePageUl":     h.buildSitePageUl(h.sitePageService.GetAll(), sitePage.ID),
 		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
 	})
@@ -104,7 +105,7 @@ func (h *adminHandler) RenderAdminComponent(c *fiber.Ctx) error {
 
 	return Render(c, "pages/admin", fiber.Map{
 		"ComponentMode":   true,
-		"ComponentEditor": h.buildComponentEditor(comp, c.Locals("I18n")),
+		"ComponentEditor": h.buildComponentEditor(c.UserContext(), comp, c.Locals("I18n")),
 		"ComponentUl":     h.buildComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      h.buildSitePageUl(h.sitePageService.GetAll(), 0),
 	}, "layouts/admin")
@@ -123,7 +124,7 @@ func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": h.buildComponentEditor(comp, c.Locals("I18n")),
+		"ComponentEditor": h.buildComponentEditor(c.UserContext(), comp, c.Locals("I18n")),
 		"ComponentUl":     h.buildComponentUl(h.componentService.GetAll(), comp.ID),
 		"SitePageUl":      h.buildSitePageUl(h.sitePageService.GetAll(), 0),
 	})
@@ -163,13 +164,13 @@ type sitePageEditor struct {
 	I18n           any
 }
 
-func (h *adminHandler) buildSitePageEditor(page models.SitePage, translator any) sitePageEditor {
+func (h *adminHandler) buildSitePageEditor(ctx context.Context, page models.SitePage, translator any) sitePageEditor {
 	return sitePageEditor{
 		ID:             page.ID,
 		Name:           page.Name,
 		Slug:           page.Slug,
 		Content:        page.Content,
-		Output:         mustPreviewHTML(h.sitePageService.MustPreview(page.Content)),
+		Output:         mustPreviewHTML(h.sitePageService.MustPreview(ctx, page.Content)),
 		IsEnabled:      page.Enabled,
 		LastModifiedAt: view.RelativeTimeWithTranslator(page.LastModifiedAt, translator),
 		I18n:           translator,
@@ -205,12 +206,12 @@ type componentEditor struct {
 	I18n           any
 }
 
-func (h *adminHandler) buildComponentEditor(comp models.Component, translator any) componentEditor {
+func (h *adminHandler) buildComponentEditor(ctx context.Context, comp models.Component, translator any) componentEditor {
 	return componentEditor{
 		ID:             comp.ID,
 		Name:           comp.Name,
 		Content:        comp.Content,
-		Output:         mustPreviewHTML(h.componentService.MustPreview(comp.Name, comp.Content)),
+		Output:         mustPreviewHTML(h.componentService.MustPreview(ctx, comp.Name, comp.Content)),
 		LastModifiedAt: view.RelativeTimeWithTranslator(comp.LastModifiedAt, translator),
 		I18n:           translator,
 	}
