@@ -1,12 +1,10 @@
 package service
 
 import (
-	"bytes"
 	"errors"
 	"regexp"
 	"time"
 
-	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
@@ -20,16 +18,16 @@ var (
 var ErrSitePageNotFound = errors.New("site page not found")
 
 type SitePageService struct {
-	repo    *repository.SitePageRepository
-	optRepo *repository.OptionRepository
-	compono compono.Compono
+	repo            *repository.SitePageRepository
+	optRepo         *repository.OptionRepository
+	contentCompiler *ContentCompiler
 }
 
-func NewSitePageService(r *repository.SitePageRepository, or *repository.OptionRepository, comp compono.Compono) *SitePageService {
+func NewSitePageService(r *repository.SitePageRepository, or *repository.OptionRepository, cc *ContentCompiler) *SitePageService {
 	return &SitePageService{
-		repo:    r,
-		optRepo: or,
-		compono: comp,
+		repo:            r,
+		optRepo:         or,
+		contentCompiler: cc,
 	}
 }
 
@@ -176,11 +174,7 @@ func (s *SitePageService) CheckSlug(slug string, exclude uint) error {
 }
 
 func (s *SitePageService) convert(source string) (string, error) {
-	var buf bytes.Buffer
-	if err := s.compono.Convert([]byte(source), &buf); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
+	return s.contentCompiler.Compile(source)
 }
 
 func (s *SitePageService) isSlugValid(slug string) bool {

@@ -1,13 +1,10 @@
 package service
 
 import (
-	"bytes"
 	"errors"
 	"regexp"
-	"strings"
 	"time"
 
-	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
@@ -20,15 +17,18 @@ var (
 )
 
 type ComponentService struct {
-	repo    *repository.ComponentRepository
-	compono compono.Compono
+	repo            *repository.ComponentRepository
+	contentCompiler *ContentCompiler
 }
 
-func NewComponentService(r *repository.ComponentRepository, comp compono.Compono) *ComponentService {
+func NewComponentService(r *repository.ComponentRepository) *ComponentService {
 	return &ComponentService{
-		repo:    r,
-		compono: comp,
+		repo: r,
 	}
+}
+
+func (s *ComponentService) SetContentCompiler(cc *ContentCompiler) {
+	s.contentCompiler = cc
 }
 
 func (s *ComponentService) GetByID(ID uint) (models.Component, error) {
@@ -45,38 +45,45 @@ func (s *ComponentService) GetAll() []models.Component {
 
 // TODO: Refactor LoadAsGlobalComponent -> LoadAllGlobalComponents()
 func (s *ComponentService) LoadAsGlobalComponent() {
+	if s.contentCompiler == nil {
+		return
+	}
+
 	for _, comp := range s.GetAll() {
-		s.compono.RegisterGlobalComponent(comp.Name, []byte(comp.Content))
+		_ = s.LoadGlobalComponent(comp)
 	}
 }
 
 func (s *ComponentService) LoadGlobalComponent(comp models.Component) error {
-	// TODO: Wrap compono errors
-	return s.compono.RegisterGlobalComponent(comp.Name, []byte(comp.Content))
+	if s.contentCompiler == nil {
+		return ErrContentCompilerNotConfigured
+	}
+
+	return s.contentCompiler.LoadGlobalComponent(comp)
 }
 
 func (s *ComponentService) RemoveGlobalComponent(comp models.Component) error {
-	// TODO: Wrap compono errors
-	return s.compono.UnregisterGlobalComponent(comp.Name)
+	if s.contentCompiler == nil {
+		return ErrContentCompilerNotConfigured
+	}
+
+	return s.contentCompiler.RemoveGlobalComponent(comp)
 }
 
 func (s *ComponentService) ReloadGlobalComponent(comp models.Component) error {
-	if err := s.RemoveGlobalComponent(comp); err != nil {
-		return err
+	if s.contentCompiler == nil {
+		return ErrContentCompilerNotConfigured
 	}
-	return s.LoadGlobalComponent(comp)
+
+	return s.contentCompiler.ReloadGlobalComponent(comp)
 }
 
 func (s *ComponentService) Preview(name, source string) (string, error) {
-	name = strings.TrimSpace(name)
-
-	var buf bytes.Buffer
-	if err := s.compono.Convert([]byte("{{"+name+"}}"), &buf,
-		compono.WithGlobalComponent(name, []byte(strings.TrimSpace(string(source)))),
-	); err != nil {
-		return "", err
+	if s.contentCompiler == nil {
+		return "", ErrContentCompilerNotConfigured
 	}
-	return buf.String(), nil
+
+	return s.contentCompiler.PreviewComponent(name, source)
 }
 
 func (s *ComponentService) MustPreview(name, source string) string {

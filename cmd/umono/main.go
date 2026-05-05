@@ -15,7 +15,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/template/html/v2"
 	"github.com/joho/godotenv"
-	"github.com/umono-cms/compono"
 	umonocrypto "github.com/umono-cms/crypto"
 	"github.com/umono-cms/umono"
 	"github.com/umono-cms/umono/internal/config"
@@ -56,8 +55,6 @@ func main() {
 		log.Fatal("db err", err)
 	}
 
-	comp := compono.New()
-
 	if err := db.AutoMigrate(
 		&models.Component{},
 		&models.SitePage{},
@@ -79,11 +76,14 @@ func main() {
 	jobRepo := repository.NewJobRepository(db)
 
 	sitePageRepo := repository.NewSitePageRepository(db)
-	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, comp)
-
 	componentRepo := repository.NewComponentRepository(db)
-	componentService := service.NewComponentService(componentRepo, comp)
-	componentService.LoadAsGlobalComponent()
+	componentService := service.NewComponentService(componentRepo)
+	contentCompiler, err := service.NewContentCompiler(componentService.GetAll())
+	if err != nil {
+		log.Fatal("content compiler err", err)
+	}
+	componentService.SetContentCompiler(contentCompiler)
+	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, contentCompiler)
 
 	settingsService := service.NewSettingsService()
 	systemService := service.NewSystemService()
