@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"time"
@@ -78,16 +79,16 @@ func (s *ComponentService) ReloadGlobalComponent(comp models.Component) error {
 	return s.contentCompiler.ReloadGlobalComponent(comp)
 }
 
-func (s *ComponentService) Preview(name, source string) (string, error) {
+func (s *ComponentService) Preview(ctx context.Context, name, source string) (string, error) {
 	if s.contentCompiler == nil {
 		return "", ErrContentCompilerNotConfigured
 	}
 
-	return s.contentCompiler.PreviewComponent(name, source)
+	return s.contentCompiler.PreviewComponentWithProviderContext(ctx, name, source)
 }
 
-func (s *ComponentService) MustPreview(name, source string) string {
-	output, _ := s.Preview(name, source)
+func (s *ComponentService) MustPreview(ctx context.Context, name, source string) string {
+	output, _ := s.Preview(ctx, name, source)
 	return output
 }
 
