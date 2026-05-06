@@ -25,6 +25,15 @@ type MediaContextProvider struct {
 	resolver MediaContextResolver
 }
 
+type mediaContextVariant struct {
+	url      string
+	width    int
+	height   int
+	mimeType string
+	pathKey  string
+	original bool
+}
+
 func NewMediaContextProvider(resolver MediaContextResolver) *MediaContextProvider {
 	return &MediaContextProvider{resolver: resolver}
 }
@@ -92,7 +101,7 @@ func (p *MediaContextProvider) mediaContextValue(ctx context.Context, item model
 		return nil, err
 	}
 
-	variants, err := p.variantContextValues(ctx, item.Variants)
+	variants, err := p.variantContextValues(ctx, item, url)
 	if err != nil {
 		return nil, err
 	}
@@ -106,37 +115,58 @@ func (p *MediaContextProvider) mediaContextValue(ctx context.Context, item model
 	}, nil
 }
 
-func (p *MediaContextProvider) variantContextValues(ctx context.Context, variants []models.MediaVariant) ([]map[string]any, error) {
-	sorted := make([]models.MediaVariant, len(variants))
-	copy(sorted, variants)
-	sort.SliceStable(sorted, func(i, j int) bool {
-		iRank := mediaContextMimeTypeRank(sorted[i].MimeType)
-		jRank := mediaContextMimeTypeRank(sorted[j].MimeType)
-		if iRank != jRank {
-			return iRank < jRank
-		}
+func (p *MediaContextProvider) variantContextValues(ctx context.Context, item models.Media, itemURL string) ([]map[string]any, error) {
+	sorted := []mediaContextVariant{
+		{
+			url:      itemURL,
+			width:    mediaContextJSONMapInt(item.Metadata, "width"),
+			height:   mediaContextJSONMapInt(item.Metadata, "height"),
+			mimeType: item.MimeType,
+			pathKey:  item.PathKey,
+			original: true,
+		},
+	}
 
-		iWidth := mediaContextJSONMapInt(sorted[i].Metadata, "width")
-		jWidth := mediaContextJSONMapInt(sorted[j].Metadata, "width")
-		if iWidth != jWidth {
-			return iWidth < jWidth
-		}
-
-		return sorted[i].PathKey < sorted[j].PathKey
-	})
-
-	values := make([]map[string]any, 0, len(sorted))
-	for _, variant := range sorted {
+	for _, variant := range item.Variants {
 		url, err := p.resolver.VariantDirectURL(ctx, variant)
 		if err != nil {
 			return nil, err
 		}
 
+		sorted = append(sorted, mediaContextVariant{
+			url:      url,
+			width:    mediaContextJSONMapInt(variant.Metadata, "width"),
+			height:   mediaContextJSONMapInt(variant.Metadata, "height"),
+			mimeType: variant.MimeType,
+			pathKey:  variant.PathKey,
+		})
+	}
+
+	sort.SliceStable(sorted, func(i, j int) bool {
+		iRank := mediaContextMimeTypeRank(sorted[i].mimeType)
+		jRank := mediaContextMimeTypeRank(sorted[j].mimeType)
+		if iRank != jRank {
+			return iRank < jRank
+		}
+
+		if sorted[i].width != sorted[j].width {
+			return sorted[i].width < sorted[j].width
+		}
+
+		if sorted[i].original != sorted[j].original {
+			return !sorted[i].original
+		}
+
+		return sorted[i].pathKey < sorted[j].pathKey
+	})
+
+	values := make([]map[string]any, 0, len(sorted))
+	for _, variant := range sorted {
 		values = append(values, map[string]any{
-			"url":       url,
-			"width":     mediaContextJSONMapInt(variant.Metadata, "width"),
-			"height":    mediaContextJSONMapInt(variant.Metadata, "height"),
-			"mime-type": variant.MimeType,
+			"url":       variant.url,
+			"width":     variant.width,
+			"height":    variant.height,
+			"mime-type": variant.mimeType,
 		})
 	}
 
