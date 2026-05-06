@@ -12,6 +12,7 @@ import (
 	"github.com/umono-cms/compono/ast"
 	"github.com/umono-cms/compono/rule"
 	"github.com/umono-cms/umono/internal/models"
+	"github.com/umono-cms/umono/internal/runtime"
 )
 
 var ErrContentCompilerNotConfigured = errors.New("content compiler is not configured")
@@ -89,7 +90,7 @@ func (c *ContentCompiler) previewComponent(name, source string, contextValues ma
 		return "", err
 	}
 
-	return buf.String(), nil
+	return runtime.OptimizeHTML(buf.String())
 }
 
 func (c *ContentCompiler) LoadGlobalComponents(components []models.Component) error {
@@ -139,7 +140,7 @@ func (c *ContentCompiler) compile(source string, context map[string]any) (string
 		return "", err
 	}
 
-	return buf.String(), nil
+	return runtime.OptimizeHTML(buf.String())
 }
 
 func (c *ContentCompiler) loadGlobalComponent(component models.Component) error {
