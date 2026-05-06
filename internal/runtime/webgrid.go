@@ -409,6 +409,9 @@ func GenerateGridCSS(inputHTML string) (string, error) {
 
 	var css bytes.Buffer
 	css.WriteString("compono-web-grid{display:grid;}\n")
+	css.WriteString("picture,img{box-sizing:border-box;max-width:100%;width:100%;}\n")
+	css.WriteString("picture{display:block;}\n")
+	css.WriteString("picture>img{display:block;height:auto;}\n")
 
 	for _, g := range grids {
 		css.WriteString(fmt.Sprintf("%s{display:grid;grid-template-columns:%s;grid-template-rows:%s;grid-template-areas:%s;}\n",
