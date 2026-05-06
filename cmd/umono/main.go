@@ -78,12 +78,6 @@ func main() {
 	sitePageRepo := repository.NewSitePageRepository(db)
 	componentRepo := repository.NewComponentRepository(db)
 	componentService := service.NewComponentService(componentRepo)
-	contentCompiler, err := service.NewContentCompiler(componentService.GetAll())
-	if err != nil {
-		log.Fatal("content compiler err", err)
-	}
-	componentService.SetContentCompiler(contentCompiler)
-	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, contentCompiler)
 
 	settingsService := service.NewSettingsService()
 	systemService := service.NewSystemService()
@@ -98,6 +92,16 @@ func main() {
 	if err := mediaService.EnsureDefaultLocalStorage("uploads"); err != nil {
 		log.Fatal("media storage err", err)
 	}
+	contentCompiler, err := service.NewContentCompiler(
+		componentService.GetAll(),
+		service.NewMediaContextProvider(mediaService),
+	)
+	if err != nil {
+		log.Fatal("content compiler err", err)
+	}
+	componentService.SetContentCompiler(contentCompiler)
+	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, contentCompiler)
+
 	jobService := service.NewJobService(jobRepo)
 	if err := mediaService.RegisterVariantJobHandlers(jobService); err != nil {
 		log.Fatal("media variant job handler err", err)
