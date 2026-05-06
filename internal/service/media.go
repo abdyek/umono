@@ -167,6 +167,22 @@ func (s *MediaService) GetByID(id string) (models.Media, error) {
 	return media, nil
 }
 
+func (s *MediaService) GetByIDWithVariants(id string) (models.Media, error) {
+	media := s.repo.GetByIDWithVariants(id)
+	if media.ID == "" {
+		return models.Media{}, ErrMediaNotFound
+	}
+	return media, nil
+}
+
+func (s *MediaService) GetByAliasWithVariants(alias string) (models.Media, error) {
+	media := s.repo.GetByAliasWithVariants(alias)
+	if media.ID == "" {
+		return models.Media{}, ErrMediaNotFound
+	}
+	return media, nil
+}
+
 func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (UploadMediaResult, error) {
 	alias := media.NormalizeAlias(input.Alias)
 	if alias != "" && !media.IsKebabCase(alias) {

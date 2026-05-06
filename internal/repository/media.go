@@ -48,6 +48,15 @@ func (r *MediaRepository) GetByAlias(alias string) models.Media {
 	return media
 }
 
+func (r *MediaRepository) GetByAliasWithVariants(alias string) models.Media {
+	var media models.Media
+	r.db.Model(&models.Media{}).
+		Preload("Variants").
+		Where("lower(json_extract(metadata, '$.alias')) = lower(?)", strings.TrimSpace(alias)).
+		Find(&media)
+	return media
+}
+
 func (r *MediaRepository) Create(media models.Media) models.Media {
 	r.db.Create(&media)
 	return media
