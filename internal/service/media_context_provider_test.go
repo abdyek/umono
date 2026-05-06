@@ -22,12 +22,6 @@ func TestMediaContextProviderBuildsMediaByIDContext(t *testing.T) {
 		},
 		Variants: []models.MediaVariant{
 			{
-				ID:       "png-640",
-				MediaID:  "media-1",
-				MimeType: "image/png",
-				Metadata: models.JSONMap{"width": 640, "height": 320, "alias": "ignored"},
-			},
-			{
 				ID:       "webp-640",
 				MediaID:  "media-1",
 				MimeType: "image/webp",
@@ -71,7 +65,7 @@ func TestMediaContextProviderBuildsMediaByIDContext(t *testing.T) {
 			{"url": "/variants/webp-320", "width": 320, "height": 160, "mime-type": "image/webp"},
 			{"url": "/variants/webp-640", "width": 640, "height": 320, "mime-type": "image/webp"},
 			{"url": "/variants/png-320", "width": 320, "height": 160, "mime-type": "image/png"},
-			{"url": "/variants/png-640", "width": 640, "height": 320, "mime-type": "image/png"},
+			{"url": "/media/media-1", "width": 640, "height": 320, "mime-type": "image/png"},
 		},
 	}
 	if !reflect.DeepEqual(value, want) {
@@ -119,7 +113,10 @@ func TestMediaContextProviderBuildsMediaByAliasContext(t *testing.T) {
 	if value["url"] != "/media/media-1" {
 		t.Fatalf("url = %q", value["url"])
 	}
-	if got := value["variants"]; !reflect.DeepEqual(got, []map[string]any{}) {
+	wantVariants := []map[string]any{
+		{"url": "/media/media-1", "width": 800, "height": 450, "mime-type": "image/jpeg"},
+	}
+	if got := value["variants"]; !reflect.DeepEqual(got, wantVariants) {
 		t.Fatalf("variants = %#v", got)
 	}
 	if resolver.aliasCalls != 1 {
@@ -134,7 +131,6 @@ func TestMediaContextProviderSortsWebPBeforeJPEGVariants(t *testing.T) {
 		MimeType: "image/jpeg",
 		Metadata: models.JSONMap{"width": 640, "height": 320},
 		Variants: []models.MediaVariant{
-			{ID: "jpeg-640", MediaID: "media-1", MimeType: "image/jpeg", Metadata: models.JSONMap{"width": 640, "height": 320}},
 			{ID: "webp-640", MediaID: "media-1", MimeType: "image/webp", Metadata: models.JSONMap{"width": 640, "height": 320}},
 			{ID: "jpeg-320", MediaID: "media-1", MimeType: "image/jpeg", Metadata: models.JSONMap{"width": 320, "height": 160}},
 			{ID: "webp-320", MediaID: "media-1", MimeType: "image/webp", Metadata: models.JSONMap{"width": 320, "height": 160}},
@@ -157,7 +153,7 @@ func TestMediaContextProviderSortsWebPBeforeJPEGVariants(t *testing.T) {
 		"/variants/webp-320",
 		"/variants/webp-640",
 		"/variants/jpeg-320",
-		"/variants/jpeg-640",
+		"/media/media-1",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("variant order = %#v", got)
@@ -171,7 +167,6 @@ func TestMediaContextProviderFeedsImageBuiltin(t *testing.T) {
 		MimeType: "image/png",
 		Metadata: models.JSONMap{"width": 640, "height": 320},
 		Variants: []models.MediaVariant{
-			{ID: "png-640", MediaID: "media-1", MimeType: "image/png", Metadata: models.JSONMap{"width": 640, "height": 320}},
 			{ID: "webp-320", MediaID: "media-1", MimeType: "image/webp", Metadata: models.JSONMap{"width": 320, "height": 160}},
 			{ID: "png-320", MediaID: "media-1", MimeType: "image/png", Metadata: models.JSONMap{"width": 320, "height": 160}},
 			{ID: "webp-640", MediaID: "media-1", MimeType: "image/webp", Metadata: models.JSONMap{"width": 640, "height": 320}},
@@ -187,7 +182,7 @@ func TestMediaContextProviderFeedsImageBuiltin(t *testing.T) {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
 
-	want := `<picture><source type="image/webp" srcset="/variants/webp-320 320w, /variants/webp-640 640w" sizes="100vw"/><source type="image/png" srcset="/variants/png-320 320w, /variants/png-640 640w" sizes="100vw"/><img src="/media/media-1" alt="Hero" width="640" height="320"/></picture>`
+	want := `<picture><source type="image/webp" srcset="/variants/webp-320 320w, /variants/webp-640 640w" sizes="100vw"/><source type="image/png" srcset="/variants/png-320 320w, /media/media-1 640w" sizes="100vw"/><img src="/media/media-1" alt="Hero" width="640" height="320"/></picture>`
 	if strings.TrimSpace(output) != want {
 		t.Fatalf("output = %q", output)
 	}
@@ -210,7 +205,7 @@ func TestMediaContextProviderFeedsImageBuiltinWithoutVariants(t *testing.T) {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
 
-	want := `<img src="/media/media-1" alt="Hero" width="800" height="450"/>`
+	want := `<picture><source type="image/jpeg" srcset="/media/media-1 800w" sizes="100vw"/><img src="/media/media-1" alt="Hero" width="800" height="450"/></picture>`
 	if strings.TrimSpace(output) != want {
 		t.Fatalf("output = %q", output)
 	}
