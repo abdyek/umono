@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -405,17 +406,19 @@ func (h *mediaHandler) Serve(c *fiber.Ctx) error {
 }
 
 type mediaDetailData struct {
-	ID          string
-	Name        string
-	Alias       string
-	URL         string
-	StorageName string
-	ContentType string
-	Size        int64
-	Width       int
-	Height      int
-	CreatedAt   string
-	ErrorMsg    string
+	ID               string
+	Name             string
+	Alias            string
+	URL              string
+	StorageName      string
+	ContentType      string
+	Size             int64
+	Width            int
+	Height           int
+	CreatedAt        string
+	ClipboardSnippet string
+	ClipboardLabel   string
+	ErrorMsg         string
 }
 
 type mediaStorageOption struct {
@@ -442,18 +445,48 @@ func (h *mediaHandler) buildMediaDetail(item models.Media, translator any) media
 		storageName = storage.Name
 	}
 
+	clipboard := mediaClipboard(item)
+
 	return mediaDetailData{
-		ID:          item.ID,
-		Name:        item.OriginalName,
-		Alias:       service.MediaAlias(item),
-		URL:         h.directURL(item),
-		StorageName: storageName,
-		ContentType: item.MimeType,
-		Size:        item.Size,
-		Width:       metadataInt(item.Metadata, "width"),
-		Height:      metadataInt(item.Metadata, "height"),
-		CreatedAt:   view.RelativeTimeWithTranslator(&item.CreatedAt, translator),
+		ID:               item.ID,
+		Name:             item.OriginalName,
+		Alias:            service.MediaAlias(item),
+		URL:              h.directURL(item),
+		StorageName:      storageName,
+		ContentType:      item.MimeType,
+		Size:             item.Size,
+		Width:            metadataInt(item.Metadata, "width"),
+		Height:           metadataInt(item.Metadata, "height"),
+		CreatedAt:        view.RelativeTimeWithTranslator(&item.CreatedAt, translator),
+		ClipboardSnippet: clipboard.Snippet,
+		ClipboardLabel:   clipboard.Label,
 	}
+}
+
+type mediaClipboardData struct {
+	Snippet string
+	Label   string
+}
+
+func mediaClipboard(item models.Media) mediaClipboardData {
+	switch {
+	case strings.HasPrefix(strings.ToLower(strings.TrimSpace(item.MimeType)), "image/"):
+		return mediaClipboardData{
+			Snippet: imageMediaClipboardSnippet(item),
+			Label:   "media.detail.copy_image_builtin",
+		}
+	default:
+		return mediaClipboardData{}
+	}
+}
+
+func imageMediaClipboardSnippet(item models.Media) string {
+	key := "media-by-id/" + item.ID
+	if alias := service.MediaAlias(item); alias != "" {
+		key = "media-by-alias/" + alias
+	}
+
+	return fmt.Sprintf(`{{ IMAGE media = context(%s) alt = "" }}`, key)
 }
 
 func metadataInt(metadata models.JSONMap, key string) int {

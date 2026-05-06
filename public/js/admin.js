@@ -371,6 +371,7 @@ function applyMediaContentResponse(html, pushUrl, failureMessage) {
     htmx.process(replacedContent);
     initComponentNameGuidance(replacedContent);
     initMediaAliasGuidance(replacedContent);
+    initClipboardButtons(replacedContent);
     initMediaUpload(replacedContent);
   }
 }
@@ -493,14 +494,102 @@ function initMediaUpload(root = document) {
   }, true);
 }
 
+async function writeClipboardText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    const copied = document.execCommand('copy');
+    if (!copied) {
+      throw new Error('Copy command failed.');
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+function setClipboardButtonState(button, state) {
+  const status = button.querySelector('[data-clipboard-status]');
+  if (!status) {
+    return;
+  }
+
+  const label = button.dataset.clipboardLabel || status.textContent;
+  const copiedLabel = button.dataset.clipboardCopiedLabel || label;
+  const errorLabel = button.dataset.clipboardErrorLabel || label;
+
+  window.clearTimeout(button.clipboardResetTimer);
+  status.classList.remove('text-emerald-400', 'text-red-400');
+
+  if (state === 'copied') {
+    status.textContent = copiedLabel;
+    status.classList.add('text-emerald-400');
+  } else if (state === 'error') {
+    status.textContent = errorLabel;
+    status.classList.add('text-red-400');
+  } else {
+    status.textContent = label;
+    return;
+  }
+
+  button.clipboardResetTimer = window.setTimeout(() => {
+    setClipboardButtonState(button, 'idle');
+  }, 1800);
+}
+
+function initClipboardButtons(root = document) {
+  const buttons = [];
+  if (root.matches && root.matches('[data-clipboard-button]')) {
+    buttons.push(root);
+  }
+  if (root.querySelectorAll) {
+    buttons.push(...root.querySelectorAll('[data-clipboard-button]'));
+  }
+
+  buttons.forEach((button) => {
+    if (button.dataset.clipboardBound === 'true') {
+      return;
+    }
+
+    button.dataset.clipboardBound = 'true';
+    button.addEventListener('click', async () => {
+      const text = button.dataset.clipboardText || '';
+      if (!text) {
+        setClipboardButtonState(button, 'error');
+        return;
+      }
+
+      try {
+        await writeClipboardText(text);
+        setClipboardButtonState(button, 'copied');
+      } catch (_) {
+        setClipboardButtonState(button, 'error');
+      }
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initComponentNameGuidance();
   initMediaAliasGuidance();
+  initClipboardButtons();
   initMediaUpload();
 });
 
 document.addEventListener('htmx:load', (event) => {
   initComponentNameGuidance(event.target);
   initMediaAliasGuidance(event.target);
+  initClipboardButtons(event.target);
   initMediaUpload(event.target);
 });
