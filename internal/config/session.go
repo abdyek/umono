@@ -12,7 +12,11 @@ func NewSessionStore() *session.Store {
 	driver := os.Getenv("SESSION_DRIVER")
 
 	cfg := session.Config{
-		Expiration: 72 * time.Hour,
+		Expiration:     72 * time.Hour,
+		CookieHTTPOnly: true,
+		CookiePath:     "/admin",
+		CookieSameSite: "strict",
+		CookieSecure:   os.Getenv("APP_ENV") == "prod",
 	}
 
 	if driver == "db" {

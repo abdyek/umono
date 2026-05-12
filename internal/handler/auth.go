@@ -36,9 +36,19 @@ func (h *authHandler) Login(c *fiber.Ctx) error {
 		return Render(c, "partials/invalid-credentials", fiber.Map{})
 	}
 
-	session, _ := h.store.Get(c)
+	session, err := h.store.Get(c)
+	if err != nil {
+		return err
+	}
+
+	if err := session.Regenerate(); err != nil {
+		return err
+	}
+
 	session.Set("username", username)
-	session.Save()
+	if err := session.Save(); err != nil {
+		return err
+	}
 
 	c.Set("HX-Redirect", "/admin")
 	return nil
@@ -50,6 +60,9 @@ func (h *authHandler) Logout(c *fiber.Ctx) error {
 		return c.Redirect("/admin/login")
 	}
 
-	session.Destroy()
+	if err := session.Destroy(); err != nil {
+		return err
+	}
+
 	return middleware.SmartRedirect(c, "/admin/login")
 }
