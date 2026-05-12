@@ -303,8 +303,12 @@ func main() {
 		optionHandler.SaveNotFoundPageOption,
 	)
 
+	adminProtected.Post("/logout",
+		middleware.OnlyHTMX(),
+		authHandler.Logout,
+	)
+
 	app.Post("/login", authHandler.Login)
-	app.Post("/logout", middleware.Logged(store), authHandler.Logout)
 	app.Get("/uploads/variants/*", mediaHandler.Serve)
 	app.Get("/uploads/:filename", mediaHandler.Serve)
 
