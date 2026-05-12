@@ -66,7 +66,7 @@ umono.db
 bin/tailwindcss
 tmp
 session_storage.db
-umono
+/umono
 dist/
 public/css/style.css
 .codex
