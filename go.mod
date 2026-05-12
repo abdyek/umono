@@ -1,6 +1,6 @@
 module github.com/umono-cms/umono
 
-go 1.26.2
+go 1.26.3
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.0
@@ -18,7 +18,7 @@ require (
 	github.com/umono-cms/crypto v0.1.0
 	golang.org/x/crypto v0.50.0
 	golang.org/x/image v0.39.0
-	golang.org/x/net v0.52.0
+	golang.org/x/net v0.53.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
 )
