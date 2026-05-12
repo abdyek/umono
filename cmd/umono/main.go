@@ -338,6 +338,11 @@ func newUmonoSecretFromEnv() (*umonocrypto.Secret, error) {
 }
 
 func updateEnvFile() error {
+	envFile, err := godotenv.Read(".env")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
 	hashedUsername, err := hashData(os.Getenv("USERNAME"))
 	if err != nil {
 		return err
@@ -354,6 +359,10 @@ func updateEnvFile() error {
 
 	content += "PORT=" + os.Getenv("PORT") + "\n"
 	content += "DSN=" + os.Getenv("DSN") + "\n\n"
+
+	if umonoSecret := strings.TrimSpace(envFile["UMONO_SECRET"]); umonoSecret != "" {
+		content += "UMONO_SECRET=" + umonoSecret + "\n\n"
+	}
 
 	content += "USERNAME=\n"
 	content += "PASSWORD=\n\n"
@@ -375,6 +384,7 @@ func updateEnvFile() error {
 	if err := godotenv.Overload(); err != nil {
 		return err
 	}
+	os.Unsetenv("UMONO_SECRET")
 
 	return nil
 }
