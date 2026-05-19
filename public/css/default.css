@@ -25,6 +25,18 @@ compono-web-grid-item {
     min-width: 0;
 }
 
+compono-image {
+    display: block;
+    max-width: 100%;
+}
+
+compono-image > picture,
+compono-image > img {
+    display: block;
+    max-width: 100%;
+    width: 100%;
+}
+
 h1, h2, h3, h4, h5, h6 {
     color: #1A1816;
     font-weight: 800;
@@ -109,6 +121,7 @@ pre code {
     white-space: pre !important;
 }
 
+compono-image img,
 img {
     max-width: 100%;
     height: auto;

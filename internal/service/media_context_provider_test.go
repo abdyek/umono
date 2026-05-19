@@ -182,7 +182,7 @@ func TestMediaContextProviderFeedsImageBuiltin(t *testing.T) {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
 
-	want := `<picture><source type="image/webp" srcset="/variants/webp-320 320w, /variants/webp-640 640w" sizes="100vw"/><source type="image/png" srcset="/variants/png-320 320w, /media/media-1 640w" sizes="100vw"/><img src="/media/media-1" alt="Hero" width="640" height="320"/></picture>`
+	want := `<compono-image><picture><source type="image/webp" srcset="/variants/webp-320 320w, /variants/webp-640 640w" sizes="100vw"/><source type="image/png" srcset="/variants/png-320 320w, /media/media-1 640w" sizes="100vw"/><img src="/media/media-1" alt="Hero" width="640" height="320"/></picture></compono-image>`
 	if strings.TrimSpace(output) != want {
 		t.Fatalf("output = %q", output)
 	}
@@ -205,7 +205,7 @@ func TestMediaContextProviderFeedsImageBuiltinWithoutVariants(t *testing.T) {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
 
-	want := `<picture><source type="image/jpeg" srcset="/media/media-1 800w" sizes="100vw"/><img src="/media/media-1" alt="Hero" width="800" height="450"/></picture>`
+	want := `<compono-image><picture><source type="image/jpeg" srcset="/media/media-1 800w" sizes="100vw"/><img src="/media/media-1" alt="Hero" width="800" height="450"/></picture></compono-image>`
 	if strings.TrimSpace(output) != want {
 		t.Fatalf("output = %q", output)
 	}

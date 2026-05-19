@@ -6,7 +6,7 @@ import (
 )
 
 func TestOptimizeHTMLAddsFullViewportSizesOutsideGrid(t *testing.T) {
-	output, err := OptimizeHTML(`<picture><source type="image/webp" srcset="/hero-640.webp 640w"><img src="/hero.jpg" alt="Hero" width="1280" height="720"></picture>`)
+	output, err := OptimizeHTML(`<compono-image><picture><source type="image/webp" srcset="/hero-640.webp 640w"><img src="/hero.jpg" alt="Hero" width="1280" height="720"></picture></compono-image>`)
 	if err != nil {
 		t.Fatalf("OptimizeHTML() error = %v", err)
 	}
@@ -17,7 +17,7 @@ func TestOptimizeHTMLAddsFullViewportSizesOutsideGrid(t *testing.T) {
 }
 
 func TestOptimizeHTMLAddsGridFractionSizes(t *testing.T) {
-	input := `<compono-web-grid data-grid-template-columns="1fr 1fr" data-grid-template-rows="min-content" data-grid-template-areas='[["media","content"]]'><compono-web-grid-item data-grid-area="media"><picture><source type="image/webp" srcset="/hero-640.webp 640w"><img src="/hero.jpg" alt="Hero" width="1280" height="720"></picture></compono-web-grid-item><compono-web-grid-item data-grid-area="content"><p>Copy</p></compono-web-grid-item></compono-web-grid>`
+	input := `<compono-web-grid data-grid-template-columns="1fr 1fr" data-grid-template-rows="min-content" data-grid-template-areas='[["media","content"]]'><compono-web-grid-item data-grid-area="media"><compono-image><picture><source type="image/webp" srcset="/hero-640.webp 640w"><img src="/hero.jpg" alt="Hero" width="1280" height="720"></picture></compono-image></compono-web-grid-item><compono-web-grid-item data-grid-area="content"><p>Copy</p></compono-web-grid-item></compono-web-grid>`
 
 	output, err := OptimizeHTML(input)
 	if err != nil {
@@ -30,7 +30,7 @@ func TestOptimizeHTMLAddsGridFractionSizes(t *testing.T) {
 }
 
 func TestOptimizeHTMLAddsResponsiveGridSizes(t *testing.T) {
-	input := `<compono-web-grid data-grid-template-columns="1fr" data-grid-template-rows="min-content" data-grid-template-areas='[["media"]]' data-md-grid-template-columns="1fr 1fr" data-md-grid-template-rows="min-content" data-md-grid-template-areas='[["media","content"]]' data-xl-grid-template-columns="1fr 1fr 1fr" data-xl-grid-template-rows="min-content" data-xl-grid-template-areas='[["media","content","aside"]]'><compono-web-grid-item data-grid-area="media"><picture><source type="image/webp" srcset="/hero-640.webp 640w"><img src="/hero.jpg" alt="Hero" width="1280" height="720"></picture></compono-web-grid-item><compono-web-grid-item data-grid-area="content"><p>Copy</p></compono-web-grid-item><compono-web-grid-item data-grid-area="aside"><p>Aside</p></compono-web-grid-item></compono-web-grid>`
+	input := `<compono-web-grid data-grid-template-columns="1fr" data-grid-template-rows="min-content" data-grid-template-areas='[["media"]]' data-md-grid-template-columns="1fr 1fr" data-md-grid-template-rows="min-content" data-md-grid-template-areas='[["media","content"]]' data-xl-grid-template-columns="1fr 1fr 1fr" data-xl-grid-template-rows="min-content" data-xl-grid-template-areas='[["media","content","aside"]]'><compono-web-grid-item data-grid-area="media"><compono-image><picture><source type="image/webp" srcset="/hero-640.webp 640w"><img src="/hero.jpg" alt="Hero" width="1280" height="720"></picture></compono-image></compono-web-grid-item><compono-web-grid-item data-grid-area="content"><p>Copy</p></compono-web-grid-item><compono-web-grid-item data-grid-area="aside"><p>Aside</p></compono-web-grid-item></compono-web-grid>`
 
 	output, err := OptimizeHTML(input)
 	if err != nil {
@@ -50,9 +50,9 @@ func TestGenerateGridCSSIncludesImageWidthRules(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		`picture,img{box-sizing:border-box;max-width:100%;width:100%;}`,
-		`picture{display:block;}`,
-		`picture>img{display:block;height:auto;}`,
+		`compono-image,picture,img{box-sizing:border-box;max-width:100%;width:100%;}`,
+		`compono-image,picture{display:block;}`,
+		`compono-image>picture,compono-image>img,picture>img{display:block;height:auto;}`,
 	} {
 		if !strings.Contains(css, want) {
 			t.Fatalf("css = %q", css)
