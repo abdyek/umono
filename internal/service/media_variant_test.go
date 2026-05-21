@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -148,6 +149,41 @@ func TestMediaDeleteRemovesVariantRecords(t *testing.T) {
 	}
 }
 
+func TestMediaUploadRejectsLocalStorageImageOverConfiguredLimit(t *testing.T) {
+	db := newMediaVariantTestDB(t)
+	mediaRepo := repository.NewMediaRepository(db)
+	storageRepo := repository.NewStorageRepository(db)
+	optionRepo := repository.NewOptionRepository(db)
+	mediaSvc := NewMediaService(mediaRepo, storageRepo, optionRepo, nil, t.TempDir())
+
+	if err := optionRepo.SaveOption(LocalStorageImageUploadLimitMBOptionKey, "1"); err != nil {
+		t.Fatalf("save upload limit option: %v", err)
+	}
+
+	storageRoot := t.TempDir()
+	if err := mediaSvc.EnsureDefaultLocalStorage(storageRoot); err != nil {
+		t.Fatalf("ensure local storage: %v", err)
+	}
+
+	_, err := mediaSvc.Upload(context.Background(), UploadMediaInput{
+		StorageID:    DefaultLocalStorageID,
+		OriginalName: "too-large.png",
+		MimeType:     "image/png",
+		Reader:       bytes.NewReader(bytes.Repeat([]byte("x"), 1024*1024+1)),
+	})
+	if !errors.Is(err, ErrLocalStorageImageUploadTooLarge) {
+		t.Fatalf("Upload() error = %v, want ErrLocalStorageImageUploadTooLarge", err)
+	}
+
+	var mediaCount int64
+	if err := db.Model(&models.Media{}).Count(&mediaCount).Error; err != nil {
+		t.Fatalf("count media: %v", err)
+	}
+	if mediaCount != 0 {
+		t.Fatalf("expected no media records, got %d", mediaCount)
+	}
+}
+
 func processAllJobs(t *testing.T, svc *JobService) {
 	t.Helper()
 
@@ -200,7 +236,7 @@ func newMediaVariantTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Storage{}, &models.Media{}, &models.MediaVariant{}, &models.Job{}); err != nil {
+	if err := db.AutoMigrate(&models.Storage{}, &models.Media{}, &models.MediaVariant{}, &models.Job{}, &models.Option{}); err != nil {
 		t.Fatalf("migrate media variant test db: %v", err)
 	}
 	return db

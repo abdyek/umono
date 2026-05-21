@@ -132,7 +132,8 @@ func main() {
 	authHandler := handler.NewAuthHandler(store)
 
 	app := fiber.New(fiber.Config{
-		Views: engine,
+		Views:     engine,
+		BodyLimit: service.LocalStorageImageUploadBodyLimitMB * 1024 * 1024,
 	})
 
 	app.Use(func(c *fiber.Ctx) error {
@@ -301,6 +302,11 @@ func main() {
 	adminProtected.Post("/options/not-found-page-option",
 		middleware.OnlyHTMX(),
 		optionHandler.SaveNotFoundPageOption,
+	)
+
+	adminProtected.Post("/options/local-storage-image-upload-limit",
+		middleware.OnlyHTMX(),
+		optionHandler.SaveLocalStorageImageUploadLimit,
 	)
 
 	adminProtected.Post("/logout",

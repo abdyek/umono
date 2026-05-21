@@ -30,29 +30,32 @@ type storageListItem struct {
 }
 
 type storageFormData struct {
-	ID          string
-	Name        string
-	Type        string
-	TypeLabel   string
-	IsDefault   bool
-	Endpoint    string
-	Region      string
-	Bucket      string
-	AccessKey   string
-	LocalRoot   string
-	MediaCount  int64
-	CreatedAt   string
-	UpdatedAt   string
-	IsReadonly  bool
-	CanDelete   bool
-	DeleteHint  string
-	Errors      map[string]string
-	GlobalError string
-	TestResult  *storageTestResult
-	SubmitURL   string
-	CancelURL   string
-	BackURL     string
-	PushURL     string
+	ID                    string
+	Name                  string
+	Type                  string
+	TypeLabel             string
+	IsDefault             bool
+	Endpoint              string
+	Region                string
+	Bucket                string
+	AccessKey             string
+	LocalRoot             string
+	LocalUploadLimitMB    int
+	LocalUploadLimitMinMB int
+	LocalUploadLimitMaxMB int
+	MediaCount            int64
+	CreatedAt             string
+	UpdatedAt             string
+	IsReadonly            bool
+	CanDelete             bool
+	DeleteHint            string
+	Errors                map[string]string
+	GlobalError           string
+	TestResult            *storageTestResult
+	SubmitURL             string
+	CancelURL             string
+	BackURL               string
+	PushURL               string
 }
 
 type storageTestResult struct {
@@ -367,6 +370,9 @@ func (h *settingsHandler) buildStorageFormData(c *fiber.Ctx, storage models.Stor
 	}
 
 	form.LocalRoot = service.StorageConfigValue(storage, "root")
+	form.LocalUploadLimitMB = h.optionService.GetLocalStorageImageUploadLimitMB()
+	form.LocalUploadLimitMinMB = service.MinLocalStorageImageUploadLimitMB
+	form.LocalUploadLimitMaxMB = service.MaxLocalStorageImageUploadLimitMB
 	return form
 }
 
