@@ -55,16 +55,31 @@ func (h *OptionHandler) SaveLocalStorageImageUploadLimit(c *fiber.Ctx) error {
 
 	limitMB, err := strconv.Atoi(value)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString("invalid local storage image upload limit")
+		return h.renderLocalStorageImageUploadLimitStatus(c, false)
 	}
 
 	if err := h.optionService.SaveLocalStorageImageUploadLimitMB(limitMB); err != nil {
 		if errors.Is(err, service.ErrInvalidLocalStorageImageUploadLimit) {
-			return c.Status(fiber.StatusBadRequest).SendString("invalid local storage image upload limit")
+			return h.renderLocalStorageImageUploadLimitStatus(c, false)
 		}
 		return err
 	}
 
 	c.Set("HX-Trigger", "localStorageImageUploadLimitSaved")
-	return c.SendStatus(fiber.StatusOK)
+	return h.renderLocalStorageImageUploadLimitStatus(c, true)
+}
+
+func (h *OptionHandler) renderLocalStorageImageUploadLimitStatus(c *fiber.Ctx, success bool) error {
+	titleKey := "settings.storage.local_upload_limit.saved"
+	messageKey := "settings.storage.local_upload_limit.saved_description"
+	if !success {
+		titleKey = "settings.storage.local_upload_limit.invalid"
+		messageKey = "settings.storage.local_upload_limit.invalid_description"
+	}
+
+	return Render(c, "partials/local-storage-upload-limit-status", fiber.Map{
+		"StatusSuccess": success,
+		"StatusTitle":   translate(c, titleKey),
+		"StatusMessage": translate(c, messageKey),
+	})
 }

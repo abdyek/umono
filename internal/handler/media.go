@@ -121,7 +121,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 
 	uploadLimitBytes := h.optionService.GetLocalStorageImageUploadLimitBytes()
 	if fileHeader.Size > uploadLimitBytes {
-		errMsg := translate(c, "media.errors.file_too_large")
+		errMsg := h.localStorageFileTooLargeMessage(c)
 		if wantsMediaUploadJSON(c) {
 			c.Status(fiber.StatusRequestEntityTooLarge)
 			return c.JSON(fiber.Map{
@@ -186,7 +186,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		} else if errors.Is(err, service.ErrUnsupportedMediaType) {
 			errMsg = translate(c, "media.errors.unsupported_type")
 		} else if errors.Is(err, service.ErrLocalStorageImageUploadTooLarge) {
-			errMsg = translate(c, "media.errors.file_too_large")
+			errMsg = h.localStorageFileTooLargeMessage(c)
 		}
 
 		if wantsMediaUploadJSON(c) {
@@ -241,7 +241,7 @@ func (h *mediaHandler) PresignUpload(c *fiber.Ctx) error {
 	if err != nil {
 		c.Status(fiber.StatusBadRequest)
 		return c.JSON(fiber.Map{
-			"error":       mediaUploadErrorMessage(c, err),
+			"error":       h.mediaUploadErrorMessage(c, err),
 			"alias_error": errors.Is(err, service.ErrAliasAlreadyExists) || errors.Is(err, service.ErrInvalidAlias),
 		})
 	}
@@ -254,7 +254,7 @@ func (h *mediaHandler) CompleteUpload(c *fiber.Ctx) error {
 	if err != nil {
 		c.Status(fiber.StatusBadRequest)
 		return c.JSON(fiber.Map{
-			"error":       mediaUploadErrorMessage(c, err),
+			"error":       h.mediaUploadErrorMessage(c, err),
 			"alias_error": errors.Is(err, service.ErrAliasAlreadyExists) || errors.Is(err, service.ErrInvalidAlias),
 		})
 	}
@@ -658,7 +658,7 @@ func (h *mediaHandler) directURL(item models.Media) string {
 	return url
 }
 
-func mediaUploadErrorMessage(c *fiber.Ctx, err error) string {
+func (h *mediaHandler) mediaUploadErrorMessage(c *fiber.Ctx, err error) string {
 	switch {
 	case errors.Is(err, service.ErrAliasAlreadyExists):
 		return translate(c, "media.errors.alias_exists")
@@ -667,7 +667,7 @@ func mediaUploadErrorMessage(c *fiber.Ctx, err error) string {
 	case errors.Is(err, service.ErrUnsupportedMediaType):
 		return translate(c, "media.errors.unsupported_type")
 	case errors.Is(err, service.ErrLocalStorageImageUploadTooLarge):
-		return translate(c, "media.errors.file_too_large")
+		return h.localStorageFileTooLargeMessage(c)
 	case errors.Is(err, service.ErrStorageNotFound):
 		return translate(c, "media.errors.invalid_storage")
 	case errors.Is(err, service.ErrPendingUploadMissing):
@@ -675,6 +675,20 @@ func mediaUploadErrorMessage(c *fiber.Ctx, err error) string {
 	default:
 		return translate(c, "media.errors.upload_failed")
 	}
+}
+
+func (h *mediaHandler) localStorageFileTooLargeMessage(c *fiber.Ctx) string {
+	limitMB := service.DefaultLocalStorageImageUploadLimitMB
+	if h != nil && h.optionService != nil {
+		limitMB = h.optionService.GetLocalStorageImageUploadLimitMB()
+	}
+
+	return fmt.Sprintf(
+		"%s %s %d MB.",
+		translate(c, "media.errors.file_too_large"),
+		translate(c, "media.errors.file_too_large_limit"),
+		limitMB,
+	)
 }
 
 func firstNonEmpty(values ...string) string {

@@ -136,6 +136,51 @@
                 <p class="text-sm text-neutral-200">{{ .StoragePage.Storage.UpdatedAt }}</p>
               </div>
             </div>
+            <form
+              id="local-storage-upload-limit-form"
+              class="space-y-4 rounded-2xl border border-neutral-800 bg-neutral-950/40 px-4 py-4"
+              hx-post="/admin/options/local-storage-image-upload-limit"
+              hx-target="#local-storage-upload-limit-status"
+              hx-swap="innerHTML"
+              hx-indicator="#local-storage-upload-limit-save-button"
+              hx-disabled-elt="#local-storage-upload-limit,#local-storage-upload-limit-save-button"
+            >
+              <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div class="min-w-0 flex-1 space-y-2">
+                  <label class="ml-1 text-sm font-medium text-neutral-300" for="local-storage-upload-limit">{{ t .I18n "settings.storage.local_upload_limit.label" }}</label>
+                  <div class="relative max-w-xs">
+                    <input
+                      id="local-storage-upload-limit"
+                      name="limit_mb"
+                      type="number"
+                      min="{{ .StoragePage.Storage.LocalUploadLimitMinMB }}"
+                      max="{{ .StoragePage.Storage.LocalUploadLimitMaxMB }}"
+                      step="1"
+                      value="{{ .StoragePage.Storage.LocalUploadLimitMB }}"
+                      class="w-full rounded-xl border border-neutral-700 bg-neutral-900/50 px-4 py-3 pr-14 text-sm text-neutral-200 outline-none transition-all duration-200 focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10"
+                    >
+                    <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-medium text-neutral-500">MB</span>
+                  </div>
+                  <p class="ml-1 text-xs leading-5 text-neutral-500">
+                    {{ t .I18n "settings.storage.local_upload_limit.help" }}
+                    {{ .StoragePage.Storage.LocalUploadLimitMinMB }}-{{ .StoragePage.Storage.LocalUploadLimitMaxMB }} MB.
+                  </p>
+                </div>
+                <button
+                  id="local-storage-upload-limit-save-button"
+                  type="submit"
+                  class="relative inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-purple-500 md:w-auto"
+                >
+                  <span class="[.htmx-request_&]:invisible">{{ t .I18n "common.save" }}</span>
+                  <span class="absolute inset-0 invisible flex items-center justify-center [.htmx-request_&]:visible">
+                    <span class="h-4 w-4">
+                      {{ template "partials/spinner" . }}
+                    </span>
+                  </span>
+                </button>
+              </div>
+              <div id="local-storage-upload-limit-status"></div>
+            </form>
           </div>
           {{ else }}
           <form

@@ -1,0 +1,4 @@
+<div class="rounded-2xl border px-4 py-3 text-sm {{ if .StatusSuccess }}border-emerald-500/20 bg-emerald-500/10 text-emerald-100{{ else }}border-red-500/20 bg-red-500/10 text-red-200{{ end }}">
+  <p class="font-medium">{{ .StatusTitle }}</p>
+  <p class="mt-1 text-xs leading-5 {{ if .StatusSuccess }}text-emerald-100/80{{ else }}text-red-200/80{{ end }}">{{ .StatusMessage }}</p>
+</div>
