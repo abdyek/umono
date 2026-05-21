@@ -2,6 +2,8 @@ package handler
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/models"
@@ -42,5 +44,27 @@ func (h *OptionHandler) SaveLanguage(c *fiber.Ctx) error {
 	}
 
 	c.Set("HX-Redirect", "/admin/settings/general")
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h *OptionHandler) SaveLocalStorageImageUploadLimit(c *fiber.Ctx) error {
+	value := strings.TrimSpace(c.FormValue("limit_mb"))
+	if value == "" {
+		value = strings.TrimSpace(c.FormValue("value"))
+	}
+
+	limitMB, err := strconv.Atoi(value)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("invalid local storage image upload limit")
+	}
+
+	if err := h.optionService.SaveLocalStorageImageUploadLimitMB(limitMB); err != nil {
+		if errors.Is(err, service.ErrInvalidLocalStorageImageUploadLimit) {
+			return c.Status(fiber.StatusBadRequest).SendString("invalid local storage image upload limit")
+		}
+		return err
+	}
+
+	c.Set("HX-Trigger", "localStorageImageUploadLimitSaved")
 	return c.SendStatus(fiber.StatusOK)
 }

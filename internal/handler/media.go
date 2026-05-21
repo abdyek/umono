@@ -119,6 +119,25 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		})
 	}
 
+	uploadLimitBytes := h.optionService.GetLocalStorageImageUploadLimitBytes()
+	if fileHeader.Size > uploadLimitBytes {
+		errMsg := translate(c, "media.errors.file_too_large")
+		if wantsMediaUploadJSON(c) {
+			c.Status(fiber.StatusRequestEntityTooLarge)
+			return c.JSON(fiber.Map{
+				"error": errMsg,
+			})
+		}
+		return Render(c, "partials/media-new-content", fiber.Map{
+			"MediaUpload": h.buildUploadForm(c, mediaUploadFormData{
+				Alias:           strings.TrimSpace(c.FormValue("alias")),
+				StorageID:       storageID,
+				SelectedStorage: storageID,
+				ErrorMsg:        errMsg,
+			}),
+		})
+	}
+
 	file, err := fileHeader.Open()
 	if err != nil {
 		return fiber.ErrInternalServerError
@@ -152,6 +171,7 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		OriginalName: fileHeader.Filename,
 		Alias:        c.FormValue("alias"),
 		MimeType:     mimeType,
+		Size:         fileHeader.Size,
 		Reader:       reader,
 	})
 	if err != nil {
@@ -165,10 +185,16 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 			aliasError = true
 		} else if errors.Is(err, service.ErrUnsupportedMediaType) {
 			errMsg = translate(c, "media.errors.unsupported_type")
+		} else if errors.Is(err, service.ErrLocalStorageImageUploadTooLarge) {
+			errMsg = translate(c, "media.errors.file_too_large")
 		}
 
 		if wantsMediaUploadJSON(c) {
-			c.Status(fiber.StatusBadRequest)
+			status := fiber.StatusBadRequest
+			if errors.Is(err, service.ErrLocalStorageImageUploadTooLarge) {
+				status = fiber.StatusRequestEntityTooLarge
+			}
+			c.Status(status)
 			return c.JSON(fiber.Map{
 				"error":       errMsg,
 				"alias_error": aliasError,
@@ -640,6 +666,8 @@ func mediaUploadErrorMessage(c *fiber.Ctx, err error) string {
 		return translate(c, "media.errors.invalid_alias")
 	case errors.Is(err, service.ErrUnsupportedMediaType):
 		return translate(c, "media.errors.unsupported_type")
+	case errors.Is(err, service.ErrLocalStorageImageUploadTooLarge):
+		return translate(c, "media.errors.file_too_large")
 	case errors.Is(err, service.ErrStorageNotFound):
 		return translate(c, "media.errors.invalid_storage")
 	case errors.Is(err, service.ErrPendingUploadMissing):

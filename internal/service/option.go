@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 
 	"github.com/umono-cms/umono/internal/i18n"
 	"github.com/umono-cms/umono/internal/models"
@@ -9,11 +11,20 @@ import (
 )
 
 const (
-	DefaultLanguage           = "en"
-	DefaultStorageIDOptionKey = "default_storage_id"
+	DefaultLanguage                         = "en"
+	DefaultStorageIDOptionKey               = "default_storage_id"
+	LocalStorageImageUploadLimitMBOptionKey = "local_storage_image_upload_limit_mb"
+	DefaultLocalStorageImageUploadLimitMB   = 4
+	MinLocalStorageImageUploadLimitMB       = 1
+	MaxLocalStorageImageUploadLimitMB       = 100
+	LocalStorageImageUploadBodyLimitMB      = MaxLocalStorageImageUploadLimitMB
+	bytesInMegabyte                         = 1024 * 1024
 )
 
-var ErrInvalidLanguage = errors.New("invalid language")
+var (
+	ErrInvalidLanguage                     = errors.New("invalid language")
+	ErrInvalidLocalStorageImageUploadLimit = errors.New("invalid local storage image upload limit")
+)
 
 type OptionService struct {
 	repo   *repository.OptionRepository
@@ -69,6 +80,32 @@ func (s *OptionService) SaveDefaultStorageID(storageID string) error {
 	return s.repo.SaveOption(DefaultStorageIDOptionKey, storageID)
 }
 
+func (s *OptionService) GetLocalStorageImageUploadLimitMB() int {
+	if s == nil || s.repo == nil {
+		return DefaultLocalStorageImageUploadLimitMB
+	}
+
+	option := s.repo.GetOptionByKey(LocalStorageImageUploadLimitMBOptionKey)
+	limitMB, err := parseLocalStorageImageUploadLimitMB(option.Value)
+	if err != nil {
+		return DefaultLocalStorageImageUploadLimitMB
+	}
+
+	return limitMB
+}
+
+func (s *OptionService) GetLocalStorageImageUploadLimitBytes() int64 {
+	return int64(s.GetLocalStorageImageUploadLimitMB()) * bytesInMegabyte
+}
+
+func (s *OptionService) SaveLocalStorageImageUploadLimitMB(limitMB int) error {
+	if !validLocalStorageImageUploadLimitMB(limitMB) {
+		return ErrInvalidLocalStorageImageUploadLimit
+	}
+
+	return s.repo.SaveOption(LocalStorageImageUploadLimitMBOptionKey, strconv.Itoa(limitMB))
+}
+
 func (s *OptionService) SupportedLanguages() []i18n.LocaleOption {
 	return s.bundle.SupportedLocales()
 }
@@ -83,4 +120,19 @@ func (s *OptionService) GetNotFoundPageOption() (string, string) {
 	}
 
 	return title, content
+}
+
+func parseLocalStorageImageUploadLimitMB(value string) (int, error) {
+	limitMB, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil {
+		return 0, err
+	}
+	if !validLocalStorageImageUploadLimitMB(limitMB) {
+		return 0, ErrInvalidLocalStorageImageUploadLimit
+	}
+	return limitMB, nil
+}
+
+func validLocalStorageImageUploadLimitMB(limitMB int) bool {
+	return limitMB >= MinLocalStorageImageUploadLimitMB && limitMB <= MaxLocalStorageImageUploadLimitMB
 }

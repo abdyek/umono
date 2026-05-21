@@ -23,11 +23,12 @@ import (
 const DefaultLocalStorageID = "local"
 
 var (
-	ErrMediaNotFound        = errors.New("media not found")
-	ErrUnsupportedMediaType = errors.New("unsupported media type")
-	ErrAliasAlreadyExists   = errors.New("alias already exists")
-	ErrInvalidAlias         = errors.New("invalid alias")
-	ErrPendingUploadMissing = errors.New("pending upload not found")
+	ErrMediaNotFound                   = errors.New("media not found")
+	ErrUnsupportedMediaType            = errors.New("unsupported media type")
+	ErrAliasAlreadyExists              = errors.New("alias already exists")
+	ErrInvalidAlias                    = errors.New("invalid alias")
+	ErrPendingUploadMissing            = errors.New("pending upload not found")
+	ErrLocalStorageImageUploadTooLarge = errors.New("local storage image upload too large")
 )
 
 const mediaCacheControl = "public, max-age=31536000, immutable"
@@ -48,11 +49,36 @@ func (r *countingReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+type localStorageUploadLimitReader struct {
+	reader    io.Reader
+	remaining int64
+}
+
+func (r *localStorageUploadLimitReader) Read(p []byte) (int, error) {
+	if r.remaining <= 0 {
+		var extra [1]byte
+		n, err := r.reader.Read(extra[:])
+		if n > 0 {
+			return 0, ErrLocalStorageImageUploadTooLarge
+		}
+		return 0, err
+	}
+
+	if int64(len(p)) > r.remaining {
+		p = p[:r.remaining]
+	}
+
+	n, err := r.reader.Read(p)
+	r.remaining -= int64(n)
+	return n, err
+}
+
 type UploadMediaInput struct {
 	StorageID    string
 	OriginalName string
 	Alias        string
 	MimeType     string
+	Size         int64
 	Reader       io.Reader
 }
 
@@ -203,18 +229,33 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	}
 
 	pathKey := mediaPathKey(id.String(), ext)
-	hasher := sha256.New()
-	counter := &countingReader{reader: input.Reader}
-	reader := io.TeeReader(counter, hasher)
 	storageModel, storageBackend, err := s.storageByID(ctx, input.StorageID)
 	if err != nil {
 		return UploadMediaResult{}, err
 	}
 
+	source := input.Reader
+	if storageModel.Type == models.StorageTypeLocal {
+		limitBytes := s.localStorageImageUploadLimitBytes()
+		if input.Size > limitBytes {
+			return UploadMediaResult{}, ErrLocalStorageImageUploadTooLarge
+		}
+		source = &localStorageUploadLimitReader{
+			reader:    source,
+			remaining: limitBytes,
+		}
+	}
+
+	hasher := sha256.New()
+	counter := &countingReader{reader: source}
+	reader := io.TeeReader(counter, hasher)
 	if err := storageBackend.Put(ctx, pathKey, reader, media.ObjectMeta{
 		ContentType:  input.MimeType,
 		CacheControl: mediaCacheControl,
 	}); err != nil {
+		if storageModel.Type == models.StorageTypeLocal {
+			_ = storageBackend.Delete(ctx, pathKey)
+		}
 		return UploadMediaResult{}, err
 	}
 
@@ -846,6 +887,20 @@ func (s *MediaService) defaultStorageID() string {
 	}
 
 	return option.Value
+}
+
+func (s *MediaService) localStorageImageUploadLimitBytes() int64 {
+	if s.optionRepo == nil {
+		return int64(DefaultLocalStorageImageUploadLimitMB) * bytesInMegabyte
+	}
+
+	option := s.optionRepo.GetOptionByKey(LocalStorageImageUploadLimitMBOptionKey)
+	limitMB, err := parseLocalStorageImageUploadLimitMB(option.Value)
+	if err != nil {
+		limitMB = DefaultLocalStorageImageUploadLimitMB
+	}
+
+	return int64(limitMB) * bytesInMegabyte
 }
 
 func (s *MediaService) storageByID(ctx context.Context, id string) (models.Storage, media.Storage, error) {
