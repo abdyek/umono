@@ -25,10 +25,6 @@ function setPreviewContent(content) {
         -webkit-font-smoothing: antialiased;
         font-optical-sizing: auto;
       }
-
-      .preview-body > compono-web-grid:nth-of-type(1) {
-        min-height: calc(var(--preview-height) - 5rem);
-      }
     </style><div class="preview-body">${content}</div>`;
 }
 

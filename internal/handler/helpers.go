@@ -2,12 +2,10 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"html/template"
 	"strings"
 
 	umono "github.com/umono-cms/umono"
-	"github.com/umono-cms/umono/internal/runtime"
 	"github.com/umono-cms/umono/internal/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -79,15 +77,6 @@ func translatedValidationError(c *fiber.Ctx, err error) string {
 	}
 }
 
-func buildPreviewHTML(renderedHTML string) string {
-	gridCSS, _ := runtime.GenerateGridCSS(renderedHTML)
-	if gridCSS == "" {
-		return renderedHTML
-	}
-
-	return fmt.Sprintf("<style>%s</style>%s", gridCSS, renderedHTML)
-}
-
 func mustPreviewHTML(renderedHTML string) template.HTML {
-	return template.HTML(buildPreviewHTML(renderedHTML))
+	return template.HTML(renderedHTML)
 }
