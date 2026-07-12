@@ -60,6 +60,21 @@ func (h *settingsHandler) Render404Page(c *fiber.Ctx) error {
 	}, layouts...)
 }
 
+func (h *settingsHandler) RenderRobotsTxt(c *fiber.Ctx) error {
+	partial := "partials/settings-robots-txt"
+	layouts := []string{"layouts/settings", "layouts/admin"}
+
+	if isSettingsContentSwap(c) {
+		partial = "partials/htmx/settings-robots-txt"
+		layouts = []string{}
+	}
+
+	return Render(c, partial, fiber.Map{
+		"SettingsUl": h.settingsUl(c, path.Base(c.Path())),
+		"Content":    h.optionService.GetRobotsTxt(),
+	}, layouts...)
+}
+
 func (h *settingsHandler) RenderGeneral(c *fiber.Ctx) error {
 	partial := "partials/settings-general"
 	layouts := []string{"layouts/settings", "layouts/admin"}
@@ -114,7 +129,7 @@ func isSettingsContentSwap(c *fiber.Ctx) bool {
 	}
 
 	switch c.Get("HX-Target") {
-	case "settings-content", "settings-general-content", "settings-404-page-content", "settings-about-content", "settings-storage-content":
+	case "settings-content", "settings-general-content", "settings-404-page-content", "settings-robots-txt-content", "settings-about-content", "settings-storage-content":
 		return true
 	default:
 		return false

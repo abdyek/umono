@@ -116,7 +116,7 @@ func main() {
 	)
 
 	previewHandler := handler.NewPreviewHandler(sitePageService, componentService)
-	siteHandler := handler.NewSiteHandler(sitePageService)
+	siteHandler := handler.NewSiteHandler(sitePageService, optionService)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
@@ -235,6 +235,7 @@ func main() {
 	adminProtected.Get("/settings", settingsHandler.Index)
 	adminProtected.Get("/settings/general", settingsHandler.RenderGeneral)
 	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
+	adminProtected.Get("/settings/robots-txt", settingsHandler.RenderRobotsTxt)
 	adminProtected.Get("/settings/storage", settingsHandler.RenderStorageIndex)
 	adminProtected.Get("/settings/storage/new", settingsHandler.RenderStorageNew)
 	adminProtected.Get("/settings/storage/:id", settingsHandler.RenderStorageShow)
@@ -309,6 +310,11 @@ func main() {
 		optionHandler.SaveLocalStorageImageUploadLimit,
 	)
 
+	adminProtected.Post("/options/robots-txt",
+		middleware.OnlyHTMX(),
+		optionHandler.SaveRobotsTxt,
+	)
+
 	adminProtected.Post("/logout",
 		middleware.OnlyHTMX(),
 		authHandler.Logout,
@@ -317,6 +323,8 @@ func main() {
 	app.Post("/login", authHandler.Login)
 	app.Get("/uploads/variants/*", mediaHandler.Serve)
 	app.Get("/uploads/:filename", mediaHandler.Serve)
+
+	app.Get("/robots.txt", siteHandler.RenderRobotsTxt)
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 

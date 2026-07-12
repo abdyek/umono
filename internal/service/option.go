@@ -19,11 +19,14 @@ const (
 	MaxLocalStorageImageUploadLimitMB       = 100
 	LocalStorageImageUploadBodyLimitMB      = MaxLocalStorageImageUploadLimitMB
 	bytesInMegabyte                         = 1024 * 1024
+	RobotsTxtOptionKey                      = "robots_txt"
+	MaxRobotsTxtBytes                       = 512000
 )
 
 var (
 	ErrInvalidLanguage                     = errors.New("invalid language")
 	ErrInvalidLocalStorageImageUploadLimit = errors.New("invalid local storage image upload limit")
+	ErrRobotsTxtTooLarge                   = errors.New("robots.txt content too large")
 )
 
 type OptionService struct {
@@ -104,6 +107,19 @@ func (s *OptionService) SaveLocalStorageImageUploadLimitMB(limitMB int) error {
 	}
 
 	return s.repo.SaveOption(LocalStorageImageUploadLimitMBOptionKey, strconv.Itoa(limitMB))
+}
+
+func (s *OptionService) GetRobotsTxt() string {
+	return s.repo.GetOptionByKey(RobotsTxtOptionKey).Value
+}
+
+func (s *OptionService) SaveRobotsTxt(content string) error {
+	content = strings.TrimPrefix(content, "\uFEFF")
+	if len(content) > MaxRobotsTxtBytes {
+		return ErrRobotsTxtTooLarge
+	}
+
+	return s.repo.SaveOption(RobotsTxtOptionKey, content)
 }
 
 func (s *OptionService) SupportedLanguages() []i18n.LocaleOption {
