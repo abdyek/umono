@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/umono-cms/umono/internal/models"
@@ -38,6 +39,39 @@ func TestOptionServiceRejectsInvalidLocalStorageImageUploadLimit(t *testing.T) {
 		if err := svc.SaveLocalStorageImageUploadLimitMB(value); err == nil {
 			t.Fatalf("SaveLocalStorageImageUploadLimitMB(%d) expected error", value)
 		}
+	}
+}
+
+func TestOptionServiceRobotsTxtDefaultsToEmpty(t *testing.T) {
+	svc := NewOptionService(repository.NewOptionRepository(newOptionTestDB(t)), nil)
+
+	if got := svc.GetRobotsTxt(); got != "" {
+		t.Fatalf("GetRobotsTxt() = %q, want empty", got)
+	}
+}
+
+func TestOptionServiceSaveRobotsTxtAllowsEmpty(t *testing.T) {
+	svc := NewOptionService(repository.NewOptionRepository(newOptionTestDB(t)), nil)
+
+	if err := svc.SaveRobotsTxt(""); err != nil {
+		t.Fatalf("SaveRobotsTxt(\"\") error = %v", err)
+	}
+	if got := svc.GetRobotsTxt(); got != "" {
+		t.Fatalf("GetRobotsTxt() = %q, want empty", got)
+	}
+}
+
+func TestOptionServiceRejectsRobotsTxtOverLimit(t *testing.T) {
+	svc := NewOptionService(repository.NewOptionRepository(newOptionTestDB(t)), nil)
+
+	atLimit := strings.Repeat("a", MaxRobotsTxtBytes)
+	if err := svc.SaveRobotsTxt(atLimit); err != nil {
+		t.Fatalf("SaveRobotsTxt() at limit error = %v", err)
+	}
+
+	overLimit := strings.Repeat("a", MaxRobotsTxtBytes+1)
+	if err := svc.SaveRobotsTxt(overLimit); err != ErrRobotsTxtTooLarge {
+		t.Fatalf("SaveRobotsTxt() over limit error = %v, want ErrRobotsTxtTooLarge", err)
 	}
 }
 

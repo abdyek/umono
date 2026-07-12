@@ -1,0 +1,50 @@
+<div id="settings-robots-txt-content" class="flex-1 flex overflow-hidden h-full">
+  <div class="flex-1 flex flex-col min-h-0">
+    <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "settings.robots_txt.title" }}</h2>
+      </div>
+    </header>
+    <form
+      id="settings-robots-txt-form"
+      class="flex-1 flex flex-col overflow-hidden p-6 space-y-4 min-h-0"
+      hx-post="/admin/options/robots-txt"
+      hx-target="#settings-robots-txt-status"
+      hx-swap="innerHTML"
+      hx-indicator="#settings-robots-txt-save-button"
+      hx-disabled-elt="#robots-txt-content,#settings-robots-txt-save-button"
+    >
+      <p class="text-sm text-neutral-400">{{ t .I18n "settings.robots_txt.description" }}</p>
+      <div class="flex-1 flex flex-col space-y-2 min-h-0">
+        <label class="text-sm font-medium text-neutral-300 ml-1" for="robots-txt-content">{{ t .I18n "settings.robots_txt.content" }}</label>
+        <textarea
+          class="flex-1 w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 placeholder:text-neutral-600 resize-none"
+          style="font-family: 'Ioveska', monospace;"
+          id="robots-txt-content"
+          name="content"
+          placeholder="{{ t .I18n "settings.robots_txt.placeholder" }}"
+        >{{ .Content }}</textarea>
+      </div>
+      <div id="settings-robots-txt-status"></div>
+      <div>
+        <button
+          id="settings-robots-txt-save-button"
+          type="submit"
+          class="relative flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg shadow-purple-900/20 active:scale-[0.98] cursor-pointer"
+        >
+          <span class="flex items-center gap-2 [.htmx-request_&]:invisible">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{{ t .I18n "common.save" }}</span>
+          </span>
+          <span class="absolute inset-0 flex items-center justify-center invisible [.htmx-request_&]:visible text-white">
+            <span class="h-4 w-4">
+              {{ template "partials/spinner" . }}
+            </span>
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

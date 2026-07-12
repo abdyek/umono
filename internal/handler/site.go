@@ -10,12 +10,20 @@ import (
 
 type siteHandler struct {
 	sitePageService *service.SitePageService
+	optionService   *service.OptionService
 }
 
-func NewSiteHandler(sps *service.SitePageService) *siteHandler {
+func NewSiteHandler(sps *service.SitePageService, os *service.OptionService) *siteHandler {
 	return &siteHandler{
 		sitePageService: sps,
+		optionService:   os,
 	}
+}
+
+func (h *siteHandler) RenderRobotsTxt(c *fiber.Ctx) error {
+	c.Set("Content-Type", "text/plain; charset=utf-8")
+	c.Set("X-Content-Type-Options", "nosniff")
+	return c.SendString(h.optionService.GetRobotsTxt())
 }
 
 func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {

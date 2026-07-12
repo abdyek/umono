@@ -35,6 +35,32 @@ func (h *OptionHandler) SaveNotFoundPageOption(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+func (h *OptionHandler) SaveRobotsTxt(c *fiber.Ctx) error {
+	if err := h.optionService.SaveRobotsTxt(c.FormValue("content")); err != nil {
+		if errors.Is(err, service.ErrRobotsTxtTooLarge) {
+			return h.renderRobotsTxtStatus(c, false)
+		}
+		return err
+	}
+
+	return h.renderRobotsTxtStatus(c, true)
+}
+
+func (h *OptionHandler) renderRobotsTxtStatus(c *fiber.Ctx, success bool) error {
+	titleKey := "settings.robots_txt.saved"
+	messageKey := "settings.robots_txt.saved_description"
+	if !success {
+		titleKey = "settings.robots_txt.too_large"
+		messageKey = "settings.robots_txt.too_large_description"
+	}
+
+	return Render(c, "partials/robots-txt-status", fiber.Map{
+		"StatusSuccess": success,
+		"StatusTitle":   translate(c, titleKey),
+		"StatusMessage": translate(c, messageKey),
+	})
+}
+
 func (h *OptionHandler) SaveLanguage(c *fiber.Ctx) error {
 	if err := h.optionService.SaveLanguage(c.FormValue("language")); err != nil {
 		if errors.Is(err, service.ErrInvalidLanguage) {
