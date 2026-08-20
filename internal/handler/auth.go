@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"encoding/base64"
-	"os"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
+	"github.com/umono-cms/umono/internal/credentials"
 	"github.com/umono-cms/umono/internal/handler/middleware"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type authHandler struct {
@@ -28,11 +25,15 @@ func (h *authHandler) Login(c *fiber.Ctx) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
 
-	hashedUsername, _ := base64.StdEncoding.DecodeString(os.Getenv("HASHED_USERNAME"))
-	hashedPassword, _ := base64.StdEncoding.DecodeString(os.Getenv("HASHED_PASSWORD"))
+	hashedUsername, hashedPassword, err := credentials.LoadHashes()
+	if err != nil {
+		return Render(c, "partials/invalid-credentials", fiber.Map{})
+	}
 
-	if bcrypt.CompareHashAndPassword(hashedUsername, []byte(username)) != nil ||
-		bcrypt.CompareHashAndPassword(hashedPassword, []byte(password)) != nil {
+	usernameMatches := credentials.Matches(hashedUsername, username)
+	passwordMatches := credentials.Matches(hashedPassword, password)
+
+	if !usernameMatches || !passwordMatches {
 		return Render(c, "partials/invalid-credentials", fiber.Map{})
 	}
 
