@@ -60,6 +60,60 @@ func TestLoginRegeneratesSessionID(t *testing.T) {
 	}
 }
 
+func TestLoginRejectsUnusableCredentialHashes(t *testing.T) {
+	cases := map[string]struct {
+		hashedUsername, hashedPassword string
+		username, password             string
+	}{
+		"hashes unset, empty credentials submitted": {"", "", "", ""},
+		"hashes unset, real credentials submitted":  {"", "", "admin", "secret"},
+		"only the username hash is set":             {validHash(t, "admin"), "", "admin", ""},
+		"password hash is not a bcrypt hash":        {validHash(t, "admin"), base64.StdEncoding.EncodeToString([]byte("nope")), "admin", "nope"},
+		"password hash is not base64":               {validHash(t, "admin"), "not-base64!!!", "admin", ""},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("HASHED_USERNAME", tc.hashedUsername)
+			t.Setenv("HASHED_PASSWORD", tc.hashedPassword)
+
+			store := testSessionStore()
+			auth := NewAuthHandler(store)
+			app := fiber.New()
+			app.Post("/login", auth.Login)
+
+			body := "username=" + tc.username + "&password=" + tc.password
+			req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if redirect := resp.Header.Get("HX-Redirect"); redirect != "" {
+				t.Fatalf("expected login to be refused, got redirect to %q", redirect)
+			}
+			for _, cookie := range resp.Cookies() {
+				if cookie.Name == "session_id" && cookie.Value != "" {
+					t.Fatal("expected login to be refused without issuing a session")
+				}
+			}
+		})
+	}
+}
+
+func validHash(t *testing.T, value string) string {
+	t.Helper()
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(value), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return base64.StdEncoding.EncodeToString(hashed)
+}
+
 func TestLogoutDestroysSession(t *testing.T) {
 	store := testSessionStore()
 	auth := NewAuthHandler(store)
