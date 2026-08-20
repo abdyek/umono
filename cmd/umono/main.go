@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -18,6 +17,7 @@ import (
 	umonocrypto "github.com/umono-cms/crypto"
 	"github.com/umono-cms/umono"
 	"github.com/umono-cms/umono/internal/config"
+	"github.com/umono-cms/umono/internal/credentials"
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/handler/middleware"
 	"github.com/umono-cms/umono/internal/i18n"
@@ -25,12 +25,21 @@ import (
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/service"
 	"github.com/umono-cms/umono/internal/view"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-var errUmonoSecretNotSet = errors.New("UMONO_SECRET is not set. Run: umono secret init")
+var (
+	errUmonoSecretNotSet = errors.New("UMONO_SECRET is not set. Run: umono secret init")
+
+	errCredentialsNotSet = errors.New(
+		"USERNAME and PASSWORD are not set. Set both in .env, then start Umono again")
+	errCredentialsIncomplete = errors.New(
+		"USERNAME and PASSWORD must be set together in .env, then start Umono again")
+	errCredentialsEmpty = errors.New(
+		"HASHED_USERNAME and HASHED_PASSWORD are hashes of an empty credential. " +
+			"Set USERNAME and PASSWORD in .env, then start Umono again")
+)
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -43,11 +52,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Getenv("USERNAME") != "" && os.Getenv("PASSWORD") != "" {
-		err := updateEnvFile()
-		if err != nil {
-			panic("Error updating .env file" + err.Error())
-		}
+	if err := ensureAdminCredentials(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	db, err := gorm.Open(sqlite.Open("umono.db"), &gorm.Config{})
@@ -351,18 +358,13 @@ func newUmonoSecretFromEnv() (*umonocrypto.Secret, error) {
 	return umonocrypto.New(key, []byte("umono-secrets"))
 }
 
-func updateEnvFile() error {
-	envFile, err := godotenv.Read(".env")
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-
-	hashedUsername, err := hashData(os.Getenv("USERNAME"))
+func updateEnvFile(envFile map[string]string, username, password string) error {
+	hashedUsername, err := credentials.Hash(username)
 	if err != nil {
 		return err
 	}
 
-	hashedPassword, err := hashData(os.Getenv("PASSWORD"))
+	hashedPassword, err := credentials.Hash(password)
 	if err != nil {
 		return err
 	}
@@ -381,8 +383,8 @@ func updateEnvFile() error {
 	content += "USERNAME=\n"
 	content += "PASSWORD=\n\n"
 
-	content += "HASHED_USERNAME=" + base64.StdEncoding.EncodeToString([]byte(hashedUsername)) + "\n"
-	content += "HASHED_PASSWORD=" + base64.StdEncoding.EncodeToString([]byte(hashedPassword)) + "\n\n"
+	content += "HASHED_USERNAME=" + credentials.Encode(hashedUsername) + "\n"
+	content += "HASHED_PASSWORD=" + credentials.Encode(hashedPassword) + "\n\n"
 
 	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
@@ -403,10 +405,40 @@ func updateEnvFile() error {
 	return nil
 }
 
-func hashData(data string) (string, error) {
-	hashedData, err := bcrypt.GenerateFromPassword([]byte(data), bcrypt.DefaultCost)
-	if err != nil {
-		return "", err
+func ensureAdminCredentials() error {
+	envFile, err := godotenv.Read(".env")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
-	return string(hashedData), nil
+
+	username := plaintextCredential(envFile, credentials.UsernameEnvKey)
+	password := plaintextCredential(envFile, credentials.PasswordEnvKey)
+
+	switch {
+	case !credentials.IsEmpty(username) && !credentials.IsEmpty(password):
+		if err := updateEnvFile(envFile, username, password); err != nil {
+			return fmt.Errorf("error updating .env file: %w", err)
+		}
+	case !credentials.IsEmpty(username) || !credentials.IsEmpty(password):
+		return errCredentialsIncomplete
+	}
+
+	hashedUsername, hashedPassword, err := credentials.LoadHashes()
+	if err != nil {
+		return errCredentialsNotSet
+	}
+
+	if credentials.Matches(hashedUsername, "") || credentials.Matches(hashedPassword, "") {
+		return errCredentialsEmpty
+	}
+
+	return nil
+}
+
+func plaintextCredential(envFile map[string]string, key string) string {
+	if value, ok := envFile[key]; ok {
+		return value
+	}
+
+	return os.Getenv(key)
 }
