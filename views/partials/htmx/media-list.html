@@ -1,0 +1,6 @@
+{{ range .MediaList.Items }}
+  {{ template "partials/media-sidebar-item" . }}
+{{ end }}
+{{ if .MediaList.Next }}
+  {{ template "partials/media-more" . }}
+{{ end }}

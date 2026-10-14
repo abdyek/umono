@@ -44,6 +44,15 @@ func (s *ComponentService) GetAll() []models.Component {
 	return s.repo.GetAll()
 }
 
+// GetPage returns a page of the components as the admin sidebar lists them and the offset of the next page, or 0 when there is none.
+func (s *ComponentService) GetPage(offset int) ([]models.Component, int) {
+	if offset < 0 {
+		offset = 0
+	}
+	items := s.repo.GetPage(offset, listPageSize+1)
+	return pageOf(items, offset)
+}
+
 // TODO: Refactor LoadAsGlobalComponent -> LoadAllGlobalComponents()
 func (s *ComponentService) LoadAsGlobalComponent() {
 	if s.contentCompiler == nil {

@@ -35,18 +35,14 @@ func NewMediaHandler(ms *service.MediaService, ss *service.StorageService, os *s
 }
 
 func (h *mediaHandler) Index(c *fiber.Ctx) error {
-	items := h.mediaService.GetAll()
-
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": h.buildMediaList(items, ""),
+		"MediaList": h.mediaSidebar(0, ""),
 	})
 }
 
 func (h *mediaHandler) RenderNew(c *fiber.Ctx) error {
-	items := h.mediaService.GetAll()
-
 	return h.render(c, "partials/media-new", fiber.Map{
-		"MediaList":   h.buildMediaList(items, ""),
+		"MediaList":   h.mediaSidebar(0, ""),
 		"MediaUpload": h.buildUploadForm(c, mediaUploadFormData{}),
 	})
 }
@@ -57,11 +53,25 @@ func (h *mediaHandler) RenderShow(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusNotFound)
 	}
 
-	items := h.mediaService.GetAll()
-
 	return h.render(c, "partials/media-show", fiber.Map{
-		"MediaList": h.buildMediaList(items, item.ID),
+		"MediaList": h.mediaSidebar(0, item.ID),
 		"Media":     h.buildMediaDetail(item, c.Locals("I18n")),
+	})
+}
+
+// RenderList renders the page of the media sidebar at the offset query
+// parameter, followed by the button for the next page.
+func (h *mediaHandler) RenderList(c *fiber.Ctx) error {
+	return Render(c, "partials/htmx/media-list", fiber.Map{
+		"MediaList": h.mediaSidebar(c.QueryInt("offset"), c.Query("active")),
+	})
+}
+
+// RenderLibraryList renders the page of the media library grid at the offset
+// query parameter, followed by the button for the next page.
+func (h *mediaHandler) RenderLibraryList(c *fiber.Ctx) error {
+	return Render(c, "partials/htmx/media-library-list", fiber.Map{
+		"MediaList": h.mediaSidebar(c.QueryInt("offset"), ""),
 	})
 }
 
@@ -218,10 +228,9 @@ func (h *mediaHandler) Upload(c *fiber.Ctx) error {
 		})
 	}
 
-	items := h.mediaService.GetAll()
 	c.Set("HX-Push-Url", "/admin/media")
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": h.buildMediaList(items, ""),
+		"MediaList": h.mediaSidebar(0, ""),
 	})
 }
 
@@ -265,10 +274,9 @@ func (h *mediaHandler) CompleteUpload(c *fiber.Ctx) error {
 		})
 	}
 
-	items := h.mediaService.GetAll()
 	c.Set("HX-Push-Url", "/admin/media")
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": h.buildMediaList(items, ""),
+		"MediaList": h.mediaSidebar(0, ""),
 	})
 }
 
@@ -293,10 +301,9 @@ func (h *mediaHandler) ConfirmUpload(c *fiber.Ctx) error {
 		})
 	}
 
-	items := h.mediaService.GetAll()
 	c.Set("HX-Push-Url", "/admin/media")
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": h.buildMediaList(items, ""),
+		"MediaList": h.mediaSidebar(0, ""),
 	})
 }
 
@@ -343,9 +350,8 @@ func (h *mediaHandler) UpdateAlias(c *fiber.Ctx) error {
 		})
 	}
 
-	items := h.mediaService.GetAll()
 	return h.render(c, "partials/media-show", fiber.Map{
-		"MediaList": h.buildMediaList(items, item.ID),
+		"MediaList": h.mediaSidebar(0, item.ID),
 		"Media":     h.buildMediaDetail(item, c.Locals("I18n")),
 	})
 }
@@ -358,10 +364,9 @@ func (h *mediaHandler) Delete(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	items := h.mediaService.GetAll()
 	c.Set("HX-Push-Url", "/admin/media")
 	return h.render(c, "partials/media-index", fiber.Map{
-		"MediaList": h.buildMediaList(items, ""),
+		"MediaList": h.mediaSidebar(0, ""),
 	})
 }
 

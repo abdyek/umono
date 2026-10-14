@@ -25,7 +25,7 @@ func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService)
 }
 
 func (h *adminHandler) Index(c *fiber.Ctx) error {
-	sitePages := h.sitePageService.GetAll()
+	sitePages, _ := h.sitePageService.GetPage(0)
 	translator := c.Locals("I18n")
 
 	var target string
@@ -46,8 +46,8 @@ func (h *adminHandler) Index(c *fiber.Ctx) error {
 
 	return Render(c, "pages/admin", fiber.Map{
 		"SitePageEditor": h.buildSitePageEditor(c.UserContext(), sitePage, translator),
-		"SitePageUl":     h.buildSitePageUl(sitePages, sitePage.ID),
-		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
+		"SitePageUl":     sitePageList(h.sitePageService, 0, sitePage.ID),
+		"ComponentUl":    componentList(h.componentService, 0, 0),
 	})
 }
 
@@ -63,12 +63,10 @@ func (h *adminHandler) RenderAdminSitePage(c *fiber.Ctx) error {
 		return c.SendStatus(404)
 	}
 
-	sitePages := h.sitePageService.GetAll()
-
 	return Render(c, "pages/admin", fiber.Map{
 		"SitePageEditor": h.buildSitePageEditor(c.UserContext(), sitePage, c.Locals("I18n")),
-		"SitePageUl":     h.buildSitePageUl(sitePages, sitePage.ID),
-		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
+		"SitePageUl":     sitePageList(h.sitePageService, 0, sitePage.ID),
+		"ComponentUl":    componentList(h.componentService, 0, 0),
 	}, "layouts/admin")
 }
 
@@ -86,8 +84,8 @@ func (h *adminHandler) RenderAdminSitePageEditor(c *fiber.Ctx) error {
 
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
 		"SitePageEditor": h.buildSitePageEditor(c.UserContext(), sitePage, c.Locals("I18n")),
-		"SitePageUl":     h.buildSitePageUl(h.sitePageService.GetAll(), sitePage.ID),
-		"ComponentUl":    h.buildComponentUl(h.componentService.GetAll(), 0),
+		"SitePageUl":     sitePageList(h.sitePageService, 0, sitePage.ID),
+		"ComponentUl":    componentList(h.componentService, 0, 0),
 	})
 }
 
@@ -106,9 +104,37 @@ func (h *adminHandler) RenderAdminComponent(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
 		"ComponentMode":   true,
 		"ComponentEditor": h.buildComponentEditor(c.UserContext(), comp, c.Locals("I18n")),
-		"ComponentUl":     h.buildComponentUl(h.componentService.GetAll(), comp.ID),
-		"SitePageUl":      h.buildSitePageUl(h.sitePageService.GetAll(), 0),
+		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
+		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	}, "layouts/admin")
+}
+
+// RenderSitePageList renders the page of the site page sidebar at the offset
+// query parameter, followed by the button for the next page.
+func (h *adminHandler) RenderSitePageList(c *fiber.Ctx) error {
+	offset := c.QueryInt("offset")
+	active := c.QueryInt("active")
+	if active < 0 {
+		active = 0
+	}
+
+	return Render(c, "partials/htmx/site-page-list", fiber.Map{
+		"SitePageUl": sitePageList(h.sitePageService, offset, uint(active)),
+	})
+}
+
+// RenderComponentList renders the page of the component sidebar at the offset
+// query parameter, followed by the button for the next page.
+func (h *adminHandler) RenderComponentList(c *fiber.Ctx) error {
+	offset := c.QueryInt("offset")
+	active := c.QueryInt("active")
+	if active < 0 {
+		active = 0
+	}
+
+	return Render(c, "partials/htmx/component-list", fiber.Map{
+		"ComponentUl": componentList(h.componentService, offset, uint(active)),
+	})
 }
 
 func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
@@ -125,30 +151,9 @@ func (h *adminHandler) RenderAdminComponentEditor(c *fiber.Ctx) error {
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
 		"ComponentEditor": h.buildComponentEditor(c.UserContext(), comp, c.Locals("I18n")),
-		"ComponentUl":     h.buildComponentUl(h.componentService.GetAll(), comp.ID),
-		"SitePageUl":      h.buildSitePageUl(h.sitePageService.GetAll(), 0),
+		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
+		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	})
-}
-
-type sitePageLi struct {
-	ID        string
-	Title     string
-	IsActive  bool
-	IsEnabled bool
-}
-
-func (h *adminHandler) buildSitePageUl(pages []models.SitePage, activeID uint) []sitePageLi {
-	var ul []sitePageLi
-	for _, sp := range pages {
-		idStr := strconv.FormatUint(uint64(sp.ID), 10)
-		ul = append(ul, sitePageLi{
-			ID:        idStr,
-			Title:     sp.Name,
-			IsActive:  sp.ID == activeID,
-			IsEnabled: sp.Enabled,
-		})
-	}
-	return ul
 }
 
 type sitePageEditor struct {
@@ -175,25 +180,6 @@ func (h *adminHandler) buildSitePageEditor(ctx context.Context, page models.Site
 		LastModifiedAt: view.RelativeTimeWithTranslator(page.LastModifiedAt, translator),
 		I18n:           translator,
 	}
-}
-
-type componentLi struct {
-	ID       string
-	Name     string
-	IsActive bool
-}
-
-func (h *adminHandler) buildComponentUl(comps []models.Component, activeID uint) []componentLi {
-	var ul []componentLi
-	for _, c := range comps {
-		idStr := strconv.FormatUint(uint64(c.ID), 10)
-		ul = append(ul, componentLi{
-			ID:       idStr,
-			Name:     c.Name,
-			IsActive: c.ID == activeID,
-		})
-	}
-	return ul
 }
 
 type componentEditor struct {

@@ -1,0 +1,6 @@
+{{ range .ComponentUl.Items }}
+  {{ template "partials/component-li" . }}
+{{ end }}
+{{ if .ComponentUl.Next }}
+  {{ template "partials/component-more" . }}
+{{ end }}

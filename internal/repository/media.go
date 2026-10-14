@@ -34,6 +34,12 @@ func (r *MediaRepository) GetAll() []models.Media {
 	return all
 }
 
+func (r *MediaRepository) GetPage(offset, limit int) []models.Media {
+	var items []models.Media
+	r.db.Model(&models.Media{}).Order("created_at DESC, id DESC").Offset(offset).Limit(limit).Find(&items)
+	return items
+}
+
 func (r *MediaRepository) GetByHash(hash string) models.Media {
 	var media models.Media
 	r.db.Model(&models.Media{}).Where("hash = ?", hash).First(&media)

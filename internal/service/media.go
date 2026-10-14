@@ -185,6 +185,15 @@ func (s *MediaService) GetAll() []models.Media {
 	return s.repo.GetAll()
 }
 
+// GetPage returns a page of the media as the admin sidebar lists them and the offset of the next page, or 0 when there is none.
+func (s *MediaService) GetPage(offset int) ([]models.Media, int) {
+	if offset < 0 {
+		offset = 0
+	}
+	items := s.repo.GetPage(offset, listPageSize+1)
+	return pageOf(items, offset)
+}
+
 func (s *MediaService) GetByID(id string) (models.Media, error) {
 	media := s.repo.GetByID(id)
 	if media.ID == "" {

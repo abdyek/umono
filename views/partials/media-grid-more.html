@@ -1,0 +1,14 @@
+<div id="media-grid-more" class="col-span-full">
+  <button
+    type="button"
+    class="w-full flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-colors cursor-pointer"
+    hx-get="/admin/media/library?offset={{ .MediaList.Next }}&active={{ .MediaList.ActiveID }}"
+    hx-target="#media-grid-more"
+    hx-swap="outerHTML"
+  >
+    <span>{{ t .I18n "admin.sidebar.load_more" }}</span>
+    <span class="hidden [.htmx-request_&]:inline-block h-4 w-4 shrink-0">
+      {{ template "partials/spinner" . }}
+    </span>
+  </button>
+</div>

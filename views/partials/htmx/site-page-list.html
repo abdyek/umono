@@ -1,0 +1,6 @@
+{{ range .SitePageUl.Items }}
+  {{ template "partials/site-page-li" . }}
+{{ end }}
+{{ if .SitePageUl.Next }}
+  {{ template "partials/site-page-more" . }}
+{{ end }}

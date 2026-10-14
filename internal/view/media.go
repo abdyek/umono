@@ -30,3 +30,11 @@ func MediaList(items []models.Media, activeID string, publicURL func(models.Medi
 	}
 	return out
 }
+
+// MediaSidebar is one page of the media sidebar. Next is the offset of
+// the next page, or 0 when there is none.
+type MediaSidebar struct {
+	Items    []MediaListItem
+	Next     int
+	ActiveID string
+}

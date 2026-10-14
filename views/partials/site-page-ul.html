@@ -1,5 +1,8 @@
 <ul id="site-page-ul" class="space-y-1"{{if and .IsHTMX (or .IsAlreadyOnSitePages .IsAlreadyOnComponents)}} hx-swap-oob="outerHTML"{{end}}>
-  {{range .SitePageUl}}
+  {{range .SitePageUl.Items}}
     {{template "partials/site-page-li" . }}
   {{end}}
+  {{ if .SitePageUl.Next }}
+    {{ template "partials/site-page-more" . }}
+  {{ end }}
 </ul>
