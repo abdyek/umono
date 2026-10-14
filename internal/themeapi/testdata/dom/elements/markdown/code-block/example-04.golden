@@ -1,0 +1,2 @@
+<p>Kurulum:</p><pre><code data-lang="sh">curl -fsSL https://umono.io/install.sh | sh
+</code></pre>

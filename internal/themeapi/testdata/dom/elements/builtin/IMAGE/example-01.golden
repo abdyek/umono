@@ -1,0 +1,1 @@
+<picture><source srcset="https://cdn.example.com/kapak-640.webp 640w, https://cdn.example.com/kapak-1280.webp 1280w" type="image/webp"><source srcset="https://cdn.example.com/kapak-640.jpg 640w, https://cdn.example.com/kapak.jpg 1600w" type="image/jpeg"><img alt="Umono'nun yönetim paneli" height="900" src="https://cdn.example.com/kapak.jpg" width="1600"></picture>

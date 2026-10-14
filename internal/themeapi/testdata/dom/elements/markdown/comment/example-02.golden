@@ -1,0 +1,3 @@
+<pre><code data-lang="go">// Bu bir Go yorumudur.
+fmt.Println(&quot;Merhaba&quot;)
+</code></pre>
