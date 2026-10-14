@@ -386,3 +386,45 @@ func TestSitePageServicePublicRenderDoesNotUpdateDiagnostics(t *testing.T) {
 		t.Fatalf("PublishedDiagnostics len = %d, want %d", got, want)
 	}
 }
+
+func TestSitePageServicePublishedPageCountOfGlobal(t *testing.T) {
+	svc, cc, _ := newPageDiagnosticTestService(t)
+
+	globals := []models.Component{
+		{Name: "FOO", Content: "{{ MISSING }}"},
+		{Name: "FOO_BAR", Content: "{{ MISSING }}"},
+		{Name: "CARD", Content: "{{ FOO }}"},
+	}
+	for _, g := range globals {
+		if err := cc.LoadGlobalComponent(g); err != nil {
+			t.Fatalf("LoadGlobalComponent %q: %v", g.Name, err)
+		}
+	}
+
+	pages := []models.SitePage{
+		{Name: "A", Slug: "a", Enabled: true, Content: "{{ FOO }}\n\n{{ FOO }}"},
+		{Name: "B", Slug: "b", Enabled: true, Content: "{{ FOO_BAR }}"},
+		{Name: "C", Slug: "c", Enabled: false, Content: "{{ FOO }}"},
+		{Name: "D", Slug: "d", Enabled: true, Content: "{{ CARD }}"},
+	}
+	for _, p := range pages {
+		if _, errs := svc.Create(p); len(errs) > 0 {
+			t.Fatalf("Create %q errors: %v", p.Name, errs)
+		}
+	}
+
+	cases := []struct {
+		name string
+		want int
+	}{
+		{name: "FOO", want: 2},
+		{name: "FOO_BAR", want: 1},
+		{name: "CARD", want: 0},
+		{name: "MISSING", want: 0},
+	}
+	for _, tc := range cases {
+		if got, want := svc.PublishedPageCountOfGlobal(tc.name), tc.want; got != want {
+			t.Fatalf("PublishedPageCountOfGlobal(%q) = %d, want %d", tc.name, got, want)
+		}
+	}
+}

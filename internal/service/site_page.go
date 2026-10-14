@@ -263,6 +263,15 @@ func (s *SitePageService) PublishedDiagnostics() []models.PublishedDiagnostic {
 	return s.diagnosticRepo.GetPublished()
 }
 
+// PublishedPageCountOfGlobal returns the number of enabled pages with a stored
+// diagnostic whose source is the global name or below it.
+func (s *SitePageService) PublishedPageCountOfGlobal(name string) int {
+	if s.diagnosticRepo == nil {
+		return 0
+	}
+	return int(s.diagnosticRepo.CountPublishedPagesBySource(name))
+}
+
 func (s *SitePageService) recomputeDiagnostics(ctx context.Context, page models.SitePage) error {
 	_, diagnostics, err := s.contentCompiler.CompileWithProviderContext(ctx, page.Content)
 	if err != nil {
