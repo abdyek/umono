@@ -175,7 +175,8 @@ func (s *SitePageService) CheckSlug(slug string, exclude uint) error {
 }
 
 func (s *SitePageService) convert(ctx context.Context, source string) (string, error) {
-	return s.contentCompiler.CompileWithProviderContext(ctx, source)
+	output, _, err := s.contentCompiler.CompileWithProviderContext(ctx, source)
+	return output, err
 }
 
 func (s *SitePageService) isSlugValid(slug string) bool {

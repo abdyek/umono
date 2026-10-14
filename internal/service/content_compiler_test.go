@@ -19,7 +19,7 @@ func TestContentCompilerLoadsGlobalComponents(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.Compile("{{ GREETING }}")
+	output, _, err := compiler.Compile("{{ GREETING }}")
 	if err != nil {
 		t.Fatalf("Compile() error = %v", err)
 	}
@@ -35,7 +35,7 @@ func TestContentCompilerPreviewComponent(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.PreviewComponent("GREETING", "# Hello")
+	output, _, err := compiler.PreviewComponent("GREETING", "# Hello")
 	if err != nil {
 		t.Fatalf("PreviewComponent() error = %v", err)
 	}
@@ -57,7 +57,7 @@ func TestContentCompilerRemovesGlobalComponent(t *testing.T) {
 		t.Fatalf("RemoveGlobalComponent() error = %v", err)
 	}
 
-	output, err := compiler.Compile("{{ GREETING }}")
+	output, _, err := compiler.Compile("{{ GREETING }}")
 	if err != nil {
 		t.Fatalf("Compile() error = %v", err)
 	}
@@ -79,7 +79,7 @@ func TestContentCompilerReloadsGlobalComponent(t *testing.T) {
 		t.Fatalf("ReloadGlobalComponent() error = %v", err)
 	}
 
-	output, err := compiler.Compile("{{ GREETING }}")
+	output, _, err := compiler.Compile("{{ GREETING }}")
 	if err != nil {
 		t.Fatalf("Compile() error = %v", err)
 	}
@@ -98,7 +98,7 @@ func TestContentCompilerPreviewComponentReplacesLoadedGlobal(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.PreviewComponent("GREETING", "{{ SITE_NAME }}\n\n# Hi")
+	output, _, err := compiler.PreviewComponent("GREETING", "{{ SITE_NAME }}\n\n# Hi")
 	if err != nil {
 		t.Fatalf("PreviewComponent() error = %v", err)
 	}
@@ -123,7 +123,7 @@ func TestContentCompilerCompilesWhileGlobalsChange(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 20; i++ {
-				output, err := compiler.Compile("{{ GREETING }}")
+				output, _, err := compiler.Compile("{{ GREETING }}")
 				if err != nil {
 					t.Errorf("Compile() error = %v", err)
 					continue
@@ -161,7 +161,7 @@ func TestContentCompilerCompilesWhileGlobalsChange(t *testing.T) {
 	wg.Wait()
 
 	for i := 0; i < 20; i++ {
-		output, err := compiler.Compile(fmt.Sprintf("{{ EXTRA_%d }}", i))
+		output, _, err := compiler.Compile(fmt.Sprintf("{{ EXTRA_%d }}", i))
 		if err != nil {
 			t.Fatalf("Compile() error = %v", err)
 		}
@@ -171,13 +171,53 @@ func TestContentCompilerCompilesWhileGlobalsChange(t *testing.T) {
 	}
 }
 
+func TestContentCompilerReturnsDiagnostics(t *testing.T) {
+	compiler, err := NewContentCompiler(nil)
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	output, diagnostics, err := compiler.Compile("Before {{ UNKNOWN }}")
+	if err != nil {
+		t.Fatalf("Compile() error = %v", err)
+	}
+
+	if strings.TrimSpace(output) != "<p>Before </p>" {
+		t.Fatalf("Compile() = %q", output)
+	}
+
+	if len(diagnostics) != 1 || string(diagnostics[0].Code) != "unknown-component" {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
+func TestContentCompilerPreviewComponentReturnsDiagnostics(t *testing.T) {
+	compiler, err := NewContentCompiler(nil)
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	output, diagnostics, err := compiler.PreviewComponent("CARD", "# Title\n\n{{ UNKNOWN }}")
+	if err != nil {
+		t.Fatalf("PreviewComponent() error = %v", err)
+	}
+
+	if strings.TrimSpace(output) != "<h1>Title</h1>" {
+		t.Fatalf("PreviewComponent() = %q", output)
+	}
+
+	if len(diagnostics) != 1 || string(diagnostics[0].Code) != "unknown-component" || !reflect.DeepEqual(diagnostics[0].Source, []string{"CARD"}) {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+}
+
 func TestContentCompilerPreviewComponentOptimizesImageSizes(t *testing.T) {
 	compiler, err := NewContentCompiler(nil)
 	if err != nil {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.PreviewComponent("HERO", `{{ IMAGE media = {
+	output, _, err := compiler.PreviewComponent("HERO", `{{ IMAGE media = {
   url: "/media/hero",
   width: 1280,
   height: 720,
@@ -202,7 +242,7 @@ func TestContentCompilerBuildsComponoContext(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.CompileWithContext("Version: {{ context(app/version) }}", map[string]any{
+	output, _, err := compiler.CompileWithContext("Version: {{ context(app/version) }}", map[string]any{
 		"app/version": "1.2.0",
 	})
 	if err != nil {
@@ -226,7 +266,7 @@ func TestContentCompilerBuildsContextFromProviders(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.CompileWithProviderContext(context.Background(), "Version: {{ context(app/version) }}")
+	output, _, err := compiler.CompileWithProviderContext(context.Background(), "Version: {{ context(app/version) }}")
 	if err != nil {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
@@ -250,7 +290,7 @@ func TestContentCompilerPassesEmptyKeysWhenSourceHasNoContextReferences(t *testi
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.CompileWithProviderContext(context.Background(), "No context here.")
+	output, _, err := compiler.CompileWithProviderContext(context.Background(), "No context here.")
 	if err != nil {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
@@ -276,7 +316,7 @@ func TestContentCompilerBuildsProviderContextForGlobalComponents(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.CompileWithProviderContext(context.Background(), "{{ GREETING }}")
+	output, _, err := compiler.CompileWithProviderContext(context.Background(), "{{ GREETING }}")
 	if err != nil {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}

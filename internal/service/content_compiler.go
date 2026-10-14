@@ -44,11 +44,11 @@ func NewContentCompiler(components []models.Component, contextProviders ...Conte
 	return c, nil
 }
 
-func (c *ContentCompiler) Compile(source string) (string, error) {
+func (c *ContentCompiler) Compile(source string) (string, []compono.Diagnostic, error) {
 	return c.CompileWithProviderContext(context.Background(), source)
 }
 
-func (c *ContentCompiler) CompileWithProviderContext(ctx context.Context, source string) (string, error) {
+func (c *ContentCompiler) CompileWithProviderContext(ctx context.Context, source string) (string, []compono.Diagnostic, error) {
 	globals := *c.globals.Load()
 
 	if len(c.contextProviders) == 0 {
@@ -57,21 +57,21 @@ func (c *ContentCompiler) CompileWithProviderContext(ctx context.Context, source
 
 	contextValues, err := c.buildCompileContext(ctx, c.contextKeys(source, globals))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	return c.compile(source, contextValues, globals)
 }
 
-func (c *ContentCompiler) CompileWithContext(source string, values map[string]any) (string, error) {
+func (c *ContentCompiler) CompileWithContext(source string, values map[string]any) (string, []compono.Diagnostic, error) {
 	return c.compile(source, c.convertContext(values), *c.globals.Load())
 }
 
-func (c *ContentCompiler) PreviewComponent(name, source string) (string, error) {
+func (c *ContentCompiler) PreviewComponent(name, source string) (string, []compono.Diagnostic, error) {
 	return c.PreviewComponentWithProviderContext(context.Background(), name, source)
 }
 
-func (c *ContentCompiler) PreviewComponentWithProviderContext(ctx context.Context, name, source string) (string, error) {
+func (c *ContentCompiler) PreviewComponentWithProviderContext(ctx context.Context, name, source string) (string, []compono.Diagnostic, error) {
 	name = strings.TrimSpace(name)
 	globals := *c.globals.Load()
 
@@ -81,23 +81,29 @@ func (c *ContentCompiler) PreviewComponentWithProviderContext(ctx context.Contex
 
 	contextValues, err := c.buildCompileContext(ctx, c.contextKeys(source, globals))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	return c.previewComponent(name, source, contextValues, globals)
 }
 
-func (c *ContentCompiler) previewComponent(name, source string, contextValues map[string]any, globals map[string]string) (string, error) {
+func (c *ContentCompiler) previewComponent(name, source string, contextValues map[string]any, globals map[string]string) (string, []compono.Diagnostic, error) {
 	var buf bytes.Buffer
 	options := append(c.globalOptions(globals, name),
 		compono.WithContext(contextValues),
 		compono.WithGlobalComponent(name, []byte(strings.TrimSpace(source))),
 	)
-	if _, err := c.compono.Convert([]byte("{{"+name+"}}"), &buf, options...); err != nil {
-		return "", err
+	diagnostics, err := c.compono.Convert([]byte("{{"+name+"}}"), &buf, options...)
+	if err != nil {
+		return "", nil, err
 	}
 
-	return runtime.OptimizeHTML(buf.String())
+	optimized, err := runtime.OptimizeHTML(buf.String())
+	if err != nil {
+		return "", nil, err
+	}
+
+	return optimized, diagnostics, nil
 }
 
 func (c *ContentCompiler) LoadGlobalComponents(components []models.Component) error {
@@ -144,14 +150,20 @@ func (c *ContentCompiler) updateGlobals(change func(globals map[string]string)) 
 	c.globals.Store(&updated)
 }
 
-func (c *ContentCompiler) compile(source string, context map[string]any, globals map[string]string) (string, error) {
+func (c *ContentCompiler) compile(source string, context map[string]any, globals map[string]string) (string, []compono.Diagnostic, error) {
 	var buf bytes.Buffer
 	options := append(c.globalOptions(globals, ""), compono.WithContext(context))
-	if _, err := c.compono.Convert([]byte(source), &buf, options...); err != nil {
-		return "", err
+	diagnostics, err := c.compono.Convert([]byte(source), &buf, options...)
+	if err != nil {
+		return "", nil, err
 	}
 
-	return runtime.OptimizeHTML(buf.String())
+	optimized, err := runtime.OptimizeHTML(buf.String())
+	if err != nil {
+		return "", nil, err
+	}
+
+	return optimized, diagnostics, nil
 }
 
 // globalOptions returns a WithGlobalComponent option for every loaded global
