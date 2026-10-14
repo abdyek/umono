@@ -11,17 +11,19 @@ type ComponentEditorData struct {
 	Name           string
 	Content        string
 	Output         template.HTML
+	Diagnostics    []DiagnosticItem
 	LastModifiedAt string
 	NameErr        string
 	I18n           any
 }
 
-func ComponentEditor(comp models.Component, output template.HTML, nameErr string, translator any) ComponentEditorData {
+func ComponentEditor(comp models.Component, output template.HTML, diagnostics []DiagnosticItem, nameErr string, translator any) ComponentEditorData {
 	return ComponentEditorData{
 		ID:             comp.ID,
 		Name:           comp.Name,
 		Content:        comp.Content,
 		Output:         output,
+		Diagnostics:    diagnostics,
 		LastModifiedAt: RelativeTimeWithTranslator(comp.LastModifiedAt, translator),
 		NameErr:        nameErr,
 		I18n:           translator,

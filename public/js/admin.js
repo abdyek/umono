@@ -28,6 +28,35 @@ function setPreviewContent(content) {
     </style><div class="preview-body">${content}</div>`;
 }
 
+// applyPreview moves the preview that came with the diagnostics into the
+// preview pane.
+function applyPreview() {
+  const template = document.querySelector('#editor-diagnostics template[data-preview]');
+  if (!template) return;
+  setPreviewContent(template.innerHTML);
+  template.remove();
+}
+
+// selectSourceRange selects a Compono range in the content textarea. Lines and
+// columns start at 1 and columns count code points; the end is exclusive.
+function selectSourceRange(startLine, startColumn, endLine, endColumn) {
+  const textarea = document.getElementById('content');
+  if (!textarea) return;
+  const lines = textarea.value.split('\n');
+  const indexOf = (line, column) => {
+    let index = 0;
+    for (let i = 0; i < line - 1 && i < lines.length; i++) {
+      index += lines[i].length + 1;
+    }
+    const text = lines[line - 1] || '';
+    return index + Array.from(text).slice(0, column - 1).join('').length;
+  };
+  textarea.focus();
+  textarea.setSelectionRange(indexOf(startLine, startColumn), indexOf(endLine, endColumn));
+  const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 24;
+  textarea.scrollTop = Math.max(0, (startLine - 1) * lineHeight - textarea.clientHeight / 3);
+}
+
 function updateSlug(value) {
   document.getElementById('slug').value = toKebabCase(value);
 }

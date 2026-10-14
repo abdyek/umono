@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"strings"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/service"
 )
@@ -32,12 +30,12 @@ func (h *previewHandler) RenderSitePagePreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	output, err := h.sitePageService.Preview(c.UserContext(), req.Content)
-	if err != nil {
-		return err
-	}
+	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, req.Content)
 
-	return c.SendString(output)
+	return Render(c, "partials/editor-preview", fiber.Map{
+		"Output":      output,
+		"Diagnostics": diagnostics,
+	})
 }
 
 func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
@@ -50,12 +48,12 @@ func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
 		return err
 	}
 
-	output, err := h.componentService.Preview(c.UserContext(), strings.TrimSpace(req.Name), req.Content)
-	if err != nil {
-		return err
-	}
+	output, diagnostics := componentPreview(c.UserContext(), h.componentService, req.Name, req.Content)
 
-	return c.SendString(output)
+	return Render(c, "partials/editor-preview", fiber.Map{
+		"Output":      output,
+		"Diagnostics": diagnostics,
+	})
 }
 
 func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
@@ -64,10 +62,10 @@ func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
 		_, content = localizedNotFoundDefaults(c)
 	}
 
-	output, err := h.sitePageService.Preview(c.UserContext(), content)
-	if err != nil {
-		return err
-	}
+	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, content)
 
-	return c.SendString(output)
+	return Render(c, "partials/editor-preview", fiber.Map{
+		"Output":      output,
+		"Diagnostics": diagnostics,
+	})
 }

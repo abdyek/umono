@@ -12,6 +12,7 @@ type SitePageEditorData struct {
 	Slug           string
 	Content        string
 	Output         template.HTML
+	Diagnostics    []DiagnosticItem
 	IsEnabled      bool
 	LastModifiedAt string
 	SlugErr        string
@@ -19,13 +20,14 @@ type SitePageEditorData struct {
 	I18n           any
 }
 
-func SitePageEditor(sp models.SitePage, output template.HTML, slugErr, nameErr string, translator any) SitePageEditorData {
+func SitePageEditor(sp models.SitePage, output template.HTML, diagnostics []DiagnosticItem, slugErr, nameErr string, translator any) SitePageEditorData {
 	return SitePageEditorData{
 		ID:             sp.ID,
 		Name:           sp.Name,
 		Slug:           sp.Slug,
 		Content:        sp.Content,
 		Output:         output,
+		Diagnostics:    diagnostics,
 		IsEnabled:      sp.Enabled,
 		LastModifiedAt: RelativeTimeWithTranslator(sp.LastModifiedAt, translator),
 		SlugErr:        slugErr,
