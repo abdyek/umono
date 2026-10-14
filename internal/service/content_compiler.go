@@ -49,17 +49,38 @@ func (c *ContentCompiler) Compile(source string) (string, []compono.Diagnostic, 
 
 func (c *ContentCompiler) CompileWithProviderContext(ctx context.Context, source string) (string, []compono.Diagnostic, error) {
 	globals := *c.globals.Load()
-
-	if len(c.contextProviders) == 0 {
-		return c.compile(source, c.convertContext(), globals)
-	}
-
-	contextValues, err := c.buildCompileContext(ctx, c.contextKeys(source, globals))
+	values, err := c.contextValues(ctx, source, globals)
 	if err != nil {
 		return "", nil, err
 	}
+	return c.compile(source, values, globals)
+}
 
-	return c.compile(source, contextValues, globals)
+// contextValues returns the context values the conversion of source needs.
+func (c *ContentCompiler) contextValues(ctx context.Context, source string, globals map[string]string) (map[string]any, error) {
+	if len(c.contextProviders) == 0 {
+		return c.convertContext(), nil
+	}
+	return c.buildCompileContext(ctx, c.contextKeys(source, globals))
+}
+
+// CompilePublic converts source for a visitor. It returns the output and the
+// image URLs Compono wrote to it, in output order. The diagnostics are not
+// returned, because a visitor's response never carries them.
+func (c *ContentCompiler) CompilePublic(ctx context.Context, source string) (string, []string, error) {
+	globals := *c.globals.Load()
+	values, err := c.contextValues(ctx, source, globals)
+	if err != nil {
+		return "", nil, err
+	}
+	var urls []string
+	output, _, err := c.compile(source, values, globals, compono.WithURLReporter(func(r compono.URLReport) {
+		urls = append(urls, r.URL)
+	}))
+	if err != nil {
+		return "", nil, err
+	}
+	return output, urls, nil
 }
 
 func (c *ContentCompiler) CompileWithContext(source string, values map[string]any) (string, []compono.Diagnostic, error) {
@@ -144,9 +165,10 @@ func (c *ContentCompiler) updateGlobals(change func(globals map[string]string)) 
 	c.globals.Store(&updated)
 }
 
-func (c *ContentCompiler) compile(source string, context map[string]any, globals map[string]string) (string, []compono.Diagnostic, error) {
+func (c *ContentCompiler) compile(source string, context map[string]any, globals map[string]string, extra ...compono.ConvertOption) (string, []compono.Diagnostic, error) {
 	var buf bytes.Buffer
 	options := append(c.globalOptions(globals, ""), compono.WithContext(context))
+	options = append(options, extra...)
 	diagnostics, err := c.compono.Convert([]byte(source), &buf, options...)
 	if err != nil {
 		return "", nil, err
