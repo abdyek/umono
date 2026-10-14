@@ -97,6 +97,15 @@ func (s *SitePageService) GetAll() []models.SitePage {
 	return s.repo.GetAll()
 }
 
+// GetPage returns a page of the pages as the admin sidebar lists them and the offset of the next page, or 0 when there is none.
+func (s *SitePageService) GetPage(offset int) ([]models.SitePage, int) {
+	if offset < 0 {
+		offset = 0
+	}
+	items := s.repo.GetPage(offset, listPageSize+1)
+	return pageOf(items, offset)
+}
+
 func (s *SitePageService) Preview(ctx context.Context, source string) (string, error) {
 	output, err := s.convert(ctx, source)
 	if err != nil {

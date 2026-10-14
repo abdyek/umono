@@ -27,6 +27,12 @@ func (r *ComponentRepository) GetAll() []models.Component {
 	return all
 }
 
+func (r *ComponentRepository) GetPage(offset, limit int) []models.Component {
+	var items []models.Component
+	r.db.Model(&models.Component{}).Order("last_modified_at DESC, id DESC").Offset(offset).Limit(limit).Find(&items)
+	return items
+}
+
 func (r *ComponentRepository) GetByName(name string) models.Component {
 	var c models.Component
 	r.db.Model(&models.Component{}).Where("name = ?", name).First(&c)

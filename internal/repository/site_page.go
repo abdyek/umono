@@ -33,6 +33,12 @@ func (r *SitePageRepository) GetAll() []models.SitePage {
 	return all
 }
 
+func (r *SitePageRepository) GetPage(offset, limit int) []models.SitePage {
+	var items []models.SitePage
+	r.db.Model(&models.SitePage{}).Order("enabled DESC, last_modified_at DESC, id DESC").Offset(offset).Limit(limit).Find(&items)
+	return items
+}
+
 func (r *SitePageRepository) Create(sp models.SitePage) models.SitePage {
 	r.db.Create(&sp)
 	return sp
