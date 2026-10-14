@@ -84,7 +84,8 @@ func (s *ComponentService) Preview(ctx context.Context, name, source string) (st
 		return "", ErrContentCompilerNotConfigured
 	}
 
-	return s.contentCompiler.PreviewComponentWithProviderContext(ctx, name, source)
+	output, _, err := s.contentCompiler.PreviewComponentWithProviderContext(ctx, name, source)
+	return output, err
 }
 
 func (s *ComponentService) MustPreview(ctx context.Context, name, source string) string {
