@@ -345,6 +345,11 @@ func main() {
 		optionHandler.SaveRobotsTxt,
 	)
 
+	adminProtected.Post("/options/site-url",
+		middleware.OnlyHTMX(),
+		optionHandler.SaveSiteURL,
+	)
+
 	adminProtected.Post("/logout",
 		middleware.OnlyHTMX(),
 		authHandler.Logout,

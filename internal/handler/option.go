@@ -61,6 +61,37 @@ func (h *OptionHandler) renderRobotsTxtStatus(c *fiber.Ctx, success bool) error 
 	})
 }
 
+func (h *OptionHandler) SaveSiteURL(c *fiber.Ctx) error {
+	if err := h.optionService.SaveSiteURL(c.FormValue("site_url")); err != nil {
+		if errors.Is(err, service.ErrInvalidSiteURL) {
+			return h.renderSiteURLStatus(c, false)
+		}
+		return err
+	}
+
+	return h.renderSiteURLStatus(c, true)
+}
+
+func (h *OptionHandler) renderSiteURLStatus(c *fiber.Ctx, success bool) error {
+	sitemapURL := sitemapURLOf(h.optionService.GetSiteURL())
+	titleKey := "settings.general.site_url_saved"
+	messageKey := "settings.general.site_url_saved_description"
+	if !success {
+		titleKey = "settings.general.site_url_invalid"
+		messageKey = "settings.general.site_url_invalid_description"
+		sitemapURL = ""
+	} else if sitemapURL == "" {
+		messageKey = "settings.general.site_url_cleared_description"
+	}
+
+	return Render(c, "partials/site-url-status", fiber.Map{
+		"StatusSuccess": success,
+		"StatusTitle":   translate(c, titleKey),
+		"StatusMessage": translate(c, messageKey),
+		"SitemapURL":    sitemapURL,
+	})
+}
+
 func (h *OptionHandler) SaveLanguage(c *fiber.Ctx) error {
 	if err := h.optionService.SaveLanguage(c.FormValue("language")); err != nil {
 		if errors.Is(err, service.ErrInvalidLanguage) {
