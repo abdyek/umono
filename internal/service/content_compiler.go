@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/umono-cms/compono"
 	"github.com/umono-cms/compono/ast"
@@ -18,18 +19,23 @@ import (
 var ErrContentCompilerNotConfigured = errors.New("content compiler is not configured")
 
 type ContentCompiler struct {
-	mu               sync.Mutex
+	// writeMu serializes changes to globals. Renders do not take it.
+	writeMu sync.Mutex
+	// globals points to an immutable map of the site global sources by name.
+	// A change builds a new map and swaps it in.
+	globals atomic.Pointer[map[string]string]
+
 	compono          compono.Compono
 	contextProviders []ContextProvider
-	globalComponents map[string]string
 }
 
 func NewContentCompiler(components []models.Component, contextProviders ...ContextProvider) (*ContentCompiler, error) {
+	empty := map[string]string{}
 	c := &ContentCompiler{
 		compono:          compono.New(),
 		contextProviders: contextProviders,
-		globalComponents: map[string]string{},
 	}
+	c.globals.Store(&empty)
 
 	if err := c.LoadGlobalComponents(components); err != nil {
 		return nil, err
@@ -43,20 +49,22 @@ func (c *ContentCompiler) Compile(source string) (string, error) {
 }
 
 func (c *ContentCompiler) CompileWithProviderContext(ctx context.Context, source string) (string, error) {
+	globals := *c.globals.Load()
+
 	if len(c.contextProviders) == 0 {
-		return c.compile(source, c.convertContext())
+		return c.compile(source, c.convertContext(), globals)
 	}
 
-	contextValues, err := c.buildCompileContext(ctx, c.contextKeys(source))
+	contextValues, err := c.buildCompileContext(ctx, c.contextKeys(source, globals))
 	if err != nil {
 		return "", err
 	}
 
-	return c.compile(source, contextValues)
+	return c.compile(source, contextValues, globals)
 }
 
 func (c *ContentCompiler) CompileWithContext(source string, values map[string]any) (string, error) {
-	return c.compile(source, c.convertContext(values))
+	return c.compile(source, c.convertContext(values), *c.globals.Load())
 }
 
 func (c *ContentCompiler) PreviewComponent(name, source string) (string, error) {
@@ -65,25 +73,23 @@ func (c *ContentCompiler) PreviewComponent(name, source string) (string, error) 
 
 func (c *ContentCompiler) PreviewComponentWithProviderContext(ctx context.Context, name, source string) (string, error) {
 	name = strings.TrimSpace(name)
+	globals := *c.globals.Load()
 
 	if len(c.contextProviders) == 0 {
-		return c.previewComponent(name, source, c.convertContext())
+		return c.previewComponent(name, source, c.convertContext(), globals)
 	}
 
-	contextValues, err := c.buildCompileContext(ctx, c.contextKeys(source))
+	contextValues, err := c.buildCompileContext(ctx, c.contextKeys(source, globals))
 	if err != nil {
 		return "", err
 	}
 
-	return c.previewComponent(name, source, contextValues)
+	return c.previewComponent(name, source, contextValues, globals)
 }
 
-func (c *ContentCompiler) previewComponent(name, source string, contextValues map[string]any) (string, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+func (c *ContentCompiler) previewComponent(name, source string, contextValues map[string]any, globals map[string]string) (string, error) {
 	var buf bytes.Buffer
-	options := append(c.globalOptions(name),
+	options := append(c.globalOptions(globals, name),
 		compono.WithContext(contextValues),
 		compono.WithGlobalComponent(name, []byte(strings.TrimSpace(source))),
 	)
@@ -95,49 +101,52 @@ func (c *ContentCompiler) previewComponent(name, source string, contextValues ma
 }
 
 func (c *ContentCompiler) LoadGlobalComponents(components []models.Component) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for _, component := range components {
-		if err := c.loadGlobalComponent(component); err != nil {
-			return err
+	c.updateGlobals(func(globals map[string]string) {
+		for _, component := range components {
+			globals[component.Name] = component.Content
 		}
-	}
-
+	})
 	return nil
 }
 
 func (c *ContentCompiler) LoadGlobalComponent(component models.Component) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	return c.loadGlobalComponent(component)
+	c.updateGlobals(func(globals map[string]string) {
+		globals[component.Name] = component.Content
+	})
+	return nil
 }
 
 func (c *ContentCompiler) RemoveGlobalComponent(component models.Component) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	return c.removeGlobalComponent(component)
+	c.updateGlobals(func(globals map[string]string) {
+		delete(globals, component.Name)
+	})
+	return nil
 }
 
 func (c *ContentCompiler) ReloadGlobalComponent(component models.Component) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if err := c.removeGlobalComponent(component); err != nil {
-		return err
-	}
-
-	return c.loadGlobalComponent(component)
+	c.updateGlobals(func(globals map[string]string) {
+		globals[component.Name] = component.Content
+	})
+	return nil
 }
 
-func (c *ContentCompiler) compile(source string, context map[string]any) (string, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+// updateGlobals applies change to a copy of the globals and swaps the copy in.
+func (c *ContentCompiler) updateGlobals(change func(globals map[string]string)) {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 
+	current := *c.globals.Load()
+	updated := make(map[string]string, len(current)+1)
+	for name, source := range current {
+		updated[name] = source
+	}
+	change(updated)
+	c.globals.Store(&updated)
+}
+
+func (c *ContentCompiler) compile(source string, context map[string]any, globals map[string]string) (string, error) {
 	var buf bytes.Buffer
-	options := append(c.globalOptions(""), compono.WithContext(context))
+	options := append(c.globalOptions(globals, ""), compono.WithContext(context))
 	if _, err := c.compono.Convert([]byte(source), &buf, options...); err != nil {
 		return "", err
 	}
@@ -147,9 +156,9 @@ func (c *ContentCompiler) compile(source string, context map[string]any) (string
 
 // globalOptions returns a WithGlobalComponent option for every loaded global
 // except skip, sorted by name.
-func (c *ContentCompiler) globalOptions(skip string) []compono.ConvertOption {
-	names := make([]string, 0, len(c.globalComponents))
-	for name := range c.globalComponents {
+func (c *ContentCompiler) globalOptions(globals map[string]string, skip string) []compono.ConvertOption {
+	names := make([]string, 0, len(globals))
+	for name := range globals {
 		if name == skip {
 			continue
 		}
@@ -159,19 +168,9 @@ func (c *ContentCompiler) globalOptions(skip string) []compono.ConvertOption {
 
 	options := make([]compono.ConvertOption, 0, len(names))
 	for _, name := range names {
-		options = append(options, compono.WithGlobalComponent(name, []byte(c.globalComponents[name])))
+		options = append(options, compono.WithGlobalComponent(name, []byte(globals[name])))
 	}
 	return options
-}
-
-func (c *ContentCompiler) loadGlobalComponent(component models.Component) error {
-	c.globalComponents[component.Name] = component.Content
-	return nil
-}
-
-func (c *ContentCompiler) removeGlobalComponent(component models.Component) error {
-	delete(c.globalComponents, component.Name)
-	return nil
 }
 
 func (c *ContentCompiler) buildCompileContext(ctx context.Context, keys []string) (map[string]any, error) {
@@ -198,17 +197,14 @@ func (c *ContentCompiler) buildCompileContext(ctx context.Context, keys []string
 	return values, nil
 }
 
-func (c *ContentCompiler) contextKeys(source string) []string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+func (c *ContentCompiler) contextKeys(source string, globals map[string]string) []string {
 	seen := map[string]struct{}{}
 	c.collectContextKeys(source, ast.DefaultRootNode(), seen)
 	sourceAsGlobal := ast.DefaultEmptyNode()
 	sourceAsGlobal.SetRule(rule.NewGlobalCompDef())
 	c.collectContextKeys(source, sourceAsGlobal, seen)
 
-	for _, globalSource := range c.globalComponents {
+	for _, globalSource := range globals {
 		node := ast.DefaultEmptyNode()
 		node.SetRule(rule.NewGlobalCompDef())
 		c.collectContextKeys(globalSource, node, seen)
