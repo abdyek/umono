@@ -242,3 +242,55 @@ func TestSitePageServicePublishedDiagnosticsOrder(t *testing.T) {
 		t.Fatalf("diagnostics[1].PageName = %q, want %q", got, want)
 	}
 }
+
+func TestSitePageServiceFillDiagnosticsOnce(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(&models.SitePage{}, &models.Component{}, &models.PageDiagnostic{}, &models.Option{}); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cc, err := NewContentCompiler(nil)
+	if err != nil {
+		t.Fatalf("new content compiler: %v", err)
+	}
+
+	optRepo := repository.NewOptionRepository(db)
+	svc := NewSitePageService(repository.NewSitePageRepository(db), optRepo, cc)
+	svc.SetPageDiagnosticRepository(repository.NewPageDiagnosticRepository(db))
+
+	if err := db.Create(&models.SitePage{Name: "Old", Slug: "old", Enabled: true, Content: "{{ MISSING }}"}).Error; err != nil {
+		t.Fatalf("create Old page: %v", err)
+	}
+
+	if got, want := len(svc.PublishedDiagnostics()), 0; got != want {
+		t.Fatalf("PublishedDiagnostics len = %d, want %d", got, want)
+	}
+
+	if err := svc.FillDiagnosticsOnce(context.Background()); err != nil {
+		t.Fatalf("FillDiagnosticsOnce: %v", err)
+	}
+
+	if got, want := len(svc.PublishedDiagnostics()), 1; got != want {
+		t.Fatalf("PublishedDiagnostics len = %d, want %d", got, want)
+	}
+
+	filledOpt := optRepo.GetOptionByKey("page_diagnostics_filled")
+	if filledOpt.ID == 0 {
+		t.Fatalf("optRepo.GetOptionByKey(\"page_diagnostics_filled\").ID = 0, want non-zero")
+	}
+
+	if err := db.Create(&models.SitePage{Name: "Later", Slug: "later", Enabled: true, Content: "{{ MISSING }}"}).Error; err != nil {
+		t.Fatalf("create Later page: %v", err)
+	}
+
+	if err := svc.FillDiagnosticsOnce(context.Background()); err != nil {
+		t.Fatalf("FillDiagnosticsOnce second call: %v", err)
+	}
+
+	if got, want := len(svc.PublishedDiagnostics()), 1; got != want {
+		t.Fatalf("PublishedDiagnostics len = %d, want %d", got, want)
+	}
+}
