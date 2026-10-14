@@ -53,3 +53,11 @@ func SitePageUl(sitePages []models.SitePage, activeID uint) []SitePageLi {
 	}
 	return ul
 }
+
+// SitePageList is one page of the site page sidebar. Next is the offset of
+// the next page, or 0 when there is none.
+type SitePageList struct {
+	Items    []SitePageLi
+	Next     int
+	ActiveID uint
+}

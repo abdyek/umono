@@ -45,3 +45,11 @@ func ComponentUl(comps []models.Component, activeID uint) []ComponentLi {
 	}
 	return ul
 }
+
+// ComponentList is one page of the component sidebar. Next is the offset of
+// the next page, or 0 when there is none.
+type ComponentList struct {
+	Items    []ComponentLi
+	Next     int
+	ActiveID uint
+}

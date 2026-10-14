@@ -1,0 +1,6 @@
+{{ range .MediaList.Items }}
+  {{ template "partials/media-grid-item" . }}
+{{ end }}
+{{ if .MediaList.Next }}
+  {{ template "partials/media-grid-more" . }}
+{{ end }}

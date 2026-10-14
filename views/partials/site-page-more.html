@@ -1,0 +1,14 @@
+<li id="site-page-more">
+  <button
+    type="button"
+    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-neutral-400 hover:bg-neutral-700/30 hover:text-neutral-200 transition-colors cursor-pointer"
+    hx-get="/admin/site-pages/list?offset={{ .SitePageUl.Next }}&active={{ .SitePageUl.ActiveID }}"
+    hx-target="#site-page-more"
+    hx-swap="outerHTML"
+  >
+    <span>{{ t .I18n "admin.sidebar.load_more" }}</span>
+    <span class="hidden [.htmx-request_&]:inline-block h-4 w-4 shrink-0">
+      {{ template "partials/spinner" . }}
+    </span>
+  </button>
+</li>

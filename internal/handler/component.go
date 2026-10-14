@@ -48,8 +48,8 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
 		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(c.UserContext(), comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
-		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
-		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
+		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
+		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	})
 }
 
@@ -81,8 +81,8 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
 		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(c.UserContext(), comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
-		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), comp.ID),
-		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
+		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
+		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	})
 }
 
@@ -104,7 +104,7 @@ func (h *ComponentHandler) RenderComponentEditor(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
 		"ComponentMode":   true,
 		"ComponentEditor": view.ComponentEditor(models.Component{}, mustPreviewHTML(""), "", c.Locals("I18n")),
-		"SitePageUl":      view.SitePageUl(h.sitePageService.GetAll(), 0),
-		"ComponentUl":     view.ComponentUl(h.componentService.GetAll(), 0),
+		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
+		"ComponentUl":     componentList(h.componentService, 0, 0),
 	}, "layouts/admin")
 }

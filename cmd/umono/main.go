@@ -187,6 +187,11 @@ func main() {
 		sitePageHandler.CheckSlug,
 	)
 
+	adminProtected.Get("/site-pages/list",
+		middleware.OnlyHTMX(),
+		adminHandler.RenderSitePageList,
+	)
+
 	adminProtected.Get("/site-pages/:id", adminHandler.RenderAdminSitePage)
 	adminProtected.Get("/site-pages/:id/editor",
 		middleware.OnlyHTMX(),
@@ -206,6 +211,11 @@ func main() {
 	adminProtected.Delete("/site-pages/:id",
 		middleware.OnlyHTMX(),
 		sitePageHandler.Delete,
+	)
+
+	adminProtected.Get("/components/list",
+		middleware.OnlyHTMX(),
+		adminHandler.RenderComponentList,
 	)
 
 	adminProtected.Get("/components/:id", adminHandler.RenderAdminComponent)
@@ -277,6 +287,14 @@ func main() {
 	adminProtected.Get("/media", mediaHandler.Index)
 	adminProtected.Get("/media/new", mediaHandler.RenderNew)
 	adminProtected.Get("/media/pending/:token/preview", mediaHandler.ServePending)
+	adminProtected.Get("/media/list",
+		middleware.OnlyHTMX(),
+		mediaHandler.RenderList,
+	)
+	adminProtected.Get("/media/library",
+		middleware.OnlyHTMX(),
+		mediaHandler.RenderLibraryList,
+	)
 	adminProtected.Get("/media/:id", mediaHandler.RenderShow)
 	adminProtected.Post("/media",
 		middleware.OnlyHTMX(),
