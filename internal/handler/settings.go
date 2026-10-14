@@ -88,6 +88,8 @@ func (h *settingsHandler) RenderGeneral(c *fiber.Ctx) error {
 		"SettingsUl": h.settingsUl(c, path.Base(c.Path())),
 		"Language":   h.optionService.GetLanguage(),
 		"Languages":  h.optionService.SupportedLanguages(),
+		"SiteURL":    h.optionService.GetSiteURL(),
+		"SitemapURL": sitemapURLOf(h.optionService.GetSiteURL()),
 	}, layouts...)
 }
 
@@ -134,4 +136,13 @@ func isSettingsContentSwap(c *fiber.Ctx) bool {
 	default:
 		return false
 	}
+}
+
+// sitemapURLOf returns the address of sitemap.xml under siteURL, or "" when
+// the site address is not set.
+func sitemapURLOf(siteURL string) string {
+	if siteURL == "" {
+		return ""
+	}
+	return siteURL + "/sitemap.xml"
 }

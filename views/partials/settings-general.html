@@ -45,5 +45,52 @@
         </button>
       </div>
     </form>
+    <form
+      id="settings-site-url-form"
+      class="px-6 pb-6 max-w-xl space-y-4"
+      hx-post="/admin/options/site-url"
+      hx-target="#settings-site-url-status"
+      hx-swap="innerHTML"
+      hx-disabled-elt="#site-url,#settings-site-url-save-button"
+    >
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-neutral-300 ml-1" for="site-url">{{ t .I18n "settings.general.site_url" }}</label>
+        <p class="text-sm text-neutral-400">{{ t .I18n "settings.general.site_url_description" }}</p>
+        <input
+          id="site-url"
+          name="site_url"
+          type="text"
+          inputmode="url"
+          autocomplete="url"
+          value="{{ .SiteURL }}"
+          placeholder="https://example.com"
+          class="w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200"
+        >
+      </div>
+      <div id="settings-site-url-status">
+        {{ if .SitemapURL }}
+          <p class="text-xs leading-5 text-neutral-500">{{ t .I18n "settings.general.sitemap" }}: <a href="{{ .SitemapURL }}" target="_blank" rel="noopener" class="underline break-all">{{ .SitemapURL }}</a></p>
+        {{ end }}
+      </div>
+      <div>
+        <button
+          id="settings-site-url-save-button"
+          type="submit"
+          class="relative flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg shadow-purple-900/20 active:scale-[0.98] cursor-pointer"
+        >
+          <span class="flex items-center gap-2 [.htmx-request_&]:invisible">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{{ t .I18n "common.save" }}</span>
+          </span>
+          <span class="absolute inset-0 flex items-center justify-center invisible [.htmx-request_&]:visible text-white">
+            <span class="h-4 w-4">
+              {{ template "partials/spinner" . }}
+            </span>
+          </span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>

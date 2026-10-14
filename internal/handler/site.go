@@ -26,6 +26,22 @@ func (h *siteHandler) RenderRobotsTxt(c *fiber.Ctx) error {
 	return c.SendString(h.optionService.GetRobotsTxt())
 }
 
+// RenderSitemap serves /sitemap.xml. It is 404 while the site address is not
+// set.
+func (h *siteHandler) RenderSitemap(c *fiber.Ctx) error {
+	siteURL := h.optionService.GetSiteURL()
+	if siteURL == "" {
+		return c.SendStatus(fiber.StatusNotFound)
+	}
+	body, err := h.sitePageService.Sitemap(siteURL)
+	if err != nil {
+		return err
+	}
+	c.Set("Content-Type", "application/xml; charset=utf-8")
+	c.Set("X-Content-Type-Options", "nosniff")
+	return c.Send(body)
+}
+
 func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 

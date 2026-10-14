@@ -345,6 +345,11 @@ func main() {
 		optionHandler.SaveRobotsTxt,
 	)
 
+	adminProtected.Post("/options/site-url",
+		middleware.OnlyHTMX(),
+		optionHandler.SaveSiteURL,
+	)
+
 	adminProtected.Post("/logout",
 		middleware.OnlyHTMX(),
 		authHandler.Logout,
@@ -355,6 +360,7 @@ func main() {
 	app.Get("/uploads/:filename", mediaHandler.Serve)
 
 	app.Get("/robots.txt", siteHandler.RenderRobotsTxt)
+	app.Get("/sitemap.xml", siteHandler.RenderSitemap)
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 

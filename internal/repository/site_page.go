@@ -39,6 +39,12 @@ func (r *SitePageRepository) GetPage(offset, limit int) []models.SitePage {
 	return items
 }
 
+func (r *SitePageRepository) GetEnabled() []models.SitePage {
+	var items []models.SitePage
+	r.db.Model(&models.SitePage{}).Where("enabled = ?", true).Order("slug ASC").Find(&items)
+	return items
+}
+
 func (r *SitePageRepository) Create(sp models.SitePage) models.SitePage {
 	r.db.Create(&sp)
 	return sp
