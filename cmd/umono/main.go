@@ -21,6 +21,7 @@ import (
 	"github.com/umono-cms/umono/internal/handler"
 	"github.com/umono-cms/umono/internal/handler/middleware"
 	"github.com/umono-cms/umono/internal/i18n"
+	"github.com/umono-cms/umono/internal/migration"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/service"
@@ -73,6 +74,10 @@ func main() {
 		&models.Job{},
 	); err != nil {
 		log.Fatal("migrate err", err)
+	}
+
+	if err := migration.GlobalParamLine(db); err != nil {
+		log.Fatal("global param line migration err", err)
 	}
 
 	// TODO: Refactor: move DI another file
