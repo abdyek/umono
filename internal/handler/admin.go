@@ -191,6 +191,7 @@ type componentEditor struct {
 	Content        string
 	Output         template.HTML
 	Diagnostics    []view.DiagnosticItem
+	PageErrorCount int
 	LastModifiedAt string
 	NameErr        string
 	I18n           any
@@ -198,7 +199,7 @@ type componentEditor struct {
 
 func (h *adminHandler) buildComponentEditor(ctx context.Context, comp models.Component, translator any) componentEditor {
 	output, diagnostics := componentPreview(ctx, h.componentService, comp.Name, comp.Content)
-	return componentEditor{
+	editor := componentEditor{
 		ID:             comp.ID,
 		Name:           comp.Name,
 		Content:        comp.Content,
@@ -207,4 +208,8 @@ func (h *adminHandler) buildComponentEditor(ctx context.Context, comp models.Com
 		LastModifiedAt: view.RelativeTimeWithTranslator(comp.LastModifiedAt, translator),
 		I18n:           translator,
 	}
+	if comp.ID != 0 {
+		editor.PageErrorCount = h.sitePageService.PublishedPageCountOfGlobal(comp.Name)
+	}
+	return editor
 }

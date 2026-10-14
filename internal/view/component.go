@@ -7,11 +7,14 @@ import (
 )
 
 type ComponentEditorData struct {
-	ID             uint
-	Name           string
-	Content        string
-	Output         template.HTML
-	Diagnostics    []DiagnosticItem
+	ID          uint
+	Name        string
+	Content     string
+	Output      template.HTML
+	Diagnostics []DiagnosticItem
+	// PageErrorCount is the number of published pages with errors from this
+	// global.
+	PageErrorCount int
 	LastModifiedAt string
 	NameErr        string
 	I18n           any

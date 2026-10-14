@@ -48,3 +48,17 @@ func (r *PageDiagnosticRepository) GetPublished() []models.PublishedDiagnostic {
 	}
 	return items
 }
+
+// CountPublishedPagesBySource returns the number of enabled pages with a
+// stored diagnostic whose source is name or below it.
+func (r *PageDiagnosticRepository) CountPublishedPagesBySource(name string) int64 {
+	var count int64
+	prefix := name + " > "
+	r.db.Table("page_diagnostics").
+		Joins("JOIN pages ON pages.id = page_diagnostics.page_id").
+		Where("pages.enabled = ?", true).
+		Where("page_diagnostics.source = ? OR substr(page_diagnostics.source, 1, ?) = ?", name, len(prefix), prefix).
+		Distinct("page_diagnostics.page_id").
+		Count(&count)
+	return count
+}

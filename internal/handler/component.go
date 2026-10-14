@@ -47,8 +47,12 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 	}
 
 	output, diagnostics := componentPreview(c.UserContext(), h.componentService, comp.Name, comp.Content)
+	editor := view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n"))
+	if comp.ID != 0 {
+		editor.PageErrorCount = h.sitePageService.PublishedPageCountOfGlobal(comp.Name)
+	}
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n")),
+		"ComponentEditor": editor,
 		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
 		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	})
@@ -81,8 +85,12 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 	}
 
 	output, diagnostics := componentPreview(c.UserContext(), h.componentService, comp.Name, comp.Content)
+	editor := view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n"))
+	if comp.ID != 0 {
+		editor.PageErrorCount = h.sitePageService.PublishedPageCountOfGlobal(comp.Name)
+	}
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n")),
+		"ComponentEditor": editor,
 		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
 		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	})
