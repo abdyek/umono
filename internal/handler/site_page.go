@@ -49,8 +49,9 @@ func (h *SitePageHandler) Create(c *fiber.Ctx) error {
 		sitePage = created
 	}
 
+	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, sitePage.Content)
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(c.UserContext(), sitePage.Content)), slugErr, nameErr, c.Locals("I18n")),
+		"SitePageEditor": view.SitePageEditor(sitePage, output, diagnostics, slugErr, nameErr, c.Locals("I18n")),
 		"SitePageUl":     sitePageList(h.sitePageService, 0, sitePage.ID),
 		"ComponentUl":    componentList(h.componentService, 0, 0),
 	})
@@ -85,8 +86,9 @@ func (h *SitePageHandler) Update(c *fiber.Ctx) error {
 		sitePage = updated
 	}
 
+	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, sitePage.Content)
 	return Render(c, "partials/htmx/site-page-editor", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(sitePage, mustPreviewHTML(h.sitePageService.MustPreview(c.UserContext(), sitePage.Content)), slugErr, nameErr, c.Locals("I18n")),
+		"SitePageEditor": view.SitePageEditor(sitePage, output, diagnostics, slugErr, nameErr, c.Locals("I18n")),
 		"SitePageUl":     sitePageList(h.sitePageService, 0, sitePage.ID),
 		"ComponentUl":    componentList(h.componentService, 0, 0),
 	})
@@ -127,7 +129,7 @@ func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {
 
 func (h *SitePageHandler) RenderNewPageSiteEditor(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
-		"SitePageEditor": view.SitePageEditor(models.SitePage{}, mustPreviewHTML(""), "", "", c.Locals("I18n")),
+		"SitePageEditor": view.SitePageEditor(models.SitePage{}, mustPreviewHTML(""), nil, "", "", c.Locals("I18n")),
 		"SitePageUl":     sitePageList(h.sitePageService, 0, 0),
 		"ComponentUl":    componentList(h.componentService, 0, 0),
 	}, "layouts/admin")

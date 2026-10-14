@@ -50,13 +50,15 @@ func (h *settingsHandler) Render404Page(c *fiber.Ctx) error {
 		previewContent = defaultContent
 	}
 
+	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, previewContent)
 	return Render(c, partial, fiber.Map{
 		"SettingsUl":     h.settingsUl(c, path.Base(c.Path())),
 		"DefaultTitle":   defaultTitle,
 		"DefaultContent": defaultContent,
 		"Title":          title,
 		"Content":        content,
-		"Output":         mustPreviewHTML(h.sitePageService.MustPreview(c.UserContext(), previewContent)),
+		"Output":         output,
+		"Diagnostics":    diagnostics,
 	}, layouts...)
 }
 

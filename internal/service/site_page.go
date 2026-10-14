@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
@@ -106,17 +107,13 @@ func (s *SitePageService) GetPage(offset int) ([]models.SitePage, int) {
 	return pageOf(items, offset)
 }
 
-func (s *SitePageService) Preview(ctx context.Context, source string) (string, error) {
-	output, err := s.convert(ctx, source)
-	if err != nil {
-		return "", err
-	}
-	return output, nil
+func (s *SitePageService) Preview(ctx context.Context, source string) (string, []compono.Diagnostic, error) {
+	return s.contentCompiler.CompileWithProviderContext(ctx, source)
 }
 
-func (s *SitePageService) MustPreview(ctx context.Context, source string) string {
-	output, _ := s.Preview(ctx, source)
-	return output
+func (s *SitePageService) MustPreview(ctx context.Context, source string) (string, []compono.Diagnostic) {
+	output, diagnostics, _ := s.Preview(ctx, source)
+	return output, diagnostics
 }
 
 func (s *SitePageService) Create(sp models.SitePage) (models.SitePage, []error) {

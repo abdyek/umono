@@ -46,8 +46,9 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 		comp = created
 	}
 
+	output, diagnostics := componentPreview(c.UserContext(), h.componentService, comp.Name, comp.Content)
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(c.UserContext(), comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
+		"ComponentEditor": view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n")),
 		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
 		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	})
@@ -79,8 +80,9 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 		comp = updated
 	}
 
+	output, diagnostics := componentPreview(c.UserContext(), h.componentService, comp.Name, comp.Content)
 	return Render(c, "partials/htmx/component-editor", fiber.Map{
-		"ComponentEditor": view.ComponentEditor(comp, mustPreviewHTML(h.componentService.MustPreview(c.UserContext(), comp.Name, comp.Content)), nameErr, c.Locals("I18n")),
+		"ComponentEditor": view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n")),
 		"ComponentUl":     componentList(h.componentService, 0, comp.ID),
 		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 	})
@@ -103,7 +105,7 @@ func (h *ComponentHandler) Delete(c *fiber.Ctx) error {
 func (h *ComponentHandler) RenderComponentEditor(c *fiber.Ctx) error {
 	return Render(c, "pages/admin", fiber.Map{
 		"ComponentMode":   true,
-		"ComponentEditor": view.ComponentEditor(models.Component{}, mustPreviewHTML(""), "", c.Locals("I18n")),
+		"ComponentEditor": view.ComponentEditor(models.Component{}, mustPreviewHTML(""), nil, "", c.Locals("I18n")),
 		"SitePageUl":      sitePageList(h.sitePageService, 0, 0),
 		"ComponentUl":     componentList(h.componentService, 0, 0),
 	}, "layouts/admin")

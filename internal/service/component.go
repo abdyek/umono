@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/umono-cms/compono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
@@ -88,18 +89,17 @@ func (s *ComponentService) ReloadGlobalComponent(comp models.Component) error {
 	return s.contentCompiler.ReloadGlobalComponent(comp)
 }
 
-func (s *ComponentService) Preview(ctx context.Context, name, source string) (string, error) {
+func (s *ComponentService) Preview(ctx context.Context, name, source string) (string, []compono.Diagnostic, error) {
 	if s.contentCompiler == nil {
-		return "", ErrContentCompilerNotConfigured
+		return "", nil, ErrContentCompilerNotConfigured
 	}
 
-	output, _, err := s.contentCompiler.PreviewComponentWithProviderContext(ctx, name, source)
-	return output, err
+	return s.contentCompiler.PreviewComponentWithProviderContext(ctx, name, source)
 }
 
-func (s *ComponentService) MustPreview(ctx context.Context, name, source string) string {
-	output, _ := s.Preview(ctx, name, source)
-	return output
+func (s *ComponentService) MustPreview(ctx context.Context, name, source string) (string, []compono.Diagnostic) {
+	output, diagnostics, _ := s.Preview(ctx, name, source)
+	return output, diagnostics
 }
 
 func (s *ComponentService) Create(c models.Component) (models.Component, []error) {

@@ -162,6 +162,7 @@ type sitePageEditor struct {
 	Slug           string
 	Content        string
 	Output         template.HTML
+	Diagnostics    []view.DiagnosticItem
 	IsEnabled      bool
 	LastModifiedAt string
 	SlugErr        string
@@ -170,12 +171,14 @@ type sitePageEditor struct {
 }
 
 func (h *adminHandler) buildSitePageEditor(ctx context.Context, page models.SitePage, translator any) sitePageEditor {
+	output, diagnostics := sitePagePreview(ctx, h.sitePageService, page.Content)
 	return sitePageEditor{
 		ID:             page.ID,
 		Name:           page.Name,
 		Slug:           page.Slug,
 		Content:        page.Content,
-		Output:         mustPreviewHTML(h.sitePageService.MustPreview(ctx, page.Content)),
+		Output:         output,
+		Diagnostics:    diagnostics,
 		IsEnabled:      page.Enabled,
 		LastModifiedAt: view.RelativeTimeWithTranslator(page.LastModifiedAt, translator),
 		I18n:           translator,
@@ -187,17 +190,20 @@ type componentEditor struct {
 	Name           string
 	Content        string
 	Output         template.HTML
+	Diagnostics    []view.DiagnosticItem
 	LastModifiedAt string
 	NameErr        string
 	I18n           any
 }
 
 func (h *adminHandler) buildComponentEditor(ctx context.Context, comp models.Component, translator any) componentEditor {
+	output, diagnostics := componentPreview(ctx, h.componentService, comp.Name, comp.Content)
 	return componentEditor{
 		ID:             comp.ID,
 		Name:           comp.Name,
 		Content:        comp.Content,
-		Output:         mustPreviewHTML(h.componentService.MustPreview(ctx, comp.Name, comp.Content)),
+		Output:         output,
+		Diagnostics:    diagnostics,
 		LastModifiedAt: view.RelativeTimeWithTranslator(comp.LastModifiedAt, translator),
 		I18n:           translator,
 	}

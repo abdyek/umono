@@ -56,11 +56,13 @@
           placeholder="{{ .DefaultContent }}"
           hx-post="/admin/not-found-page/preview"
           hx-trigger="keyup changed delay:750ms"
-          hx-swap="none"
+          hx-target="#editor-diagnostics"
+          hx-swap="innerHTML"
           hx-indicator="false"
           hx-disinherit="hx-confirm"
-          hx-on::after-request="setPreviewContent(event.detail.xhr.responseText);"
+          hx-on::after-swap="applyPreview()"
           >{{ .Content }}</textarea>
+        <div id="editor-diagnostics" class="max-h-40 overflow-auto">{{ template "partials/editor-diagnostics" .Diagnostics }}</div>
       </div>
     </form>
   </div>
