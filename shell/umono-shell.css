@@ -1,0 +1,8 @@
+@layer umono-shell {
+  body { margin: 0; }
+  umono-root {
+    display: flow-root;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}

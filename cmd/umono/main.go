@@ -136,6 +136,11 @@ func main() {
 	systemHandler := handler.NewSystemHandler(systemService, jobService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
+	shellHandler, err := handler.NewShellHandler(umono.Shell())
+	if err != nil {
+		log.Fatal("shell err", err)
+	}
+
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
 	engine.AddFunc("t", view.Translate)
 
@@ -359,6 +364,7 @@ func main() {
 	app.Get("/uploads/variants/*", mediaHandler.Serve)
 	app.Get("/uploads/:filename", mediaHandler.Serve)
 
+	app.Get("/_umono/:file", shellHandler.Serve)
 	app.Get("/robots.txt", siteHandler.RenderRobotsTxt)
 	app.Get("/sitemap.xml", siteHandler.RenderSitemap)
 
