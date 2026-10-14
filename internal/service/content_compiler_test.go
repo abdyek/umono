@@ -43,6 +43,69 @@ func TestContentCompilerPreviewComponent(t *testing.T) {
 	}
 }
 
+func TestContentCompilerRemovesGlobalComponent(t *testing.T) {
+	compiler, err := NewContentCompiler([]models.Component{
+		{Name: "GREETING", Content: "# Hello"},
+	})
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	if err := compiler.RemoveGlobalComponent(models.Component{Name: "GREETING"}); err != nil {
+		t.Fatalf("RemoveGlobalComponent() error = %v", err)
+	}
+
+	output, err := compiler.Compile("{{ GREETING }}")
+	if err != nil {
+		t.Fatalf("Compile() error = %v", err)
+	}
+
+	if strings.TrimSpace(output) != "" {
+		t.Fatalf("Compile() = %q", output)
+	}
+}
+
+func TestContentCompilerReloadsGlobalComponent(t *testing.T) {
+	compiler, err := NewContentCompiler([]models.Component{
+		{Name: "GREETING", Content: "# Hello"},
+	})
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	if err := compiler.ReloadGlobalComponent(models.Component{Name: "GREETING", Content: "# Hi"}); err != nil {
+		t.Fatalf("ReloadGlobalComponent() error = %v", err)
+	}
+
+	output, err := compiler.Compile("{{ GREETING }}")
+	if err != nil {
+		t.Fatalf("Compile() error = %v", err)
+	}
+
+	if strings.TrimSpace(output) != "<h1>Hi</h1>" {
+		t.Fatalf("Compile() = %q", output)
+	}
+}
+
+func TestContentCompilerPreviewComponentReplacesLoadedGlobal(t *testing.T) {
+	compiler, err := NewContentCompiler([]models.Component{
+		{Name: "GREETING", Content: "# Hello"},
+		{Name: "SITE_NAME", Content: "# Site"},
+	})
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	output, err := compiler.PreviewComponent("GREETING", "{{ SITE_NAME }}\n\n# Hi")
+	if err != nil {
+		t.Fatalf("PreviewComponent() error = %v", err)
+	}
+
+	if strings.TrimSpace(output) != "<h1>Site</h1><h1>Hi</h1>" {
+		t.Fatalf("PreviewComponent() = %q", output)
+	}
+}
+
 func TestContentCompilerPreviewComponentOptimizesImageSizes(t *testing.T) {
 	compiler, err := NewContentCompiler(nil)
 	if err != nil {
@@ -142,7 +205,7 @@ func TestContentCompilerBuildsProviderContextForGlobalComponents(t *testing.T) {
 		},
 	}
 	compiler, err := NewContentCompiler([]models.Component{
-		{Name: "GREETING", Content: "name = context(user/name)\nHello {{ name }}"},
+		{Name: "GREETING", Content: "~ name = context(user/name)\nHello {{ name }}"},
 	}, provider)
 	if err != nil {
 		t.Fatalf("NewContentCompiler() error = %v", err)
