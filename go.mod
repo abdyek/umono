@@ -16,7 +16,7 @@ require (
 	github.com/gofiber/template/html/v2 v2.1.3
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/umono-cms/compono v0.5.0
+	github.com/umono-cms/compono v0.7.0
 	github.com/umono-cms/crypto v0.1.0
 	golang.org/x/crypto v0.51.0
 	golang.org/x/image v0.39.0
