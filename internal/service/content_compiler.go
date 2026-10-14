@@ -13,7 +13,6 @@ import (
 	"github.com/umono-cms/compono/ast"
 	"github.com/umono-cms/compono/rule"
 	"github.com/umono-cms/umono/internal/models"
-	"github.com/umono-cms/umono/internal/runtime"
 )
 
 var ErrContentCompilerNotConfigured = errors.New("content compiler is not configured")
@@ -98,12 +97,7 @@ func (c *ContentCompiler) previewComponent(name, source string, contextValues ma
 		return "", nil, err
 	}
 
-	optimized, err := runtime.OptimizeHTML(buf.String())
-	if err != nil {
-		return "", nil, err
-	}
-
-	return optimized, diagnostics, nil
+	return buf.String(), diagnostics, nil
 }
 
 func (c *ContentCompiler) LoadGlobalComponents(components []models.Component) error {
@@ -158,12 +152,7 @@ func (c *ContentCompiler) compile(source string, context map[string]any, globals
 		return "", nil, err
 	}
 
-	optimized, err := runtime.OptimizeHTML(buf.String())
-	if err != nil {
-		return "", nil, err
-	}
-
-	return optimized, diagnostics, nil
+	return buf.String(), diagnostics, nil
 }
 
 // globalOptions returns a WithGlobalComponent option for every loaded global
