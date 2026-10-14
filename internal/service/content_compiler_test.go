@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/umono-cms/umono/internal/models"
@@ -103,6 +105,69 @@ func TestContentCompilerPreviewComponentReplacesLoadedGlobal(t *testing.T) {
 
 	if strings.TrimSpace(output) != "<h1>Site</h1><h1>Hi</h1>" {
 		t.Fatalf("PreviewComponent() = %q", output)
+	}
+}
+
+func TestContentCompilerCompilesWhileGlobalsChange(t *testing.T) {
+	compiler, err := NewContentCompiler([]models.Component{
+		{Name: "GREETING", Content: "# Hello"},
+	})
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(10)
+
+	for g := 0; g < 8; g++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 20; i++ {
+				output, err := compiler.Compile("{{ GREETING }}")
+				if err != nil {
+					t.Errorf("Compile() error = %v", err)
+					continue
+				}
+				trimmed := strings.TrimSpace(output)
+				if trimmed != "<h1>Hello</h1>" && trimmed != "<h1>Hi</h1>" {
+					t.Errorf("Compile() = %q", output)
+				}
+			}
+		}()
+	}
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 20; i++ {
+			content := "# Hi"
+			if i%2 != 0 {
+				content = "# Hello"
+			}
+			if err := compiler.ReloadGlobalComponent(models.Component{Name: "GREETING", Content: content}); err != nil {
+				t.Errorf("ReloadGlobalComponent() error = %v", err)
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 20; i++ {
+			if err := compiler.LoadGlobalComponent(models.Component{Name: fmt.Sprintf("EXTRA_%d", i), Content: "# Extra"}); err != nil {
+				t.Errorf("LoadGlobalComponent() error = %v", err)
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	for i := 0; i < 20; i++ {
+		output, err := compiler.Compile(fmt.Sprintf("{{ EXTRA_%d }}", i))
+		if err != nil {
+			t.Fatalf("Compile() error = %v", err)
+		}
+		if strings.TrimSpace(output) != "<h1>Extra</h1>" {
+			t.Fatalf("Compile() = %q", output)
+		}
 	}
 }
 
