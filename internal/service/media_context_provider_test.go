@@ -177,7 +177,7 @@ func TestMediaContextProviderFeedsImageBuiltin(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.CompileWithProviderContext(context.Background(), `{{ IMAGE media = context(media-by-id/media-1) alt = "Hero" }}`)
+	output, _, err := compiler.CompileWithProviderContext(context.Background(), `{{ IMAGE media = context(media-by-id/media-1) alt = "Hero" }}`)
 	if err != nil {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
@@ -200,7 +200,7 @@ func TestMediaContextProviderFeedsImageBuiltinWithoutVariants(t *testing.T) {
 		t.Fatalf("NewContentCompiler() error = %v", err)
 	}
 
-	output, err := compiler.CompileWithProviderContext(context.Background(), `{{ IMAGE media = context(media-by-id/media-1) alt = "Hero" }}`)
+	output, _, err := compiler.CompileWithProviderContext(context.Background(), `{{ IMAGE media = context(media-by-id/media-1) alt = "Hero" }}`)
 	if err != nil {
 		t.Fatalf("CompileWithProviderContext() error = %v", err)
 	}
