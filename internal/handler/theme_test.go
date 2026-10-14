@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-
 	"github.com/umono-cms/umono/internal/theme"
 )
 

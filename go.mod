@@ -18,6 +18,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/umono-cms/compono v0.7.0
 	github.com/umono-cms/crypto v0.1.0
+	github.com/umono-cms/themecore v0.1.0
 	golang.org/x/crypto v0.51.0
 	golang.org/x/image v0.39.0
 	gorm.io/driver/sqlite v1.5.7
@@ -50,7 +51,9 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mattn/go-sqlite3 v1.14.24 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/tdewolff/parse/v2 v2.8.16 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.59.0 // indirect
 	golang.org/x/net v0.55.0 // indirect

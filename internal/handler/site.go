@@ -11,12 +11,14 @@ import (
 type siteHandler struct {
 	sitePageService *service.SitePageService
 	optionService   *service.OptionService
+	themeRelease    string
 }
 
-func NewSiteHandler(sps *service.SitePageService, os *service.OptionService) *siteHandler {
+func NewSiteHandler(sps *service.SitePageService, os *service.OptionService, themeRelease string) *siteHandler {
 	return &siteHandler{
 		sitePageService: sps,
 		optionService:   os,
+		themeRelease:    themeRelease,
 	}
 }
 
@@ -62,7 +64,8 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	}
 
 	return Render(c, "layouts/page", fiber.Map{
-		"Title":   sitePage.Name,
-		"Content": template.HTML(sitePage.Content),
+		"Title":        sitePage.Name,
+		"Content":      template.HTML(sitePage.Content),
+		"ThemeRelease": h.themeRelease,
 	})
 }
