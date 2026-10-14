@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/umono-cms/umono/internal/models"
@@ -288,6 +289,97 @@ func TestSitePageServiceFillDiagnosticsOnce(t *testing.T) {
 
 	if err := svc.FillDiagnosticsOnce(context.Background()); err != nil {
 		t.Fatalf("FillDiagnosticsOnce second call: %v", err)
+	}
+
+	if got, want := len(svc.PublishedDiagnostics()), 1; got != want {
+		t.Fatalf("PublishedDiagnostics len = %d, want %d", got, want)
+	}
+}
+
+func newPublicRenderTestService(t *testing.T) (*SitePageService, *ContentCompiler) {
+	t.Helper()
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(&models.SitePage{}, &models.Component{}, &models.PageDiagnostic{}, &models.Option{}); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cc, err := NewContentCompiler(nil)
+	if err != nil {
+		t.Fatalf("new content compiler: %v", err)
+	}
+
+	optRepo := repository.NewOptionRepository(db)
+	svc := NewSitePageService(repository.NewSitePageRepository(db), optRepo, cc)
+	svc.SetPageDiagnosticRepository(repository.NewPageDiagnosticRepository(db))
+
+	return svc, cc
+}
+
+func TestSitePageServicePublicRenderHidesDiagnostics(t *testing.T) {
+	svc, _ := newPublicRenderTestService(t)
+
+	if _, errs := svc.Create(models.SitePage{
+		Name:    "About",
+		Slug:    "about",
+		Enabled: true,
+		Content: "Hello\n\n{{ NOPE }}",
+	}); len(errs) > 0 {
+		t.Fatalf("Create errors: %v", errs)
+	}
+
+	page, err := svc.GetRenderedBySlug(context.Background(), "about")
+	if err != nil {
+		t.Fatalf("GetRenderedBySlug: %v", err)
+	}
+	if got, want := strings.Contains(page.Content, "Hello"), true; got != want {
+		t.Fatalf("strings.Contains(page.Content, %q) = %v, want %v", "Hello", got, want)
+	}
+	if got, want := strings.Contains(page.Content, "NOPE"), false; got != want {
+		t.Fatalf("strings.Contains(page.Content, %q) = %v, want %v", "NOPE", got, want)
+	}
+
+	nf, err := svc.GetNotFoundPage(context.Background(), "Not found", "Gone\n\n{{ NOPE }}")
+	if err != nil {
+		t.Fatalf("GetNotFoundPage: %v", err)
+	}
+	if got, want := strings.Contains(nf.Content, "Gone"), true; got != want {
+		t.Fatalf("strings.Contains(nf.Content, %q) = %v, want %v", "Gone", got, want)
+	}
+	if got, want := strings.Contains(nf.Content, "NOPE"), false; got != want {
+		t.Fatalf("strings.Contains(nf.Content, %q) = %v, want %v", "NOPE", got, want)
+	}
+}
+
+func TestSitePageServicePublicRenderDoesNotUpdateDiagnostics(t *testing.T) {
+	svc, cc := newPublicRenderTestService(t)
+
+	if _, errs := svc.Create(models.SitePage{
+		Name:    "Home",
+		Slug:    "",
+		Enabled: true,
+		Content: "{{ FOO }}",
+	}); len(errs) > 0 {
+		t.Fatalf("Create errors: %v", errs)
+	}
+
+	if got, want := len(svc.PublishedDiagnostics()), 1; got != want {
+		t.Fatalf("PublishedDiagnostics len = %d, want %d", got, want)
+	}
+
+	if err := cc.LoadGlobalComponent(models.Component{Name: "FOO", Content: "Foo"}); err != nil {
+		t.Fatalf("LoadGlobalComponent: %v", err)
+	}
+
+	page, err := svc.GetRenderedBySlug(context.Background(), "")
+	if err != nil {
+		t.Fatalf("GetRenderedBySlug: %v", err)
+	}
+	if got, want := strings.Contains(page.Content, "Foo"), true; got != want {
+		t.Fatalf("strings.Contains(page.Content, %q) = %v, want %v", "Foo", got, want)
 	}
 
 	if got, want := len(svc.PublishedDiagnostics()), 1; got != want {
