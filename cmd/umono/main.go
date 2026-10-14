@@ -355,6 +355,7 @@ func main() {
 	app.Get("/uploads/:filename", mediaHandler.Serve)
 
 	app.Get("/robots.txt", siteHandler.RenderRobotsTxt)
+	app.Get("/sitemap.xml", siteHandler.RenderSitemap)
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 

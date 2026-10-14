@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -21,12 +22,14 @@ const (
 	bytesInMegabyte                         = 1024 * 1024
 	RobotsTxtOptionKey                      = "robots_txt"
 	MaxRobotsTxtBytes                       = 512000
+	SiteURLOptionKey                        = "site_url"
 )
 
 var (
 	ErrInvalidLanguage                     = errors.New("invalid language")
 	ErrInvalidLocalStorageImageUploadLimit = errors.New("invalid local storage image upload limit")
 	ErrRobotsTxtTooLarge                   = errors.New("robots.txt content too large")
+	ErrInvalidSiteURL                      = errors.New("invalid site url")
 )
 
 type OptionService struct {
@@ -120,6 +123,47 @@ func (s *OptionService) SaveRobotsTxt(content string) error {
 	}
 
 	return s.repo.SaveOption(RobotsTxtOptionKey, content)
+}
+
+// GetSiteURL returns the root address of the site, or "" when it is not set.
+func (s *OptionService) GetSiteURL() string {
+	return s.repo.GetOptionByKey(SiteURLOptionKey).Value
+}
+
+// SaveSiteURL saves the root address of the site. An empty value clears it.
+func (s *OptionService) SaveSiteURL(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return s.repo.SaveOption(SiteURLOptionKey, "")
+	}
+
+	normalized, err := NormalizeSiteURL(value)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.SaveOption(SiteURLOptionKey, normalized)
+}
+
+// NormalizeSiteURL returns the root address of the site: the scheme and the
+// host of value, without a trailing slash. Only http and https are accepted.
+// A path, a query, a fragment or user info is rejected with ErrInvalidSiteURL.
+func NormalizeSiteURL(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if strings.ContainsAny(value, "?#") {
+		return "", ErrInvalidSiteURL
+	}
+
+	u, err := url.Parse(value)
+	if err != nil {
+		return "", ErrInvalidSiteURL
+	}
+
+	if (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.Opaque != "" || (u.Path != "" && u.Path != "/") {
+		return "", ErrInvalidSiteURL
+	}
+
+	return u.Scheme + "://" + u.Host, nil
 }
 
 func (s *OptionService) SupportedLanguages() []i18n.LocaleOption {
