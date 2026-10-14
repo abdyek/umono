@@ -21,6 +21,7 @@ require (
 	github.com/umono-cms/themecore v0.1.0
 	golang.org/x/crypto v0.51.0
 	golang.org/x/image v0.39.0
+	golang.org/x/net v0.55.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
 )
@@ -56,7 +57,6 @@ require (
 	github.com/tdewolff/parse/v2 v2.8.16 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.59.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 )
