@@ -1,0 +1,4 @@
+{{ NAV label = "Geri" content = BACK }}
+
+~ BACK
+{{ LINK text = "Geri dön" url = "/" }}

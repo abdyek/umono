@@ -1,0 +1,5 @@
+{{ FEATURES first = "Yalın" second = "Anlamsal" }}
+
+~ FEATURES first = "" second = ""
+- {{ first }}
+- {{ second }}

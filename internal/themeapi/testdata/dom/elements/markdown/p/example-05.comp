@@ -1,0 +1,9 @@
+{{ POST title = "Umono Nedir?" content = BODY }}
+
+~ POST title = "" content = NO_MATTER
+# {{ title }}
+{{ content }}
+
+~ BODY
+## Giriş
+Umono bir CMS'tir.

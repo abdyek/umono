@@ -1,0 +1,4 @@
+{{ DETAILS text = "Ayrıntılar" content = BODY open = false }}
+
+~ BODY
+Gizli metin.

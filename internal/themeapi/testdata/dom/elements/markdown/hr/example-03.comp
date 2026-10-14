@@ -1,0 +1,4 @@
+{{ SEPARATOR mark = "---" }}
+
+~ SEPARATOR mark = ""
+{{ mark }}

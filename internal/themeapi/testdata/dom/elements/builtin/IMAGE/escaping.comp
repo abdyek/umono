@@ -1,0 +1,1 @@
+{{ IMAGE media = { url: "/uploads/a.png?w=1&h=2", width: 10, height: 10, mime-type: "image/png" } alt = "Tom & Jerry <3" }}

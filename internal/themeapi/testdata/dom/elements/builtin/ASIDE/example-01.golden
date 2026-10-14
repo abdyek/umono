@@ -1,0 +1,1 @@
+<p>Compono'da raw HTML yazılamaz.</p><aside><p>Raw HTML yalnızca Compono'nun API'ı üzerinden programatik olarak eklenebilir.</p></aside><p>Bu yüzden semantik elementler built-in'lerle üretilir.</p>

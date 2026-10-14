@@ -4,3 +4,4 @@
 package themeapi
 
 //go:generate go run ./gen ../../umono.json
+//go:generate go run ./domgen testdata/dom

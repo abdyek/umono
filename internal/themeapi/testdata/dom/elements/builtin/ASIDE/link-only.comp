@@ -1,0 +1,4 @@
+{{ ASIDE content = ONE }}
+
+~ ONE
+{{ LINK text = "Ana sayfa" url = "/" }}

@@ -1,0 +1,4 @@
+```go
+// Bu bir Go yorumudur.
+fmt.Println("Merhaba")
+```

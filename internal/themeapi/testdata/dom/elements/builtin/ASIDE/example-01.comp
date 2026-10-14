@@ -1,0 +1,8 @@
+Compono'da raw HTML yazılamaz.
+
+{{ ASIDE content = NOTE }}
+
+Bu yüzden semantik elementler built-in'lerle üretilir.
+
+~ NOTE
+Raw HTML yalnızca Compono'nun API'ı üzerinden programatik olarak eklenebilir.

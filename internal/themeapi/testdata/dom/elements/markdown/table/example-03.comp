@@ -1,0 +1,7 @@
+{{ PRICES personal = "0 ₺" team = "490 ₺" }}
+
+~ PRICES personal = "" team = ""
+| Plan    | Aylık fiyat     |
+| ------- | --------------- |
+| Kişisel | {{ personal }}  |
+| Ekip    | {{ team }}      |

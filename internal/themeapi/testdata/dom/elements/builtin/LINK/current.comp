@@ -1,0 +1,1 @@
+{{ LINK text = "Ana sayfa" url = "/" current = "page" }}

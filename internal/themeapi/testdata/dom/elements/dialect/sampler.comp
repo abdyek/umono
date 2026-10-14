@@ -1,0 +1,41 @@
+1. Sıralı liste
+2. İkinci
+
+* Yıldız madde
++ Artı madde
+
+Setext başlık
+=============
+
+Setext ikinci
+-------------
+
+    girintili kod
+
+***
+
+___
+
+__kalın__ ve _italik_ ve ~~üstü çizili~~
+
+![görsel](/a.png)
+
+[referans][r]
+
+[r]: /hedef
+
+<https://umono.io>
+
+Sert satır sonu  
+devam
+
+\*kaçış\* ve &amp; ve &copy;
+
+- [ ] görev
+- [x] bitti
+
+Dipnot[^1]
+
+[^1]: Dipnot metni.
+
+<div>raw HTML</div>

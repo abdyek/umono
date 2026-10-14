@@ -1,0 +1,4 @@
+{{ GREETING name = "Yunus" }}
+
+~ GREETING name = ""
+Hoş geldin **{{ name }}**!

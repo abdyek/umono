@@ -1,0 +1,5 @@
+{{ LIST ordered = true items = [ { text: "Kur", children: [ { text: "İndir", children: [] }, { text: "Aç", children: [] } ] }, { text: "Çalıştır", children: [] } ] item = STEP }}
+
+~ STEP item = {}
+{{ item.text }}
+{{ LIST ordered = true items = item.children item = STEP }}

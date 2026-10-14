@@ -1,0 +1,4 @@
+{{ ROW value = "| a | b |" }}
+
+~ ROW value = ""
+{{ value }}
