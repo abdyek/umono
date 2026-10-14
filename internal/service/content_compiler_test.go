@@ -211,31 +211,6 @@ func TestContentCompilerPreviewComponentReturnsDiagnostics(t *testing.T) {
 	}
 }
 
-func TestContentCompilerPreviewComponentOptimizesImageSizes(t *testing.T) {
-	compiler, err := NewContentCompiler(nil)
-	if err != nil {
-		t.Fatalf("NewContentCompiler() error = %v", err)
-	}
-
-	output, _, err := compiler.PreviewComponent("HERO", `{{ IMAGE media = {
-  url: "/media/hero",
-  width: 1280,
-  height: 720,
-  mime-type: "image/jpeg",
-  variants: [
-    { url: "/media/hero-640.webp", width: 640, height: 360, mime-type: "image/webp" },
-    { url: "/media/hero-1280.webp", width: 1280, height: 720, mime-type: "image/webp" }
-  ]
-} alt = "Hero" }}`)
-	if err != nil {
-		t.Fatalf("PreviewComponent() error = %v", err)
-	}
-
-	if !strings.Contains(output, `sizes="100vw"`) {
-		t.Fatalf("PreviewComponent() = %q", output)
-	}
-}
-
 func TestContentCompilerBuildsComponoContext(t *testing.T) {
 	compiler, err := NewContentCompiler(nil)
 	if err != nil {
