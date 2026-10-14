@@ -1,0 +1,4 @@
+{{ ASIDE label = "İlgili yazılar" content = RELATED }}
+
+~ RELATED
+{{ LINK text = "Tema Sistemi" url = "/tema-sistemi" }}

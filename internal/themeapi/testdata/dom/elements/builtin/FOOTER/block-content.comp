@@ -1,0 +1,7 @@
+{{ FOOTER content = BODY }}
+
+~ BODY
+# Başlık
+Paragraf metni.
+- bir
+- iki

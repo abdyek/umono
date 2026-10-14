@@ -1,0 +1,20 @@
+{{ HEADER content = SITE_HEADER }}
+{{ MAIN content = BODY }}
+{{ FOOTER content = SITE_FOOTER }}
+
+~ SITE_HEADER
+{{ LINK text = "Umono" url = "/" }}
+{{ NAV label = "Ana menü" content = MENU }}
+
+~ MENU
+{{ LIST items = [ { text: "Blog", url: "/blog" } ] item = ITEM }}
+
+~ ITEM item = {}
+{{ LINK text = item.text url = item.url }}
+
+~ BODY
+# Merhaba
+İçerik.
+
+~ SITE_FOOTER
+© 2026 Umono

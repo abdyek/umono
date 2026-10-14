@@ -1,0 +1,4 @@
+{{ SOURCE text = "compono.md" url = "https://compono.md" }}
+
+~ SOURCE text = "" url = ""
+Kaynak: [{{ text }}]({{ url }})

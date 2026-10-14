@@ -1,0 +1,4 @@
+{{ NOTE text = "**kalın değil**" }}
+
+~ NOTE text = ""
+{{ text }}

@@ -1,0 +1,7 @@
+{{ NAV label = "Breadcrumb" content = CRUMBS }}
+
+~ CRUMBS
+{{ LIST ordered = true items = [ { text: "Ana sayfa", url: "/", current: "" }, { text: "Dokümanlar", url: "/docs", current: "" }, { text: "Kurulum", url: "/docs/kurulum", current: "page" } ] item = CRUMB }}
+
+~ CRUMB item = {}
+{{ LINK text = item.text url = item.url current = item.current }}

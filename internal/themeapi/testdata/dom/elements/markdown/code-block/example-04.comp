@@ -1,0 +1,7 @@
+{{ INSTALL }}
+
+~ INSTALL
+Kurulum:
+```sh
+curl -fsSL https://umono.io/install.sh | sh
+```

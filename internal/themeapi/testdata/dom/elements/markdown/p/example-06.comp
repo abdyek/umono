@@ -1,0 +1,11 @@
+{{ POST content = BODY }}
+
+~ POST content = NO_MATTER
+Birinci satır
+İkinci satır
+{{ content }}
+Üçüncü satır
+Dördüncü satır
+
+~ BODY
+## Ara başlık

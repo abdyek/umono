@@ -1,0 +1,7 @@
+{{ ASIDE content = BODY }}
+
+~ BODY
+# Başlık
+Paragraf metni.
+- bir
+- iki

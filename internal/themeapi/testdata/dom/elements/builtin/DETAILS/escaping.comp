@@ -1,0 +1,4 @@
+{{ DETAILS text = "A & B <C>" content = BODY }}
+
+~ BODY
+Metin.

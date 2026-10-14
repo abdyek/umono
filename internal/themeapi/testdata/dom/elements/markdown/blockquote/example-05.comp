@@ -1,0 +1,4 @@
+{{ QUOTE text = "Az olsun, öz olsun." }}
+
+~ QUOTE text = ""
+> {{ text }}

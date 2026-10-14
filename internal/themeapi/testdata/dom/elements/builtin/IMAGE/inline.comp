@@ -1,0 +1,1 @@
+Yeni panel {{ IMAGE media = { url: "/uploads/panel-ikon.png", width: 24, height: 24, mime-type: "image/png" } alt = "" }} simgesiyle açılır.

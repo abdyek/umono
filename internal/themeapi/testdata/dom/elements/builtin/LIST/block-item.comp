@@ -1,0 +1,5 @@
+{{ LIST items = [ { title: "Umono Nedir?", summary: "Umono'yu tanıtıyoruz." }, { title: "Tema Sistemi", summary: "Temalar nasıl çalışır?" } ] item = POST_SUMMARY }}
+
+~ POST_SUMMARY item = {}
+### {{ item.title }}
+{{ item.summary }}

@@ -1,0 +1,7 @@
+{{ LIST ordered = true items = [
+  { command: "umono theme build" },
+  { command: "umono theme install" },
+] item = STEP }}
+
+~ STEP item = {}
+`{{ item.command }}` komutunu çalıştır.

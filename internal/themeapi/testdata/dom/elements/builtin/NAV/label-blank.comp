@@ -1,0 +1,4 @@
+{{ NAV label = "   " content = LINKS }}
+
+~ LINKS
+{{ LINK text = "Gizlilik" url = "/gizlilik" }}

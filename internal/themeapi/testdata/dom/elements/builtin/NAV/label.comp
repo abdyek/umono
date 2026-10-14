@@ -1,0 +1,7 @@
+{{ NAV label = "Ana menü" content = MAIN_MENU }}
+
+~ MAIN_MENU
+{{ LIST items = [ { text: "Ana sayfa", url: "/", current: "page" }, { text: "Dokümanlar", url: "/docs", current: "" } ] item = MENU_ITEM }}
+
+~ MENU_ITEM item = {}
+{{ LINK text = item.text url = item.url current = item.current }}

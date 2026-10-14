@@ -1,0 +1,1 @@
+{{ IMAGE media = { url: "/uploads/kapak.jpg", width: 800, height: 400, mime-type: "image/jpeg", variants: [{ url: "/uploads/kapak-400.webp", width: 400, height: 200, mime-type: "image/webp" }, { url: "/uploads/kapak-800.webp", width: 800, height: 400, mime-type: "image/webp" }] } alt = "Kapak" }}

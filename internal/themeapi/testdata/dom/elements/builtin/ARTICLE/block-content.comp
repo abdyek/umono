@@ -1,0 +1,7 @@
+{{ ARTICLE content = BODY }}
+
+~ BODY
+# Başlık
+Paragraf metni.
+- bir
+- iki

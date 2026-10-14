@@ -1,0 +1,1 @@
+Yaz: {{ LINK text = "e-posta" url = "mailto:info@umono.io" }}, ara: {{ LINK text = "telefon" url = "tel:+905551112233" }}, git: {{ LINK text = "bölüm" url = "#bolum" }}, {{ LINK text = "CDN" url = "//cdn.example.com/a" }}

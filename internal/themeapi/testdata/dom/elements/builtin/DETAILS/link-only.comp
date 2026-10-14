@@ -1,0 +1,4 @@
+{{ DETAILS text = "Menü" content = MORE open = true }}
+
+~ MORE
+{{ LINK text = "Devamı" url = "/devam" }}

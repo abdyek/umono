@@ -1,0 +1,8 @@
+{{ DETAILS text = "Temayı nasıl kurarım?" content = ANSWER_1 open = true }}
+{{ DETAILS text = "Temayı nasıl kaldırırım?" content = ANSWER_2 }}
+
+~ ANSWER_1
+`umono theme install` komutunu kullan.
+
+~ ANSWER_2
+Admin panelinde temayı etkisizleştir.

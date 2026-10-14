@@ -1,0 +1,1 @@
+{{ IMAGE media = { url: "/uploads/logo.png", width: 120, height: 60, mime-type: "image/png", variants: [] } alt = "Logo" }}
