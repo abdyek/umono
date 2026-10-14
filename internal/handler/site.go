@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"html/template"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/csp"
@@ -45,9 +48,15 @@ func (h *siteHandler) RenderSitemap(c *fiber.Ctx) error {
 	return c.Send(body)
 }
 
+// RenderSitePage renders a page, or the 404 page, for a visitor. A page's
+// weak ETag is computed from the shell without the nonce, so it stays the
+// same while the nonce changes with each request. A matching If-None-Match
+// gets a 304 without a Content-Security-Policy, so the browser keeps the CSP
+// whose nonce matches its copy.
 func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
+	found := true
 	sitePage, imageURLs, err := h.sitePageService.GetRenderedBySlug(ctx, c.Params("slug"))
 	if err != nil {
 		if errors.Is(err, service.ErrSitePageNotFound) {
@@ -58,9 +67,31 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 				return c.SendStatus(fiber.StatusInternalServerError)
 			}
 			c.Status(fiber.StatusNotFound)
+			found = false
 		} else {
 			// TODO: handle other errors
 			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+	}
+
+	data := fiber.Map{
+		"Title":        sitePage.Name,
+		"Content":      template.HTML(sitePage.Content),
+		"ThemeRelease": h.themeRelease,
+		"Nonce":        "",
+	}
+	c.Set("Cache-Control", "no-cache")
+
+	if found {
+		withoutNonce, err := renderBytes(c, "layouts/page", data)
+		if err != nil {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+		sum := sha256.Sum256(withoutNonce)
+		etag := "W/" + strconv.Quote(hex.EncodeToString(sum[:]))
+		c.Set("ETag", etag)
+		if etagMatches(c.Get("If-None-Match"), etag) {
+			return c.SendStatus(fiber.StatusNotModified)
 		}
 	}
 
@@ -70,10 +101,11 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	}
 	c.Set("Content-Security-Policy", csp.Header(nonce, csp.ImageOrigins(imageURLs, c.BaseURL())))
 
-	return Render(c, "layouts/page", fiber.Map{
-		"Title":        sitePage.Name,
-		"Content":      template.HTML(sitePage.Content),
-		"ThemeRelease": h.themeRelease,
-		"Nonce":        nonce,
-	})
+	data["Nonce"] = nonce
+	body, err := renderBytes(c, "layouts/page", data)
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	c.Set("Content-Type", "text/html; charset=utf-8")
+	return c.Send(body)
 }

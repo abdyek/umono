@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"errors"
 	"html/template"
 	"strings"
@@ -11,7 +12,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Render(c *fiber.Ctx, view string, data fiber.Map, layouts ...string) error {
+// viewData adds the values every view gets to data.
+func viewData(c *fiber.Ctx, data fiber.Map) fiber.Map {
 	if data == nil {
 		data = fiber.Map{}
 	}
@@ -25,7 +27,21 @@ func Render(c *fiber.Ctx, view string, data fiber.Map, layouts ...string) error 
 	data["IsAlreadyOnSitePages"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/site-pages")
 	data["IsAlreadyOnComponents"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/components")
 	data["IsAlreadyOnMedia"] = strings.Contains(c.Get("HX-Current-URL"), "/admin/media")
-	return c.Render(view, data, layouts...)
+	return data
+}
+
+func Render(c *fiber.Ctx, view string, data fiber.Map, layouts ...string) error {
+	return c.Render(view, viewData(c, data), layouts...)
+}
+
+// renderBytes renders view without a layout with the values every view gets
+// and returns the output.
+func renderBytes(c *fiber.Ctx, view string, data fiber.Map) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := c.App().Config().Views.Render(&buf, view, viewData(c, data)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func localizedNotFoundDefaults(c *fiber.Ctx) (string, string) {
