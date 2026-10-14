@@ -25,6 +25,7 @@ import (
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/service"
+	"github.com/umono-cms/umono/internal/theme"
 	"github.com/umono-cms/umono/internal/view"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -140,7 +141,9 @@ func main() {
 	)
 
 	previewHandler := handler.NewPreviewHandler(sitePageService, componentService)
-	siteHandler := handler.NewSiteHandler(sitePageService, optionService)
+	fallbackTheme := theme.NewFallback()
+	siteHandler := handler.NewSiteHandler(sitePageService, optionService, fallbackTheme.Release)
+	themeHandler := handler.NewThemeHandler(fallbackTheme)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
@@ -378,6 +381,7 @@ func main() {
 	app.Get("/uploads/:filename", mediaHandler.Serve)
 
 	app.Get("/_umono/:file", shellHandler.Serve)
+	app.Get("/_theme/:release/*", themeHandler.Serve)
 	app.Get("/robots.txt", siteHandler.RenderRobotsTxt)
 	app.Get("/sitemap.xml", siteHandler.RenderSitemap)
 
