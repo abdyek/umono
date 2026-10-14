@@ -5,6 +5,7 @@ import (
 	"html/template"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/umono-cms/umono/internal/csp"
 	"github.com/umono-cms/umono/internal/service"
 )
 
@@ -47,11 +48,11 @@ func (h *siteHandler) RenderSitemap(c *fiber.Ctx) error {
 func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
-	sitePage, err := h.sitePageService.GetRenderedBySlug(ctx, c.Params("slug"))
+	sitePage, imageURLs, err := h.sitePageService.GetRenderedBySlug(ctx, c.Params("slug"))
 	if err != nil {
 		if errors.Is(err, service.ErrSitePageNotFound) {
 			defaultTitle, defaultContent := localizedNotFoundDefaults(c)
-			sitePage, err = h.sitePageService.GetNotFoundPage(ctx, defaultTitle, defaultContent)
+			sitePage, imageURLs, err = h.sitePageService.GetNotFoundPage(ctx, defaultTitle, defaultContent)
 			if err != nil {
 				// TODO: handle other errors
 				return c.SendStatus(fiber.StatusInternalServerError)
@@ -63,9 +64,16 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 		}
 	}
 
+	nonce, err := csp.Nonce()
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	c.Set("Content-Security-Policy", csp.Header(nonce, csp.ImageOrigins(imageURLs, c.BaseURL())))
+
 	return Render(c, "layouts/page", fiber.Map{
 		"Title":        sitePage.Name,
 		"Content":      template.HTML(sitePage.Content),
 		"ThemeRelease": h.themeRelease,
+		"Nonce":        nonce,
 	})
 }

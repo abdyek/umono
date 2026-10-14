@@ -6,7 +6,7 @@
   <title>{{ .Title }}</title>
   <link rel="stylesheet" href="/_umono/umono-shell.css">
   <link rel="stylesheet" href="/_theme/{{ .ThemeRelease }}/theme.css">
-  <script src="/_umono/umono-root.js" defer></script>
+  <script nonce="{{ .Nonce }}" src="/_umono/umono-root.js" defer></script>
 </head>
 <body>
   <umono-root>{{ .Content }}</umono-root>

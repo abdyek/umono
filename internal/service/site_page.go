@@ -40,27 +40,29 @@ func NewSitePageService(r *repository.SitePageRepository, or *repository.OptionR
 	}
 }
 
-func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (models.SitePage, error) {
+// GetRenderedBySlug renders the enabled page with the slug for a visitor and returns it with the image URLs of its output.
+func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (models.SitePage, []string, error) {
 	// TODO: Put here cache
 	sitePage, err := s.GetBySlug(slug)
 	if err != nil {
-		return models.SitePage{}, err
+		return models.SitePage{}, nil, err
 	}
 
 	if !sitePage.Enabled {
-		return models.SitePage{}, ErrSitePageNotFound
+		return models.SitePage{}, nil, ErrSitePageNotFound
 	}
 
-	output, err := s.convert(ctx, sitePage.Content)
+	output, imageURLs, err := s.contentCompiler.CompilePublic(ctx, sitePage.Content)
 	if err != nil {
-		return models.SitePage{}, err
+		return models.SitePage{}, nil, err
 	}
 
 	sitePage.Content = output
-	return sitePage, nil
+	return sitePage, imageURLs, nil
 }
 
-func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (models.SitePage, error) {
+// GetNotFoundPage renders the 404 page for a visitor and returns it with the image URLs of its output.
+func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (models.SitePage, []string, error) {
 	title := defaultTitle
 	content := defaultContent
 
@@ -74,15 +76,15 @@ func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, def
 		}
 	}
 
-	rendered, err := s.convert(ctx, content)
+	rendered, imageURLs, err := s.contentCompiler.CompilePublic(ctx, content)
 	if err != nil {
-		return models.SitePage{}, err
+		return models.SitePage{}, nil, err
 	}
 
 	return models.SitePage{
 		Name:    title,
 		Content: rendered,
-	}, nil
+	}, imageURLs, nil
 }
 
 func (s *SitePageService) GetBySlug(slug string) (models.SitePage, error) {
@@ -286,11 +288,6 @@ func (s *SitePageService) recomputeDiagnostics(ctx context.Context, page models.
 		})
 	}
 	return s.diagnosticRepo.Replace(page.ID, items)
-}
-
-func (s *SitePageService) convert(ctx context.Context, source string) (string, error) {
-	output, _, err := s.contentCompiler.CompileWithProviderContext(ctx, source)
-	return output, err
 }
 
 func (s *SitePageService) isSlugValid(slug string) bool {
