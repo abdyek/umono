@@ -3,6 +3,7 @@ package csp
 import (
 	"encoding/base64"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -18,12 +19,15 @@ func TestNonce(t *testing.T) {
 	if n1 == n2 {
 		t.Fatalf("Nonce() returned equal values: got %q, want distinct value", n1)
 	}
-	decoded, err := base64.StdEncoding.DecodeString(n1)
+	if strings.ContainsAny(n1, "+/=") {
+		t.Fatalf("Nonce() = %q contains a character that is not safe in an HTML attribute", n1)
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(n1)
 	if err != nil {
-		t.Fatalf("base64.StdEncoding.DecodeString(%q) returned error: %v", n1, err)
+		t.Fatalf("base64.RawURLEncoding.DecodeString(%q) returned error: %v", n1, err)
 	}
 	if got, want := len(decoded), 16; got != want {
-		t.Fatalf("base64.StdEncoding.DecodeString(%q) length: got %d, want %d", n1, got, want)
+		t.Fatalf("base64.RawURLEncoding.DecodeString(%q) length: got %d, want %d", n1, got, want)
 	}
 }
 

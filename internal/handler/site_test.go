@@ -193,3 +193,101 @@ func TestSitePageSendsContentSecurityPolicy(t *testing.T) {
 		t.Fatalf("resp3.Header.Get(\"Content-Security-Policy\") = %q, want %q", got, want)
 	}
 }
+
+func TestSitePageETag(t *testing.T) {
+	app, sps := newSitePageTestApp(t)
+
+	const quote = "\""
+
+	page, errs := sps.Create(models.SitePage{Name: "About", Slug: "about", Enabled: true, Content: "Hello"})
+	if errs != nil {
+		t.Fatalf("sps.Create() errs = %v", errs)
+	}
+
+	get := func(t *testing.T, app *fiber.App, path, ifNoneMatch string) (*http.Response, string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		if ifNoneMatch != "" {
+			req.Header.Set("If-None-Match", ifNoneMatch)
+		}
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("app.Test() error = %v", err)
+		}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("io.ReadAll() error = %v", err)
+		}
+		return resp, string(body)
+	}
+
+	resp1, _ := get(t, app, "/about", "")
+	if got, want := resp1.StatusCode, http.StatusOK; got != want {
+		t.Fatalf("resp1.StatusCode = %d, want %d", got, want)
+	}
+	if got, want := resp1.Header.Get("Cache-Control"), "no-cache"; got != want {
+		t.Fatalf("resp1.Header.Get(\"Cache-Control\") = %q, want %q", got, want)
+	}
+	if got, want := resp1.Header.Get("Content-Type"), "text/html; charset=utf-8"; got != want {
+		t.Fatalf("resp1.Header.Get(\"Content-Type\") = %q, want %q", got, want)
+	}
+	etag := resp1.Header.Get("ETag")
+	if !strings.HasPrefix(etag, "W/"+quote) {
+		t.Fatalf("resp1.Header.Get(\"ETag\") = %q, want to start with %q", etag, "W/"+quote)
+	}
+	if !strings.HasSuffix(etag, quote) {
+		t.Fatalf("resp1.Header.Get(\"ETag\") = %q, want to end with %q", etag, quote)
+	}
+
+	resp2, _ := get(t, app, "/about", "")
+	if got, want := resp2.Header.Get("ETag"), etag; got != want {
+		t.Fatalf("resp2.Header.Get(\"ETag\") = %q, want %q", got, want)
+	}
+
+	resp3, body3 := get(t, app, "/about", etag)
+	if got, want := resp3.StatusCode, http.StatusNotModified; got != want {
+		t.Fatalf("resp3.StatusCode = %d, want %d", got, want)
+	}
+	if got, want := body3, ""; got != want {
+		t.Fatalf("resp3 body = %q, want %q", got, want)
+	}
+	if got, want := resp3.Header.Get("Content-Security-Policy"), ""; got != want {
+		t.Fatalf("resp3.Header.Get(\"Content-Security-Policy\") = %q, want %q", got, want)
+	}
+	if got, want := resp3.Header.Get("ETag"), etag; got != want {
+		t.Fatalf("resp3.Header.Get(\"ETag\") = %q, want %q", got, want)
+	}
+
+	resp4, _ := get(t, app, "/about", "W/"+quote+"other"+quote)
+	if got, want := resp4.StatusCode, http.StatusOK; got != want {
+		t.Fatalf("resp4.StatusCode = %d, want %d", got, want)
+	}
+
+	page.Content = "Changed"
+	if _, err := sps.Update(page); err != nil {
+		t.Fatalf("sps.Update() err = %v", err)
+	}
+
+	resp5, _ := get(t, app, "/about", "")
+	if got, want := resp5.Header.Get("ETag"), etag; got == want {
+		t.Fatalf("resp5.Header.Get(\"ETag\") = %q, want different from %q", got, want)
+	}
+
+	resp6, _ := get(t, app, "/about", etag)
+	if got, want := resp6.StatusCode, http.StatusOK; got != want {
+		t.Fatalf("resp6.StatusCode = %d, want %d", got, want)
+	}
+
+	resp7, _ := get(t, app, "/missing", "")
+	if got, want := resp7.StatusCode, http.StatusNotFound; got != want {
+		t.Fatalf("resp7.StatusCode = %d, want %d", got, want)
+	}
+	if got, want := resp7.Header.Get("ETag"), ""; got != want {
+		t.Fatalf("resp7.Header.Get(\"ETag\") = %q, want %q", got, want)
+	}
+
+	resp8, _ := get(t, app, "/missing", "*")
+	if got, want := resp8.StatusCode, http.StatusNotFound; got != want {
+		t.Fatalf("resp8.StatusCode = %d, want %d", got, want)
+	}
+}

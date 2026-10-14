@@ -13,13 +13,14 @@ import (
 const rejected = ";,' \r\n*"
 
 // Nonce returns a new script nonce: 16 random bytes from crypto/rand in
-// standard base64.
+// unpadded URL-safe base64. The CSP grammar allows - and _, and unlike + and
+// / they are written to an HTML attribute as they are.
 func Nonce() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(b), nil
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 // ImageOrigins returns the sources img-src needs for the image URLs a render

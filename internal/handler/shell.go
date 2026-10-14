@@ -69,11 +69,12 @@ func (h *shellHandler) Serve(c *fiber.Ctx) error {
 
 // etagMatches reports whether the If-None-Match header matches etag with the
 // weak comparison: "*" matches, and each listed tag matches when it equals
-// etag after a leading W/ is removed.
+// etag after a leading W/ is removed from both.
 func etagMatches(header, etag string) bool {
 	if header == "" {
 		return false
 	}
+	etag = strings.TrimPrefix(etag, "W/")
 	for _, part := range strings.Split(header, ",") {
 		part = strings.TrimSpace(part)
 		if part == "" {
