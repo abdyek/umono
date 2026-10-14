@@ -83,10 +83,11 @@ func (c *ContentCompiler) previewComponent(name, source string, contextValues ma
 	defer c.mu.Unlock()
 
 	var buf bytes.Buffer
-	if err := c.compono.Convert([]byte("{{"+name+"}}"), &buf,
+	options := append(c.globalOptions(name),
 		compono.WithContext(contextValues),
 		compono.WithGlobalComponent(name, []byte(strings.TrimSpace(source))),
-	); err != nil {
+	)
+	if _, err := c.compono.Convert([]byte("{{"+name+"}}"), &buf, options...); err != nil {
 		return "", err
 	}
 
@@ -136,25 +137,39 @@ func (c *ContentCompiler) compile(source string, context map[string]any) (string
 	defer c.mu.Unlock()
 
 	var buf bytes.Buffer
-	if err := c.compono.Convert([]byte(source), &buf, compono.WithContext(context)); err != nil {
+	options := append(c.globalOptions(""), compono.WithContext(context))
+	if _, err := c.compono.Convert([]byte(source), &buf, options...); err != nil {
 		return "", err
 	}
 
 	return runtime.OptimizeHTML(buf.String())
 }
 
-func (c *ContentCompiler) loadGlobalComponent(component models.Component) error {
-	if err := c.compono.RegisterGlobalComponent(component.Name, []byte(component.Content)); err != nil {
-		return err
+// globalOptions returns a WithGlobalComponent option for every loaded global
+// except skip, sorted by name.
+func (c *ContentCompiler) globalOptions(skip string) []compono.ConvertOption {
+	names := make([]string, 0, len(c.globalComponents))
+	for name := range c.globalComponents {
+		if name == skip {
+			continue
+		}
+		names = append(names, name)
 	}
+	sort.Strings(names)
+
+	options := make([]compono.ConvertOption, 0, len(names))
+	for _, name := range names {
+		options = append(options, compono.WithGlobalComponent(name, []byte(c.globalComponents[name])))
+	}
+	return options
+}
+
+func (c *ContentCompiler) loadGlobalComponent(component models.Component) error {
 	c.globalComponents[component.Name] = component.Content
 	return nil
 }
 
 func (c *ContentCompiler) removeGlobalComponent(component models.Component) error {
-	if err := c.compono.UnregisterGlobalComponent(component.Name); err != nil {
-		return err
-	}
 	delete(c.globalComponents, component.Name)
 	return nil
 }
