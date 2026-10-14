@@ -14,6 +14,9 @@ var publicFS embed.FS
 //go:embed all:locales
 var localesFS embed.FS
 
+//go:embed all:shell
+var shellFS embed.FS
+
 // Views returns the views filesystem without the "views" prefix
 func Views() fs.FS {
 	sub, _ := fs.Sub(viewsFS, "views")
@@ -29,5 +32,11 @@ func Public() fs.FS {
 // Locales returns the locales filesystem without the "locales" prefix
 func Locales() fs.FS {
 	sub, _ := fs.Sub(localesFS, "locales")
+	return sub
+}
+
+// Shell returns the shell filesystem without the "shell" prefix
+func Shell() fs.FS {
+	sub, _ := fs.Sub(shellFS, "shell")
 	return sub
 }
