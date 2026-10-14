@@ -235,6 +235,26 @@ func (s *SitePageService) RecomputeAllDiagnostics(ctx context.Context) error {
 	return nil
 }
 
+// diagnosticsFilledKey is the option that records that FillDiagnosticsOnce has
+// filled the stored diagnostics.
+const diagnosticsFilledKey = "page_diagnostics_filled"
+
+// FillDiagnosticsOnce recomputes the stored diagnostics of every page on the
+// first launch that stores them, so that the errors of content saved before
+// show up in the list. Later calls change nothing.
+func (s *SitePageService) FillDiagnosticsOnce(ctx context.Context) error {
+	if s.diagnosticRepo == nil || s.optRepo == nil {
+		return nil
+	}
+	if s.optRepo.GetOptionByKey(diagnosticsFilledKey).ID != 0 {
+		return nil
+	}
+	if err := s.RecomputeAllDiagnostics(ctx); err != nil {
+		return err
+	}
+	return s.optRepo.SaveOption(diagnosticsFilledKey, "done")
+}
+
 // PublishedDiagnostics returns the stored diagnostics of the enabled pages.
 func (s *SitePageService) PublishedDiagnostics() []models.PublishedDiagnostic {
 	if s.diagnosticRepo == nil {

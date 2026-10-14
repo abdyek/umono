@@ -122,6 +122,9 @@ func main() {
 	}
 	componentService.OnRenderInputChange(recomputeDiagnostics)
 	mediaService.OnRenderInputChange(recomputeDiagnostics)
+	if err := sitePageService.FillDiagnosticsOnce(context.Background()); err != nil {
+		log.Printf("fill page diagnostics: %v", err)
+	}
 
 	jobService := service.NewJobService(jobRepo)
 	if err := mediaService.RegisterVariantJobHandlers(jobService); err != nil {
