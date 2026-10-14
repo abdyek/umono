@@ -28,7 +28,7 @@ func newSitemapTestApp(t *testing.T) (*fiber.App, *gorm.DB, *service.OptionServi
 
 	optionRepo := repository.NewOptionRepository(db)
 	optionService := service.NewOptionService(optionRepo, nil)
-	h := NewSiteHandler(service.NewSitePageService(repository.NewSitePageRepository(db), optionRepo, nil), optionService)
+	h := NewSiteHandler(service.NewSitePageService(repository.NewSitePageRepository(db), optionRepo, nil), optionService, "")
 
 	app := fiber.New()
 	app.Get("/sitemap.xml", h.RenderSitemap)
