@@ -111,12 +111,13 @@ type PendingUpload struct {
 }
 
 type MediaService struct {
-	repo        *repository.MediaRepository
-	storageRepo *repository.StorageRepository
-	optionRepo  *repository.OptionRepository
-	secrets     *SecretService
-	jobs        JobEnqueuer
-	pendingDir  string
+	repo               *repository.MediaRepository
+	storageRepo        *repository.StorageRepository
+	optionRepo         *repository.OptionRepository
+	secrets            *SecretService
+	jobs               JobEnqueuer
+	pendingDir         string
+	renderInputChanged func(ctx context.Context)
 }
 
 func NewMediaService(
@@ -155,6 +156,16 @@ func (s *MediaService) RegisterVariantJobHandlers(jobs *JobService) error {
 		return err
 	}
 	return jobs.RegisterHandler(JobTypeMediaVariantGenerate, s.HandleVariantGenerateJob)
+}
+
+// OnRenderInputChange sets fn to be called after a media record is created,
+// changed or deleted, which can change the render of any page.
+func (s *MediaService) OnRenderInputChange(fn func(ctx context.Context)) { s.renderInputChanged = fn }
+
+func (s *MediaService) notifyRenderInputChange(ctx context.Context) {
+	if s.renderInputChanged != nil {
+		s.renderInputChanged(ctx)
+	}
 }
 
 func (s *MediaService) EnsureDefaultLocalStorage(root string) error {
@@ -302,6 +313,7 @@ func (s *MediaService) Upload(ctx context.Context, input UploadMediaInput) (Uplo
 	}
 
 	record = s.repo.Create(record)
+	s.notifyRenderInputChange(ctx)
 	_ = s.EnqueueVariantPlan(ctx, record.ID)
 	return UploadMediaResult{Media: record}, nil
 }
@@ -413,6 +425,7 @@ func (s *MediaService) CompletePreparedUpload(ctx context.Context, token string)
 	}
 
 	record := s.repo.Create(pending.Media)
+	s.notifyRenderInputChange(ctx)
 	_ = s.deletePendingUpload(token)
 	_ = s.EnqueueVariantPlan(ctx, record.ID)
 	return UploadMediaResult{Media: record}, nil
@@ -448,6 +461,7 @@ func (s *MediaService) ConfirmPendingUpload(ctx context.Context, token string) (
 	}
 
 	created := s.repo.Create(pending.Media)
+	s.notifyRenderInputChange(ctx)
 	_ = s.deletePendingUpload(token)
 	_ = s.EnqueueVariantPlan(ctx, created.ID)
 	return created, nil
@@ -510,6 +524,7 @@ func (s *MediaService) UpdateAlias(id, alias string) (models.Media, error) {
 	copyMediaMetadata(metadata, item.Metadata)
 	item.Metadata = metadata
 	item = s.repo.Update(item)
+	s.notifyRenderInputChange(context.Background())
 	return item, nil
 }
 
@@ -537,7 +552,12 @@ func (s *MediaService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 
-	return s.repo.Delete(id)
+	if err := s.repo.Delete(id); err != nil {
+		return err
+	}
+
+	s.notifyRenderInputChange(ctx)
+	return nil
 }
 
 func (s *MediaService) OpenByIDAndExt(ctx context.Context, id, ext string) (io.ReadCloser, media.ObjectMeta, error) {

@@ -66,6 +66,7 @@ func main() {
 	if err := db.AutoMigrate(
 		&models.Component{},
 		&models.SitePage{},
+		&models.PageDiagnostic{},
 		&models.Option{},
 		&models.Storage{},
 		&models.Media{},
@@ -113,6 +114,14 @@ func main() {
 	}
 	componentService.SetContentCompiler(contentCompiler)
 	sitePageService := service.NewSitePageService(sitePageRepo, optionRepo, contentCompiler)
+	sitePageService.SetPageDiagnosticRepository(repository.NewPageDiagnosticRepository(db))
+	recomputeDiagnostics := func(ctx context.Context) {
+		if err := sitePageService.RecomputeAllDiagnostics(context.WithoutCancel(ctx)); err != nil {
+			log.Printf("recompute page diagnostics: %v", err)
+		}
+	}
+	componentService.OnRenderInputChange(recomputeDiagnostics)
+	mediaService.OnRenderInputChange(recomputeDiagnostics)
 
 	jobService := service.NewJobService(jobRepo)
 	if err := mediaService.RegisterVariantJobHandlers(jobService); err != nil {
@@ -133,7 +142,7 @@ func main() {
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
 	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
-	systemHandler := handler.NewSystemHandler(systemService, jobService)
+	systemHandler := handler.NewSystemHandler(systemService, jobService, sitePageService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
 	shellHandler, err := handler.NewShellHandler(umono.Shell())
@@ -285,6 +294,7 @@ func main() {
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
 	adminProtected.Get("/system", systemHandler.Index)
 	adminProtected.Get("/system/jobs", systemHandler.RenderJobs)
+	adminProtected.Get("/system/errors", systemHandler.RenderErrors)
 	adminProtected.Post("/system/jobs/:id/retry",
 		middleware.OnlyHTMX(),
 		systemHandler.RetryJob,

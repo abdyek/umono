@@ -3,7 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"regexp"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/umono-cms/compono"
@@ -23,6 +26,10 @@ type SitePageService struct {
 	repo            *repository.SitePageRepository
 	optRepo         *repository.OptionRepository
 	contentCompiler *ContentCompiler
+	diagnosticRepo  *repository.PageDiagnosticRepository
+	// diagnosticMu serializes the recomputations of the stored diagnostics so
+	// that the last one writes what the latest inputs render.
+	diagnosticMu sync.Mutex
 }
 
 func NewSitePageService(r *repository.SitePageRepository, or *repository.OptionRepository, cc *ContentCompiler) *SitePageService {
@@ -138,7 +145,11 @@ func (s *SitePageService) Create(sp models.SitePage) (models.SitePage, []error) 
 	now := time.Now()
 	sp.LastModifiedAt = &now
 
-	return s.repo.Create(sp), nil
+	created := s.repo.Create(sp)
+	if err := s.RecomputeDiagnostics(context.Background(), created.ID); err != nil {
+		log.Printf("recompute diagnostics of page %d: %v", created.ID, err)
+	}
+	return created, nil
 }
 
 func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) {
@@ -163,11 +174,21 @@ func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) 
 	now := time.Now()
 	sp.LastModifiedAt = &now
 
-	return s.repo.Update(sp), nil
+	updated := s.repo.Update(sp)
+	if err := s.RecomputeDiagnostics(context.Background(), updated.ID); err != nil {
+		log.Printf("recompute diagnostics of page %d: %v", updated.ID, err)
+	}
+	return updated, nil
 }
 
 func (s *SitePageService) Delete(id uint) error {
-	return s.repo.Delete(id)
+	if err := s.repo.Delete(id); err != nil {
+		return err
+	}
+	if s.diagnosticRepo != nil {
+		return s.diagnosticRepo.DeleteByPage(id)
+	}
+	return nil
 }
 
 func (s *SitePageService) CheckSlug(slug string, exclude uint) error {
@@ -178,6 +199,64 @@ func (s *SitePageService) CheckSlug(slug string, exclude uint) error {
 		return ErrSlugAlreadyExists
 	}
 	return nil
+}
+
+// SetPageDiagnosticRepository sets where the diagnostics of the pages' last renders are stored.
+func (s *SitePageService) SetPageDiagnosticRepository(r *repository.PageDiagnosticRepository) {
+	s.diagnosticRepo = r
+}
+
+// RecomputeDiagnostics renders the page with the id and replaces its stored diagnostics.
+func (s *SitePageService) RecomputeDiagnostics(ctx context.Context, id uint) error {
+	if s.diagnosticRepo == nil {
+		return nil
+	}
+	s.diagnosticMu.Lock()
+	defer s.diagnosticMu.Unlock()
+	page := s.repo.GetByID(id)
+	if page.ID == 0 {
+		return nil
+	}
+	return s.recomputeDiagnostics(ctx, page)
+}
+
+// RecomputeAllDiagnostics renders every page and replaces its stored diagnostics.
+func (s *SitePageService) RecomputeAllDiagnostics(ctx context.Context) error {
+	if s.diagnosticRepo == nil {
+		return nil
+	}
+	s.diagnosticMu.Lock()
+	defer s.diagnosticMu.Unlock()
+	for _, page := range s.repo.GetAll() {
+		if err := s.recomputeDiagnostics(ctx, page); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PublishedDiagnostics returns the stored diagnostics of the enabled pages.
+func (s *SitePageService) PublishedDiagnostics() []models.PublishedDiagnostic {
+	if s.diagnosticRepo == nil {
+		return []models.PublishedDiagnostic{}
+	}
+	return s.diagnosticRepo.GetPublished()
+}
+
+func (s *SitePageService) recomputeDiagnostics(ctx context.Context, page models.SitePage) error {
+	_, diagnostics, err := s.contentCompiler.CompileWithProviderContext(ctx, page.Content)
+	if err != nil {
+		return err
+	}
+	items := make([]models.PageDiagnostic, 0, len(diagnostics))
+	for _, d := range diagnostics {
+		items = append(items, models.PageDiagnostic{
+			Code:    string(d.Code),
+			Message: d.Message,
+			Source:  strings.Join(d.Source, " > "),
+		})
+	}
+	return s.diagnosticRepo.Replace(page.ID, items)
 }
 
 func (s *SitePageService) convert(ctx context.Context, source string) (string, error) {

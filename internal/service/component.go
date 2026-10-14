@@ -19,8 +19,9 @@ var (
 )
 
 type ComponentService struct {
-	repo            *repository.ComponentRepository
-	contentCompiler *ContentCompiler
+	repo               *repository.ComponentRepository
+	contentCompiler    *ContentCompiler
+	renderInputChanged func(ctx context.Context)
 }
 
 func NewComponentService(r *repository.ComponentRepository) *ComponentService {
@@ -89,6 +90,18 @@ func (s *ComponentService) ReloadGlobalComponent(comp models.Component) error {
 	return s.contentCompiler.ReloadGlobalComponent(comp)
 }
 
+// OnRenderInputChange sets fn to be called after a change to the globals,
+// which can change the render of any page.
+func (s *ComponentService) OnRenderInputChange(fn func(ctx context.Context)) {
+	s.renderInputChanged = fn
+}
+
+func (s *ComponentService) notifyRenderInputChange() {
+	if s.renderInputChanged != nil {
+		s.renderInputChanged(context.Background())
+	}
+}
+
 func (s *ComponentService) Preview(ctx context.Context, name, source string) (string, []compono.Diagnostic, error) {
 	if s.contentCompiler == nil {
 		return "", nil, ErrContentCompilerNotConfigured
@@ -130,6 +143,7 @@ func (s *ComponentService) Create(c models.Component) (models.Component, []error
 		return models.Component{}, []error{err}
 	}
 
+	s.notifyRenderInputChange()
 	return created, nil
 }
 
@@ -167,6 +181,7 @@ func (s *ComponentService) Update(c models.Component) (models.Component, []error
 		if err != nil {
 			return models.Component{}, []error{err}
 		}
+		s.notifyRenderInputChange()
 		return updated, nil
 	}
 
@@ -175,6 +190,7 @@ func (s *ComponentService) Update(c models.Component) (models.Component, []error
 		return models.Component{}, []error{err}
 	}
 
+	s.notifyRenderInputChange()
 	return updated, nil
 }
 
@@ -185,7 +201,12 @@ func (s *ComponentService) Delete(id uint) error {
 		return err
 	}
 
-	return s.RemoveGlobalComponent(comp)
+	if err := s.RemoveGlobalComponent(comp); err != nil {
+		return err
+	}
+
+	s.notifyRenderInputChange()
+	return nil
 }
 
 func (s *ComponentService) isNameValid(name string) bool {
