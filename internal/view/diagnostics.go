@@ -3,9 +3,11 @@ package view
 import (
 	"html/template"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/umono-cms/compono"
+	"github.com/umono-cms/umono/internal/models"
 )
 
 // DiagnosticItem is a Compono diagnostic as an editor lists it. The range is
@@ -83,4 +85,29 @@ func diagnosticMessage(message string) template.HTML {
 		}
 	}
 	return template.HTML(b.String())
+}
+
+// PublishedDiagnosticItem is a stored diagnostic as the list of published
+// errors shows it.
+type PublishedDiagnosticItem struct {
+	PageName string
+	PageURL  string
+	Source   string
+	Code     string
+	Message  template.HTML
+}
+
+// PublishedDiagnostics returns the items of the list of published errors.
+func PublishedDiagnostics(rows []models.PublishedDiagnostic) []PublishedDiagnosticItem {
+	items := []PublishedDiagnosticItem{}
+	for _, row := range rows {
+		items = append(items, PublishedDiagnosticItem{
+			PageName: row.PageName,
+			PageURL:  "/admin/site-pages/" + strconv.FormatUint(uint64(row.PageID), 10),
+			Source:   row.Source,
+			Code:     row.Code,
+			Message:  diagnosticMessage(row.Message),
+		})
+	}
+	return items
 }

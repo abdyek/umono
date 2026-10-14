@@ -19,5 +19,10 @@ func (*SystemService) MenuItems() []SystemMenuItem {
 			Slug:     "jobs",
 			Partial:  "system-jobs",
 		},
+		{
+			TitleKey: "system.menu.errors",
+			Slug:     "errors",
+			Partial:  "system-errors",
+		},
 	}
 }

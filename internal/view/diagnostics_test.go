@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/umono-cms/compono"
+	"github.com/umono-cms/umono/internal/models"
 )
 
 func rng(sl, sc, el, ec int) compono.Range {
@@ -184,5 +185,24 @@ func TestEditorDiagnostics(t *testing.T) {
 				t.Fatalf("got %#v, want %#v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPublishedDiagnostics(t *testing.T) {
+	rows := []models.PublishedDiagnostic{
+		{PageID: 7, PageName: "About", Code: "unknown-component", Message: "The component **FOO** is not defined.", Source: ""},
+		{PageID: 12, PageName: "Home", Code: "unknown-key", Message: "a < b", Source: "LAYOUT > CARD"},
+	}
+	want := []PublishedDiagnosticItem{
+		{PageName: "About", PageURL: "/admin/site-pages/7", Source: "", Code: "unknown-component", Message: template.HTML("The component <strong>FOO</strong> is not defined.")},
+		{PageName: "Home", PageURL: "/admin/site-pages/12", Source: "LAYOUT > CARD", Code: "unknown-key", Message: template.HTML("a &lt; b")},
+	}
+	got := PublishedDiagnostics(rows)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %#v, want %#v", got, want)
+	}
+
+	if got := PublishedDiagnostics(nil); got == nil || len(got) != 0 {
+		t.Fatalf("PublishedDiagnostics(nil) = %#v, want non-nil empty slice", got)
 	}
 }

@@ -13,14 +13,16 @@ import (
 )
 
 type systemHandler struct {
-	systemService *service.SystemService
-	jobService    *service.JobService
+	systemService   *service.SystemService
+	jobService      *service.JobService
+	sitePageService *service.SitePageService
 }
 
-func NewSystemHandler(ss *service.SystemService, js *service.JobService) *systemHandler {
+func NewSystemHandler(ss *service.SystemService, js *service.JobService, sps *service.SitePageService) *systemHandler {
 	return &systemHandler{
-		systemService: ss,
-		jobService:    js,
+		systemService:   ss,
+		jobService:      js,
+		sitePageService: sps,
 	}
 }
 
@@ -51,6 +53,21 @@ func (h *systemHandler) RenderJobs(c *fiber.Ctx) error {
 		"SystemUl":   h.systemUl(c, path.Base(c.Path())),
 		"Jobs":       buildSystemJobs(c, jobs),
 		"RetryLabel": translate(c, "system.jobs.retry"),
+	}, layouts...)
+}
+
+func (h *systemHandler) RenderErrors(c *fiber.Ctx) error {
+	partial := "partials/system-errors"
+	layouts := []string{"layouts/system", "layouts/admin"}
+
+	if isSystemContentSwap(c) {
+		partial = "partials/htmx/system-errors"
+		layouts = []string{}
+	}
+
+	return Render(c, partial, fiber.Map{
+		"SystemUl":    h.systemUl(c, path.Base(c.Path())),
+		"Diagnostics": view.PublishedDiagnostics(h.sitePageService.PublishedDiagnostics()),
 	}, layouts...)
 }
 
@@ -179,7 +196,7 @@ func isSystemContentSwap(c *fiber.Ctx) bool {
 	}
 
 	switch c.Get("HX-Target") {
-	case "system-content", "system-jobs-content":
+	case "system-content", "system-jobs-content", "system-errors-content":
 		return true
 	default:
 		return false
