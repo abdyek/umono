@@ -304,6 +304,120 @@ func TestContentCompilerBuildsProviderContextForGlobalComponents(t *testing.T) {
 	}
 }
 
+func TestContentCompilerPreviewComponentAnalyzesRequiredParameterBody(t *testing.T) {
+	compiler, err := NewContentCompiler([]models.Component{{Name: "SITE_NAME", Content: "Umono"}})
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	source := strings.Join([]string{
+		"~ count! = 0",
+		"{{ missing }}",
+		"",
+		"{{ UNKNOWN }} {{ SITE_NAME }} {{ GREET }}",
+		"",
+		"{{ MAIN content = NOPE }}",
+		"",
+		"~ GREET",
+		"Hi",
+	}, "\n")
+
+	_, diagnostics, err := compiler.PreviewComponent("CARD", source)
+	if err != nil {
+		t.Fatalf("PreviewComponent() error = %v", err)
+	}
+
+	filtered := diagnostics[:0]
+	for _, d := range diagnostics {
+		if reflect.DeepEqual(d.Source, []string{"CARD"}) {
+			filtered = append(filtered, d)
+		}
+	}
+
+	type expected struct {
+		code    string
+		message string
+		line    int
+		column  int
+	}
+	want := []expected{
+		{code: "unknown-parameter", line: 2, column: 1},
+		{code: "unknown-component", message: "The component **UNKNOWN** is not defined.", line: 4, column: 1},
+		{code: "unknown-component", message: "The component **NOPE** is not defined.", line: 6, column: 19},
+	}
+
+	if len(filtered) != len(want) {
+		t.Fatalf("diagnostics = %#v", filtered)
+	}
+
+	for i, w := range want {
+		got := filtered[i]
+		if string(got.Code) != w.code {
+			t.Fatalf("diagnostics = %#v", filtered)
+		}
+		if w.message != "" && got.Message != w.message {
+			t.Fatalf("diagnostics = %#v", filtered)
+		}
+		if got.Range.Start.Line != w.line || got.Range.Start.Column != w.column {
+			t.Fatalf("diagnostics = %#v", filtered)
+		}
+	}
+}
+
+func TestContentCompilerPreviewComponentDoesNotAnalyzeOptionalParameterBody(t *testing.T) {
+	compiler, err := NewContentCompiler(nil)
+	if err != nil {
+		t.Fatalf("NewContentCompiler() error = %v", err)
+	}
+
+	source := strings.Join([]string{
+		"~ count = 0",
+		"{{ missing }}",
+		"",
+		"~ UNUSED",
+		"{{ Bad }}",
+	}, "\n")
+
+	_, diagnostics, err := compiler.PreviewComponent("CARD", source)
+	if err != nil {
+		t.Fatalf("PreviewComponent() error = %v", err)
+	}
+
+	filtered := diagnostics[:0]
+	for _, d := range diagnostics {
+		if reflect.DeepEqual(d.Source, []string{"CARD"}) {
+			filtered = append(filtered, d)
+		}
+	}
+
+	type expected struct {
+		code    string
+		message string
+		line    int
+		column  int
+	}
+	want := []expected{
+		{code: "unknown-parameter", line: 2, column: 1},
+	}
+
+	if len(filtered) != len(want) {
+		t.Fatalf("diagnostics = %#v", filtered)
+	}
+
+	for i, w := range want {
+		got := filtered[i]
+		if string(got.Code) != w.code {
+			t.Fatalf("diagnostics = %#v", filtered)
+		}
+		if w.message != "" && got.Message != w.message {
+			t.Fatalf("diagnostics = %#v", filtered)
+		}
+		if got.Range.Start.Line != w.line || got.Range.Start.Column != w.column {
+			t.Fatalf("diagnostics = %#v", filtered)
+		}
+	}
+}
+
 type recordingContextProvider struct {
 	values map[string]any
 	calls  [][]string

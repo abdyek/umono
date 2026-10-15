@@ -108,15 +108,17 @@ func (c *ContentCompiler) PreviewComponentWithProviderContext(ctx context.Contex
 }
 
 func (c *ContentCompiler) previewComponent(name, source string, contextValues map[string]any, globals map[string]string) (string, []compono.Diagnostic, error) {
+	body := []byte(strings.TrimSpace(source))
 	var buf bytes.Buffer
 	options := append(c.globalOptions(globals, name),
 		compono.WithContext(contextValues),
-		compono.WithGlobalComponent(name, []byte(strings.TrimSpace(source))),
+		compono.WithGlobalComponent(name, body),
 	)
 	diagnostics, err := c.compono.Convert([]byte("{{"+name+"}}"), &buf, options...)
 	if err != nil {
 		return "", nil, err
 	}
+	diagnostics = append(diagnostics, requiredBodyDiagnostics(name, body, globals)...)
 
 	return buf.String(), diagnostics, nil
 }
