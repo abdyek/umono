@@ -51,3 +51,15 @@ func (a *ActiveSet) Delete(g models.ContractGroup) {
 	defer a.mu.Unlock()
 	delete(a.themes, g)
 }
+
+// ByPath returns the active theme installed at path and its group.
+func (a *ActiveSet) ByPath(path string) (models.ContractGroup, Loaded, bool) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	for g, t := range a.themes {
+		if t.Path == path {
+			return g, t, true
+		}
+	}
+	return models.ContractGroup{}, Loaded{}, false
+}

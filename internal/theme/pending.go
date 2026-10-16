@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"time"
 
 	"github.com/umono-cms/themecore"
 )
@@ -177,14 +179,20 @@ func RejectPending(pendingDir, path string) error {
 	if err := removeReadOnly(dir); err != nil {
 		return err
 	}
-	root := filepath.Clean(pendingDir)
+	return removeEmptyParents(pendingDir, dir)
+}
+
+// removeEmptyParents removes the parent directories of dir under root that
+// are empty, from the innermost.
+func removeEmptyParents(root, dir string) error {
+	root = filepath.Clean(root)
 	for parent := filepath.Dir(dir); parent != root; parent = filepath.Dir(parent) {
 		entries, err := os.ReadDir(parent)
 		if err != nil {
 			return err
 		}
 		if len(entries) > 0 {
-			break
+			return nil
 		}
 		if err := os.Remove(parent); err != nil {
 			return err
@@ -209,4 +217,44 @@ func removeReadOnly(dir string) error {
 		return err
 	}
 	return os.RemoveAll(dir)
+}
+
+// Replace moves the pending install at path over the installed theme: the
+// installed directory is renamed aside, the pending one is renamed into its
+// place and the old one is deleted. themesDir and pendingDir must be on the
+// same file system. Moving a directory to another parent needs write
+// permission on it, so the read-only pending directory is made writable for
+// the move and gets its mode back after it.
+func Replace(themesDir, pendingDir, path string) error {
+	if !themePathPattern.MatchString(path) {
+		return fmt.Errorf("%w: %q", ErrInvalidThemePath, path)
+	}
+	dst := filepath.Join(themesDir, filepath.FromSlash(path))
+	src := filepath.Join(pendingDir, filepath.FromSlash(path))
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	mode := info.Mode().Perm()
+	aside := dst + ".replaced-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+
+	if err := os.Chmod(src, mode|0o200); err != nil {
+		return err
+	}
+	if err := os.Rename(dst, aside); err != nil {
+		_ = os.Chmod(src, mode)
+		return err
+	}
+	if err := os.Rename(src, dst); err != nil {
+		_ = os.Rename(aside, dst)
+		_ = os.Chmod(src, mode)
+		return err
+	}
+	if err := os.Chmod(dst, mode); err != nil {
+		return err
+	}
+	if err := removeReadOnly(aside); err != nil {
+		return err
+	}
+	return removeEmptyParents(pendingDir, src)
 }
