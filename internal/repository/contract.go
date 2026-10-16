@@ -1,0 +1,61 @@
+package repository
+
+import (
+	"github.com/umono-cms/umono/internal/models"
+	"gorm.io/gorm"
+)
+
+type ContractRepository struct {
+	db *gorm.DB
+}
+
+func NewContractRepository(db *gorm.DB) *ContractRepository {
+	return &ContractRepository{db: db}
+}
+
+// inGroup limits a query on contracts to the group g. table is the name or
+// alias of the contracts table in the query.
+func inGroup(q *gorm.DB, table string, g models.ContractGroup) *gorm.DB {
+	q = q.Where(table+".org = ? AND "+table+".name = ? AND "+table+".major = ?", g.Org, g.Name, g.Major)
+	if g.Major == 0 {
+		q = q.Where(table+".minor = ?", g.Minor)
+	}
+	return q
+}
+
+// GetByIdentity returns the record of org/name@vmajor.minor, or a zero
+// Contract when there is none.
+func (r *ContractRepository) GetByIdentity(org, name string, major, minor uint) models.Contract {
+	var c models.Contract
+	r.db.Where("org = ? AND name = ? AND major = ? AND minor = ?", org, name, major, minor).Limit(1).Find(&c)
+	return c
+}
+
+// GetHighestInGroup returns the record of the group with the highest minor,
+// or a zero Contract when the group has none.
+func (r *ContractRepository) GetHighestInGroup(g models.ContractGroup) models.Contract {
+	var c models.Contract
+	inGroup(r.db.Model(&models.Contract{}), "contracts", g).Order("minor DESC").Limit(1).Find(&c)
+	return c
+}
+
+// GroupBase returns the highest minor of the records that pages of the group
+// are bound to, disabled pages included. ok is false when no page is bound.
+func (r *ContractRepository) GroupBase(g models.ContractGroup) (minor uint, ok bool) {
+	var base *uint
+	inGroup(r.db.Table("pages p").Joins("JOIN contracts c ON c.id = p.contract_id"), "c", g).
+		Select("MAX(c.minor)").Scan(&base)
+	if base == nil {
+		return 0, false
+	}
+	return *base, true
+}
+
+// GetPagesAboveMinor returns the pages of the group bound to a record with a
+// minor above minor, ordered by ID.
+func (r *ContractRepository) GetPagesAboveMinor(g models.ContractGroup, minor uint) []models.SitePage {
+	var pages []models.SitePage
+	inGroup(r.db.Model(&models.SitePage{}).Joins("JOIN contracts c ON c.id = pages.contract_id"), "c", g).
+		Where("c.minor > ?", minor).Order("pages.id ASC").Find(&pages)
+	return pages
+}
