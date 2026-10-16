@@ -66,6 +66,7 @@ func main() {
 
 	if err := db.AutoMigrate(
 		&models.Component{},
+		&models.Contract{},
 		&models.SitePage{},
 		&models.PageDiagnostic{},
 		&models.Option{},
