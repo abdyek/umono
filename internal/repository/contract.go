@@ -31,6 +31,13 @@ func (r *ContractRepository) GetByIdentity(org, name string, major, minor uint) 
 	return c
 }
 
+// GetByID returns the record id, or a zero Contract when there is none.
+func (r *ContractRepository) GetByID(id uint) models.Contract {
+	var c models.Contract
+	r.db.Where("id = ?", id).Limit(1).Find(&c)
+	return c
+}
+
 // GetHighestInGroup returns the record of the group with the highest minor,
 // or a zero Contract when the group has none.
 func (r *ContractRepository) GetHighestInGroup(g models.ContractGroup) models.Contract {

@@ -27,6 +27,9 @@ type Installed struct {
 	// their path relative to assets/. They are served from memory, so a file
 	// that changes on disk after the checks is never served.
 	Assets map[string][]byte
+	// HasAttributes tells whether the package has an attributes.toml. Without
+	// one, render gets no injection hook.
+	HasAttributes bool
 	// Result holds the parsed contract and the compiled attributes.toml.
 	Result themecore.Result
 }
@@ -76,12 +79,14 @@ func CheckInstalled(themesDir, path string) (Installed, error) {
 			assets[rest] = b
 		}
 	}
+	_, hasAttributes := p.Files["attributes.toml"]
 	return Installed{
 		Path:           path,
 		Release:        hex.EncodeToString(sum[:])[:12],
 		Built:          built,
 		ContractSource: p.Files["contract.toml"],
 		Assets:         assets,
+		HasAttributes:  hasAttributes,
 		Result:         result,
 	}, nil
 }
