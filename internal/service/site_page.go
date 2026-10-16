@@ -83,7 +83,8 @@ func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (R
 	return RenderedPage{SitePage: sitePage, ImageURLs: imageURLs, Release: r.Release}, nil
 }
 
-// GetNotFoundPage renders the 404 page for a visitor.
+// GetNotFoundPage renders the 404 page for a visitor. The localized default
+// content is used only when the 404 page has no binding.
 func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (RenderedPage, error) {
 	title := defaultTitle
 	content := defaultContent
@@ -92,7 +93,7 @@ func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, def
 		if page.Name != "" {
 			title = page.Name
 		}
-		if page.Content != "" {
+		if page.Content != "" || page.ContractID != nil {
 			content = page.Content
 		}
 	}
@@ -115,15 +116,24 @@ func (s *SitePageService) GetNotFoundPageSource() (models.SitePage, error) {
 	return page, nil
 }
 
-// SaveNotFoundPage saves the name and the content of the 404 system page and
-// recomputes its diagnostics. Empty values make a visitor see the localized
-// defaults.
-func (s *SitePageService) SaveNotFoundPage(name, content string) error {
+// SaveNotFoundPage saves the name, the content and the layout binding of the
+// 404 system page, after the binding's save checks, and recomputes its
+// diagnostics. An empty name or, without a binding, an empty content makes a
+// visitor see the localized defaults.
+func (s *SitePageService) SaveNotFoundPage(name, content string, contractID *uint, layoutID *string) error {
 	page, err := s.GetNotFoundPageSource()
 	if err != nil {
 		return err
 	}
-	if err := s.repo.UpdateNameAndContent(page.ID, name, content, time.Now()); err != nil {
+	if s.pageThemes != nil {
+		candidate := page
+		candidate.Name, candidate.Content = name, content
+		candidate.ContractID, candidate.LayoutID = contractID, layoutID
+		if err := s.pageThemes.CheckBinding(candidate, &page); err != nil {
+			return err
+		}
+	}
+	if err := s.repo.UpdateSystemPage(page.ID, name, content, contractID, layoutID, time.Now()); err != nil {
 		return err
 	}
 	if err := s.RecomputeDiagnostics(context.Background(), page.ID); err != nil {
@@ -168,6 +178,14 @@ func (s *SitePageService) Preview(ctx context.Context, source string) (string, [
 func (s *SitePageService) MustPreview(ctx context.Context, source string) (string, []compono.Diagnostic) {
 	output, diagnostics, _ := s.Preview(ctx, source)
 	return output, diagnostics
+}
+
+// PreviewBound converts source for the editor's preview with an unsaved
+// layout binding. The preview shows the structure: no theme stylesheet is
+// applied to it.
+func (s *SitePageService) PreviewBound(ctx context.Context, source string, contractID *uint, layoutID *string) (string, []compono.Diagnostic, error) {
+	r := s.pageRender(models.SitePage{ContractID: contractID, LayoutID: layoutID})
+	return s.contentCompiler.CompileWithProviderContext(ctx, source, r.Options()...)
 }
 
 func (s *SitePageService) Create(sp models.SitePage) (models.SitePage, []error) {

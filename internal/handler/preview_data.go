@@ -9,9 +9,10 @@ import (
 	"github.com/umono-cms/umono/internal/view"
 )
 
-// sitePagePreview renders source as the preview of a page editor.
-func sitePagePreview(ctx context.Context, s *service.SitePageService, source string) (template.HTML, []view.DiagnosticItem) {
-	output, diagnostics := s.MustPreview(ctx, source)
+// sitePagePreviewBound renders source as the preview of the page editor with
+// an unsaved layout binding.
+func sitePagePreviewBound(ctx context.Context, s *service.SitePageService, source string, contractID *uint, layoutID *string) (template.HTML, []view.DiagnosticItem) {
+	output, diagnostics, _ := s.PreviewBound(ctx, source, contractID, layoutID)
 	return mustPreviewHTML(output), view.EditorDiagnostics(diagnostics, nil)
 }
 

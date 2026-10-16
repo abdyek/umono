@@ -35,12 +35,15 @@ func (r *SitePageRepository) GetBySystemKey(key string) models.SitePage {
 	return sp
 }
 
-// UpdateNameAndContent writes the name and the content of the page, empty
-// ones included, and its LastModifiedAt.
-func (r *SitePageRepository) UpdateNameAndContent(id uint, name, content string, modifiedAt time.Time) error {
+// UpdateSystemPage writes the name, the content and the layout binding of
+// the system page id, empty and nil values included, and its
+// LastModifiedAt.
+func (r *SitePageRepository) UpdateSystemPage(id uint, name, content string, contractID *uint, layoutID *string, modifiedAt time.Time) error {
 	return r.db.Model(&models.SitePage{}).Where("id = ?", id).Updates(map[string]any{
 		"name":             name,
 		"content":          content,
+		"contract_id":      contractID,
+		"layout_id":        layoutID,
 		"last_modified_at": modifiedAt,
 	}).Error
 }

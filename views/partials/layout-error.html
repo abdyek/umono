@@ -1,0 +1,8 @@
+{{ if .Error }}
+<div class="ml-1 mt-1 space-y-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2">
+  <p class="text-xs font-medium text-red-400">{{ .Error }}</p>
+  {{ if .Skeleton }}
+  <code class="block select-all whitespace-pre-wrap break-all rounded-md bg-neutral-900/80 px-2 py-1.5 text-xs text-neutral-200" style="font-family: 'Ioveska', monospace;">{{ .Skeleton }}</code>
+  {{ end }}
+</div>
+{{ end }}

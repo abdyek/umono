@@ -10,6 +10,9 @@
           <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "admin.pages.create_title" }}</h2>
         </div>{{ end }}
         <div class="flex items-center gap-2">
+          {{ if .PublicURL }}
+          <a href="{{ .PublicURL }}" target="_blank" rel="noopener" class="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">{{ t .I18n "admin.pages.view_page" }}</a>
+          {{ end }}
           <label class="flex items-center gap-2 cursor-pointer">
             <span class="text-xs text-neutral-500">{{ t .I18n "common.enabled" }}</span>
             <div class="relative">
@@ -23,7 +26,7 @@
             type="submit"
             form="editor-form"
             class="relative flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg shadow-purple-900/20 active:scale-[0.98] cursor-pointer"
-            hx-disabled-elt="#name,#content,#editor-submit-button,#editor-delete-button,#slug,#enabled-checkbox"
+            hx-disabled-elt="#name,#content,#editor-submit-button,#editor-delete-button,#slug,#enabled-checkbox,#layout"
           >
             <span class="flex items-center gap-2 [.htmx-request_&]:invisible">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -42,7 +45,7 @@
             id="editor-delete-button"
             class="p-2 rounded-xl hover:bg-red-500/10 text-neutral-500 hover:text-red-400 transition-colors cursor-pointer"
             hx-delete="/admin/site-pages/{{ .ID }}"
-            hx-disabled-elt="#name,#content,#editor-submit-button,#editor-delete-button,#slug,#enabled-checkbox"
+            hx-disabled-elt="#name,#content,#editor-submit-button,#editor-delete-button,#slug,#enabled-checkbox,#layout"
             hx-confirm="{{ t .I18n "admin.pages.delete_confirm" }}"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,6 +107,8 @@
           {{ end }}
         </div>
       </div>
+      {{ template "partials/layout-field" .Layout }}
+      {{ template "partials/layout-error" .Layout }}
       <div class="flex-1 flex flex-col space-y-2 min-h-0">
         <label class="text-sm font-medium text-neutral-300 ml-1" for="content">{{ t .I18n "common.content" }}</label>
         <textarea 
@@ -113,7 +118,7 @@
           name="content"
           placeholder="{{ t .I18n "admin.pages.placeholders.content" }}"
           hx-post="/admin/site-pages/preview"
-          hx-trigger="keyup changed delay:750ms"
+          hx-trigger="keyup changed delay:750ms, layout-changed"
           hx-target="#editor-diagnostics"
           hx-swap="innerHTML"
           hx-indicator="false"

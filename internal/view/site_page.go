@@ -17,7 +17,11 @@ type SitePageEditorData struct {
 	LastModifiedAt string
 	SlugErr        string
 	NameErr        string
-	I18n           any
+	// Layout is the Layout field and PublicURL the page's public address,
+	// "" for a new page.
+	Layout    LayoutField
+	PublicURL string
+	I18n      any
 }
 
 func SitePageEditor(sp models.SitePage, output template.HTML, diagnostics []DiagnosticItem, slugErr, nameErr string, translator any) SitePageEditorData {

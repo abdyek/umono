@@ -54,7 +54,7 @@ func TestSaveNotFoundPage(t *testing.T) {
 	svc, _, db := newPageDiagnosticTestService(t)
 	sp := createNotFoundSystemPage(t, db, "# Gone")
 
-	if err := svc.SaveNotFoundPage("New", "{{ MISSING }}"); err != nil {
+	if err := svc.SaveNotFoundPage("New", "{{ MISSING }}", nil, nil); err != nil {
 		t.Fatalf("SaveNotFoundPage err = %v, want nil", err)
 	}
 
@@ -97,7 +97,7 @@ func TestSaveNotFoundPageClearsIt(t *testing.T) {
 	svc, _, db := newPageDiagnosticTestService(t)
 	createNotFoundSystemPage(t, db, "# Gone")
 
-	if err := svc.SaveNotFoundPage("", ""); err != nil {
+	if err := svc.SaveNotFoundPage("", "", nil, nil); err != nil {
 		t.Fatalf("SaveNotFoundPage err = %v, want nil", err)
 	}
 
@@ -116,7 +116,7 @@ func TestSaveNotFoundPageClearsIt(t *testing.T) {
 func TestSaveNotFoundPageWithoutSystemPage(t *testing.T) {
 	svc, _, _ := newPageDiagnosticTestService(t)
 
-	if err := svc.SaveNotFoundPage("A", "B"); !errors.Is(err, ErrSitePageNotFound) {
+	if err := svc.SaveNotFoundPage("A", "B", nil, nil); !errors.Is(err, ErrSitePageNotFound) {
 		t.Fatalf("SaveNotFoundPage err = %v, want %v", err, ErrSitePageNotFound)
 	}
 

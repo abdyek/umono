@@ -45,17 +45,18 @@ func (h *settingsHandler) Render404Page(c *fiber.Ctx) error {
 	}
 
 	var title, content string
-	if page, err := h.sitePageService.GetNotFoundPageSource(); err == nil {
+	page, err := h.sitePageService.GetNotFoundPageSource()
+	if err == nil {
 		title, content = page.Name, page.Content
 	}
 	defaultTitle, defaultContent := localizedNotFoundDefaults(c)
 
 	previewContent := content
-	if content == "" {
+	if content == "" && page.ContractID == nil {
 		previewContent = defaultContent
 	}
 
-	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, previewContent)
+	output, diagnostics := sitePagePreviewBound(c.UserContext(), h.sitePageService, previewContent, page.ContractID, page.LayoutID)
 	return Render(c, partial, fiber.Map{
 		"SettingsUl":     h.settingsUl(c, path.Base(c.Path())),
 		"DefaultTitle":   defaultTitle,
@@ -64,6 +65,7 @@ func (h *settingsHandler) Render404Page(c *fiber.Ctx) error {
 		"Content":        content,
 		"Output":         output,
 		"Diagnostics":    diagnostics,
+		"Layout":         layoutField(c.Locals("I18n"), h.themeService, page, bindingString(page.ContractID, page.LayoutID)),
 	}, layouts...)
 }
 
