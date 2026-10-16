@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/umono-cms/themecore"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/theme"
@@ -72,6 +73,10 @@ type ThemeService struct {
 	// contract record or overwrite each other's active_themes.
 	activateMu         sync.Mutex
 	renderInputChanged func(ctx context.Context)
+	// parsedMu guards parsed, the contract records parsed with themecore by
+	// ID. A record never changes, so it is parsed once.
+	parsedMu sync.Mutex
+	parsed   map[uint]themecore.Contract
 }
 
 func NewThemeService(themesDir, pendingDir string, contracts *ContractService, themes *repository.ThemeRepository, registry ContractRegistry) *ThemeService {
@@ -82,6 +87,7 @@ func NewThemeService(themesDir, pendingDir string, contracts *ContractService, t
 		themes:     themes,
 		registry:   registry,
 		active:     theme.NewActiveSet(),
+		parsed:     map[uint]themecore.Contract{},
 	}
 }
 
@@ -150,12 +156,13 @@ func (s *ThemeService) Activate(ctx context.Context, path string) (ThemeCandidat
 		return ThemeCandidate{}, err
 	}
 	s.active.Set(c.Contract.Group(), theme.Loaded{
-		Path:       c.Path,
-		Release:    c.Release,
-		ContractID: c.Contract.ID,
-		Contract:   c.Result.Contract,
-		Attributes: c.Result.Attributes,
-		Assets:     c.Assets,
+		Path:          c.Path,
+		Release:       c.Release,
+		ContractID:    c.Contract.ID,
+		Contract:      c.Result.Contract,
+		Attributes:    c.Result.Attributes,
+		HasAttributes: c.HasAttributes,
+		Assets:        c.Assets,
 	})
 	s.notifyRenderInputChange()
 	return c, nil
@@ -249,12 +256,13 @@ func (s *ThemeService) ApplyPending(ctx context.Context, path string) error {
 	}
 
 	s.active.Set(g, theme.Loaded{
-		Path:       path,
-		Release:    c.Release,
-		ContractID: c.Contract.ID,
-		Contract:   c.Result.Contract,
-		Attributes: c.Result.Attributes,
-		Assets:     c.Assets,
+		Path:          path,
+		Release:       c.Release,
+		ContractID:    c.Contract.ID,
+		Contract:      c.Result.Contract,
+		Attributes:    c.Result.Attributes,
+		HasAttributes: c.HasAttributes,
+		Assets:        c.Assets,
 	})
 	if contractChanged {
 		s.notifyRenderInputChange()
@@ -350,12 +358,13 @@ func (s *ThemeService) checkActive(ref models.Contract, path string) (theme.Load
 		return theme.Loaded{}, fmt.Errorf("%w: %s", ErrContractChanged, ref.Ref())
 	}
 	return theme.Loaded{
-		Path:       path,
-		Release:    installed.Release,
-		ContractID: record.ID,
-		Contract:   installed.Result.Contract,
-		Attributes: installed.Result.Attributes,
-		Assets:     installed.Assets,
+		Path:          path,
+		Release:       installed.Release,
+		ContractID:    record.ID,
+		Contract:      installed.Result.Contract,
+		Attributes:    installed.Result.Attributes,
+		HasAttributes: installed.HasAttributes,
+		Assets:        installed.Assets,
 	}, nil
 }
 

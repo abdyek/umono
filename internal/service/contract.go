@@ -34,6 +34,12 @@ func (s *ContractService) Record(ref models.Contract) (models.Contract, bool) {
 	return c, c.ID != 0
 }
 
+// ByID returns the stored record id. ok is false when there is none.
+func (s *ContractService) ByID(id uint) (models.Contract, bool) {
+	c := s.repo.GetByID(id)
+	return c, c.ID != 0
+}
+
 // Selectable reports whether a theme with the contract can be activated in
 // its group: the contract covers the group's base, or the group has none.
 func (s *ContractService) Selectable(theme models.Contract) bool {

@@ -17,6 +17,8 @@ type Loaded struct {
 	ContractID uint
 	Contract   themecore.Contract
 	Attributes themecore.AttributeTable
+	// HasAttributes tells whether the package has an attributes.toml.
+	HasAttributes bool
 	// Assets are the files under assets/ of the package, keyed by their path
 	// relative to assets/.
 	Assets map[string][]byte
