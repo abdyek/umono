@@ -85,6 +85,15 @@ func TestCheckInstalled(t *testing.T) {
 	if !reflect.DeepEqual(got.Result.Attributes.Root("post"), wantAttrs) {
 		t.Fatalf("Attributes.Root(post) = %v, want %v", got.Result.Attributes.Root("post"), wantAttrs)
 	}
+	if n := len(got.Assets); n != 1 {
+		t.Fatalf("len(Assets) = %d, want 1", n)
+	}
+	if !bytes.Equal(got.Assets["theme.css"], themecore.FallbackCSS()) {
+		t.Fatalf("Assets[theme.css] = %q, want %q", got.Assets["theme.css"], themecore.FallbackCSS())
+	}
+	if _, ok := got.Assets["built.toml"]; ok {
+		t.Fatalf("Assets[built.toml] exists, want missing")
+	}
 }
 
 func TestCheckInstalledRejectsChangedFile(t *testing.T) {
