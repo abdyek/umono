@@ -4,12 +4,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/template/html/v2"
+	"github.com/umono-cms/themecore"
 	"github.com/umono-cms/umono"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
@@ -19,7 +21,40 @@ import (
 	"gorm.io/gorm"
 )
 
-func newSitePageTestApp(t *testing.T) (*fiber.App, *service.SitePageService) {
+type fakePageThemes struct{ render service.PageRender }
+
+func (f fakePageThemes) PageRender(page models.SitePage) (service.PageRender, error) {
+	return f.render, nil
+}
+
+func fixtureRender(t *testing.T) service.PageRender {
+	t.Helper()
+	contract, err := os.ReadFile("../theme/testdata/package/contract.toml")
+	if err != nil {
+		t.Fatalf("os.ReadFile() contract error = %v", err)
+	}
+	attributes, err := os.ReadFile("../theme/testdata/package/attributes.toml")
+	if err != nil {
+		t.Fatalf("os.ReadFile() attributes error = %v", err)
+	}
+	c, err := themecore.ParseContract(contract)
+	if err != nil {
+		t.Fatalf("themecore.ParseContract() error = %v", err)
+	}
+	table, err := themecore.CompileAttributes(attributes, c)
+	if err != nil {
+		t.Fatalf("themecore.CompileAttributes() error = %v", err)
+	}
+	return service.PageRender{
+		LayoutID:   "post",
+		Layout:     c.Layouts[0].Source,
+		Components: c.Components,
+		Release:    "abc123abc123",
+		Attributes: &table,
+	}
+}
+
+func newSitePageTestApp(t *testing.T, themes service.PageThemes) (*fiber.App, *service.SitePageService) {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -37,6 +72,9 @@ func newSitePageTestApp(t *testing.T) (*fiber.App, *service.SitePageService) {
 
 	optionRepo := repository.NewOptionRepository(db)
 	sps := service.NewSitePageService(repository.NewSitePageRepository(db), optionRepo, cc)
+	if themes != nil {
+		sps.SetPageThemes(themes)
+	}
 	h := NewSiteHandler(sps, service.NewOptionService(optionRepo, nil), "fallback-abc123abc123")
 
 	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
@@ -49,7 +87,7 @@ func newSitePageTestApp(t *testing.T) (*fiber.App, *service.SitePageService) {
 }
 
 func TestSitePageLinksThemeStylesheet(t *testing.T) {
-	app, sps := newSitePageTestApp(t)
+	app, sps := newSitePageTestApp(t, nil)
 
 	if _, err := sps.Create(models.SitePage{Name: "About", Slug: "about", Enabled: true, Content: "Hello"}); err != nil {
 		t.Fatalf("sps.Create() error = %v", err)
@@ -121,7 +159,7 @@ func nonceOf(t *testing.T, body string) string {
 }
 
 func TestSitePageSendsContentSecurityPolicy(t *testing.T) {
-	app, sps := newSitePageTestApp(t)
+	app, sps := newSitePageTestApp(t, nil)
 
 	if _, err := sps.Create(models.SitePage{
 		Name:    "Gallery",
@@ -195,7 +233,7 @@ func TestSitePageSendsContentSecurityPolicy(t *testing.T) {
 }
 
 func TestSitePageETag(t *testing.T) {
-	app, sps := newSitePageTestApp(t)
+	app, sps := newSitePageTestApp(t, nil)
 
 	const quote = "\""
 
@@ -289,5 +327,75 @@ func TestSitePageETag(t *testing.T) {
 	resp8, _ := get(t, app, "/missing", "*")
 	if got, want := resp8.StatusCode, http.StatusNotFound; got != want {
 		t.Fatalf("resp8.StatusCode = %d, want %d", got, want)
+	}
+}
+
+func TestSitePageRendersWithTheTheme(t *testing.T) {
+	app, sps := newSitePageTestApp(t, fakePageThemes{render: fixtureRender(t)})
+
+	if _, errs := sps.Create(models.SitePage{
+		Name:    "Post",
+		Slug:    "post",
+		Enabled: true,
+		Content: "{{ UMONO_LAYOUT title = \"Hello\" body = TEXT }}\n\n~ TEXT\nHi\n",
+	}); errs != nil {
+		t.Fatalf("sps.Create() errs = %v", errs)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/post", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if got, want := resp.StatusCode, http.StatusOK; got != want {
+		t.Fatalf("resp.StatusCode = %d, want %d", got, want)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll() error = %v", err)
+	}
+	bodyStr := string(body)
+
+	for _, want := range []string{
+		`<umono-root class="layout-post">`,
+		`href="/_theme/abc123abc123/theme.css"`,
+		"Hello",
+	} {
+		if !strings.Contains(bodyStr, want) {
+			t.Fatalf("body = %q, want to contain %q", bodyStr, want)
+		}
+	}
+}
+
+func TestSitePageRendersWithTheFallback(t *testing.T) {
+	app, sps := newSitePageTestApp(t, fakePageThemes{})
+
+	if _, errs := sps.Create(models.SitePage{Name: "A", Slug: "a", Enabled: true, Content: "# Plain"}); errs != nil {
+		t.Fatalf("sps.Create() errs = %v", errs)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/a", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if got, want := resp.StatusCode, http.StatusOK; got != want {
+		t.Fatalf("resp.StatusCode = %d, want %d", got, want)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll() error = %v", err)
+	}
+	bodyStr := string(body)
+
+	for _, want := range []string{
+		"<umono-root>",
+		`href="/_theme/fallback-abc123abc123/theme.css"`,
+	} {
+		if !strings.Contains(bodyStr, want) {
+			t.Fatalf("body = %q, want to contain %q", bodyStr, want)
+		}
 	}
 }

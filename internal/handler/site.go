@@ -48,20 +48,21 @@ func (h *siteHandler) RenderSitemap(c *fiber.Ctx) error {
 	return c.Send(body)
 }
 
-// RenderSitePage renders a page, or the 404 page, for a visitor. A page's
-// weak ETag is computed from the shell without the nonce, so it stays the
-// same while the nonce changes with each request. A matching If-None-Match
-// gets a 304 without a Content-Security-Policy, so the browser keeps the CSP
-// whose nonce matches its copy.
+// RenderSitePage renders a page, or the 404 page, for a visitor, with its
+// group's active theme or the fallback. A page's weak ETag is computed from
+// the shell without the nonce, so it stays the same while the nonce changes
+// with each request. A matching If-None-Match gets a 304 without a
+// Content-Security-Policy, so the browser keeps the CSP whose nonce matches
+// its copy.
 func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	found := true
-	sitePage, imageURLs, err := h.sitePageService.GetRenderedBySlug(ctx, c.Params("slug"))
+	page, err := h.sitePageService.GetRenderedBySlug(ctx, c.Params("slug"))
 	if err != nil {
 		if errors.Is(err, service.ErrSitePageNotFound) {
 			defaultTitle, defaultContent := localizedNotFoundDefaults(c)
-			sitePage, imageURLs, err = h.sitePageService.GetNotFoundPage(ctx, defaultTitle, defaultContent)
+			page, err = h.sitePageService.GetNotFoundPage(ctx, defaultTitle, defaultContent)
 			if err != nil {
 				// TODO: handle other errors
 				return c.SendStatus(fiber.StatusInternalServerError)
@@ -74,10 +75,16 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 		}
 	}
 
+	release := page.Release
+	if release == "" {
+		release = h.themeRelease
+	}
+
 	data := fiber.Map{
-		"Title":        sitePage.Name,
-		"Content":      template.HTML(sitePage.Content),
-		"ThemeRelease": h.themeRelease,
+		"Title":        page.Name,
+		"Content":      template.HTML(page.Content),
+		"ThemeRelease": release,
+		"RootClass":    page.RootClass,
 		"Nonce":        "",
 	}
 	c.Set("Cache-Control", "no-cache")
@@ -99,7 +106,7 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-	c.Set("Content-Security-Policy", csp.Header(nonce, csp.ImageOrigins(imageURLs, c.BaseURL())))
+	c.Set("Content-Security-Policy", csp.Header(nonce, csp.ImageOrigins(page.ImageURLs, c.BaseURL())))
 
 	data["Nonce"] = nonce
 	body, err := renderBytes(c, "layouts/page", data)

@@ -26,11 +26,31 @@ var ErrSitePageNotFound = errors.New("site page not found")
 // ordinary page.
 var ErrSystemPage = errors.New("system page")
 
+// PageThemes resolves how a page renders with the themes. ThemeService is
+// one.
+type PageThemes interface {
+	PageRender(page models.SitePage) (PageRender, error)
+}
+
+// RenderedPage is a page rendered for a visitor. Content holds the Compono
+// output.
+type RenderedPage struct {
+	models.SitePage
+	// ImageURLs are the image URLs Compono wrote to the output.
+	ImageURLs []string
+	// Release is the active theme's release, "" when the page renders with
+	// the fallback.
+	Release string
+	// RootClass is the class of <umono-root>, "" for none.
+	RootClass string
+}
+
 type SitePageService struct {
 	repo            *repository.SitePageRepository
 	optRepo         *repository.OptionRepository
 	contentCompiler *ContentCompiler
 	diagnosticRepo  *repository.PageDiagnosticRepository
+	pageThemes      PageThemes
 	// diagnosticMu serializes the recomputations of the stored diagnostics so
 	// that the last one writes what the latest inputs render.
 	diagnosticMu sync.Mutex
@@ -44,32 +64,34 @@ func NewSitePageService(r *repository.SitePageRepository, or *repository.OptionR
 	}
 }
 
-// GetRenderedBySlug renders the enabled page with the slug for a visitor and returns it with the image URLs of its output.
-func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (models.SitePage, []string, error) {
+// GetRenderedBySlug renders the enabled page with the slug for a visitor.
+func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (RenderedPage, error) {
 	// TODO: Put here cache
 	sitePage, err := s.GetBySlug(slug)
 	if err != nil {
-		return models.SitePage{}, nil, err
+		return RenderedPage{}, err
 	}
 
 	if !sitePage.Enabled {
-		return models.SitePage{}, nil, ErrSitePageNotFound
+		return RenderedPage{}, ErrSitePageNotFound
 	}
 
-	output, imageURLs, err := s.contentCompiler.CompilePublic(ctx, sitePage.Content)
+	r := s.pageRender(sitePage)
+	output, imageURLs, err := s.contentCompiler.CompilePublic(ctx, sitePage.Content, r.Options()...)
 	if err != nil {
-		return models.SitePage{}, nil, err
+		return RenderedPage{}, err
 	}
 
 	sitePage.Content = output
-	return sitePage, imageURLs, nil
+	return RenderedPage{SitePage: sitePage, ImageURLs: imageURLs, Release: r.Release, RootClass: r.RootClass()}, nil
 }
 
-// GetNotFoundPage renders the 404 page for a visitor and returns it with the image URLs of its output.
-func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (models.SitePage, []string, error) {
+// GetNotFoundPage renders the 404 page for a visitor.
+func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (RenderedPage, error) {
 	title := defaultTitle
 	content := defaultContent
-	if page := s.repo.GetBySystemKey(models.NotFoundSystemKey); page.ID != 0 {
+	page := s.repo.GetBySystemKey(models.NotFoundSystemKey)
+	if page.ID != 0 {
 		if page.Name != "" {
 			title = page.Name
 		}
@@ -78,15 +100,18 @@ func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, def
 		}
 	}
 
-	rendered, imageURLs, err := s.contentCompiler.CompilePublic(ctx, content)
+	r := s.pageRender(page)
+	rendered, imageURLs, err := s.contentCompiler.CompilePublic(ctx, content, r.Options()...)
 	if err != nil {
-		return models.SitePage{}, nil, err
+		return RenderedPage{}, err
 	}
 
-	return models.SitePage{
-		Name:    title,
-		Content: rendered,
-	}, imageURLs, nil
+	return RenderedPage{
+		SitePage:  models.SitePage{Name: title, Content: rendered},
+		ImageURLs: imageURLs,
+		Release:   r.Release,
+		RootClass: r.RootClass(),
+	}, nil
 }
 
 // GetNotFoundPageSource returns the stored 404 system page, unrendered.
@@ -242,6 +267,12 @@ func (s *SitePageService) SetPageDiagnosticRepository(r *repository.PageDiagnost
 	s.diagnosticRepo = r
 }
 
+// SetPageThemes sets how the pages render with the themes. Without it every
+// page renders without a layout and with the fallback.
+func (s *SitePageService) SetPageThemes(t PageThemes) {
+	s.pageThemes = t
+}
+
 // RecomputeDiagnostics renders the page with the id and replaces its stored diagnostics.
 func (s *SitePageService) RecomputeDiagnostics(ctx context.Context, id uint) error {
 	if s.diagnosticRepo == nil {
@@ -309,7 +340,7 @@ func (s *SitePageService) PublishedPageCountOfGlobal(name string) int {
 }
 
 func (s *SitePageService) recomputeDiagnostics(ctx context.Context, page models.SitePage) error {
-	_, diagnostics, err := s.contentCompiler.CompileWithProviderContext(ctx, page.Content)
+	_, diagnostics, err := s.contentCompiler.CompileWithProviderContext(ctx, page.Content, s.pageRender(page).Options()...)
 	if err != nil {
 		return err
 	}
@@ -322,6 +353,21 @@ func (s *SitePageService) recomputeDiagnostics(ctx context.Context, page models.
 		})
 	}
 	return s.diagnosticRepo.Replace(page.ID, items)
+}
+
+// pageRender returns how page renders. A binding that cannot be resolved is
+// logged and the page renders without a layout, so that one broken binding
+// does not stop the render of the others.
+func (s *SitePageService) pageRender(page models.SitePage) PageRender {
+	if s.pageThemes == nil {
+		return PageRender{}
+	}
+	r, err := s.pageThemes.PageRender(page)
+	if err != nil {
+		log.Printf("error: render of page %d: %v", page.ID, err)
+		return PageRender{}
+	}
+	return r
 }
 
 func (s *SitePageService) isSlugValid(slug string) bool {
