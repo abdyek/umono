@@ -160,7 +160,7 @@ func main() {
 	previewHandler := handler.NewPreviewHandler(sitePageService, componentService)
 	fallbackTheme := theme.NewFallback()
 	siteHandler := handler.NewSiteHandler(sitePageService, optionService, fallbackTheme.Release)
-	themeHandler := handler.NewThemeHandler(fallbackTheme)
+	themeHandler := handler.NewThemeHandler(fallbackTheme, themeService)
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)

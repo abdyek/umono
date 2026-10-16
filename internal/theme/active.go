@@ -17,6 +17,9 @@ type Loaded struct {
 	ContractID uint
 	Contract   themecore.Contract
 	Attributes themecore.AttributeTable
+	// Assets are the files under assets/ of the package, keyed by their path
+	// relative to assets/.
+	Assets map[string][]byte
 }
 
 // Broken is an active theme that failed the checks of loading. Its group
@@ -92,4 +95,16 @@ func (a *ActiveSet) ByPath(path string) (models.ContractGroup, Loaded, bool) {
 		}
 	}
 	return models.ContractGroup{}, Loaded{}, false
+}
+
+// ByRelease returns the loaded active theme whose release is release.
+func (a *ActiveSet) ByRelease(release string) (Loaded, bool) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	for _, t := range a.themes {
+		if t.Release == release {
+			return t, true
+		}
+	}
+	return Loaded{}, false
 }

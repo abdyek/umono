@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/umono-cms/themecore"
 )
@@ -22,6 +23,10 @@ type Installed struct {
 	Built   themecore.Built
 	// ContractSource is the contract.toml of the package, unchanged.
 	ContractSource []byte
+	// Assets are the files under assets/ of the checked package, keyed by
+	// their path relative to assets/. They are served from memory, so a file
+	// that changes on disk after the checks is never served.
+	Assets map[string][]byte
 	// Result holds the parsed contract and the compiled attributes.toml.
 	Result themecore.Result
 }
@@ -65,11 +70,18 @@ func CheckInstalled(themesDir, path string) (Installed, error) {
 		return Installed{}, err
 	}
 	sum := sha256.Sum256(p.Files["checksums.json"])
+	assets := map[string][]byte{}
+	for name, b := range p.Files {
+		if rest, ok := strings.CutPrefix(name, "assets/"); ok {
+			assets[rest] = b
+		}
+	}
 	return Installed{
 		Path:           path,
 		Release:        hex.EncodeToString(sum[:])[:12],
 		Built:          built,
 		ContractSource: p.Files["contract.toml"],
+		Assets:         assets,
 		Result:         result,
 	}, nil
 }

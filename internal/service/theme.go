@@ -155,6 +155,7 @@ func (s *ThemeService) Activate(ctx context.Context, path string) (ThemeCandidat
 		ContractID: c.Contract.ID,
 		Contract:   c.Result.Contract,
 		Attributes: c.Result.Attributes,
+		Assets:     c.Assets,
 	})
 	s.notifyRenderInputChange()
 	return c, nil
@@ -253,6 +254,7 @@ func (s *ThemeService) ApplyPending(ctx context.Context, path string) error {
 		ContractID: c.Contract.ID,
 		Contract:   c.Result.Contract,
 		Attributes: c.Result.Attributes,
+		Assets:     c.Assets,
 	})
 	if contractChanged {
 		s.notifyRenderInputChange()
@@ -353,6 +355,7 @@ func (s *ThemeService) checkActive(ref models.Contract, path string) (theme.Load
 		ContractID: record.ID,
 		Contract:   installed.Result.Contract,
 		Attributes: installed.Result.Attributes,
+		Assets:     installed.Assets,
 	}, nil
 }
 
@@ -387,4 +390,16 @@ func (s *ThemeService) DeleteContract(ref models.Contract) error {
 		return fmt.Errorf("%w: %d pages", ErrContractHasPages, n)
 	}
 	return s.contracts.Delete(record.ID)
+}
+
+// Asset returns the asset name, a path relative to assets/, of the loaded
+// active theme whose release is release. A broken or deactivated theme has
+// none.
+func (s *ThemeService) Asset(release, name string) ([]byte, bool) {
+	t, ok := s.active.ByRelease(release)
+	if !ok {
+		return nil, false
+	}
+	b, ok := t.Assets[name]
+	return b, ok
 }
