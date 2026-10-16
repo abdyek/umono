@@ -65,9 +65,10 @@ func (h *systemHandler) RenderErrors(c *fiber.Ctx) error {
 		layouts = []string{}
 	}
 
+	notFoundTitle, _ := localizedNotFoundDefaults(c)
 	return Render(c, partial, fiber.Map{
 		"SystemUl":    h.systemUl(c, path.Base(c.Path())),
-		"Diagnostics": view.PublishedDiagnostics(h.sitePageService.PublishedDiagnostics()),
+		"Diagnostics": view.PublishedDiagnostics(h.sitePageService.PublishedDiagnostics(), notFoundTitle),
 	}, layouts...)
 }
 
