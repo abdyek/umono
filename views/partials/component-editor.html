@@ -98,6 +98,11 @@
           hx-indicator="false"
           hx-on::after-swap="applyPreview()"
           >{{ .Content }}</textarea>
+        {{ if .ContentErr }}
+        <div class="flex items-center gap-1.5 ml-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2">
+          <p class="text-xs font-medium text-red-400">{{ .ContentErr }}</p>
+        </div>
+        {{ end }}
         <div id="editor-diagnostics" class="max-h-40 overflow-auto">{{ template "partials/editor-diagnostics" .Diagnostics }}</div>
         {{ if .PageErrorCount }}
         <a href="/admin/system/errors" class="block rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 hover:bg-amber-500/10 transition-colors">{{ t .I18n "admin.components.page_errors" }} {{ .PageErrorCount }}</a>

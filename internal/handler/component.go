@@ -48,6 +48,9 @@ func (h *ComponentHandler) Create(c *fiber.Ctx) error {
 
 	output, diagnostics := componentPreview(c.UserContext(), h.componentService, comp.Name, comp.Content)
 	editor := view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n"))
+	if service.ErrorsIs(errs, service.ErrGlobalCallsLayout) {
+		editor.ContentErr = translatedValidationError(c, service.ErrGlobalCallsLayout)
+	}
 	if comp.ID != 0 {
 		editor.PageErrorCount = h.sitePageService.PublishedPageCountOfGlobal(comp.Name)
 	}
@@ -86,6 +89,9 @@ func (h *ComponentHandler) Update(c *fiber.Ctx) error {
 
 	output, diagnostics := componentPreview(c.UserContext(), h.componentService, comp.Name, comp.Content)
 	editor := view.ComponentEditor(comp, output, diagnostics, nameErr, c.Locals("I18n"))
+	if service.ErrorsIs(errs, service.ErrGlobalCallsLayout) {
+		editor.ContentErr = translatedValidationError(c, service.ErrGlobalCallsLayout)
+	}
 	if comp.ID != 0 {
 		editor.PageErrorCount = h.sitePageService.PublishedPageCountOfGlobal(comp.Name)
 	}
