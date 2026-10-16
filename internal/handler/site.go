@@ -84,7 +84,6 @@ func (h *siteHandler) RenderSitePage(c *fiber.Ctx) error {
 		"Title":        page.Name,
 		"Content":      template.HTML(page.Content),
 		"ThemeRelease": release,
-		"RootClass":    page.RootClass,
 		"Nonce":        "",
 	}
 	c.Set("Cache-Control", "no-cache")

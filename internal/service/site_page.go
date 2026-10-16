@@ -32,8 +32,7 @@ type PageThemes interface {
 	PageRender(page models.SitePage) (PageRender, error)
 }
 
-// RenderedPage is a page rendered for a visitor. Content holds the Compono
-// output.
+// RenderedPage is a page rendered for a visitor. Content holds <umono-root> with the Compono output.
 type RenderedPage struct {
 	models.SitePage
 	// ImageURLs are the image URLs Compono wrote to the output.
@@ -41,8 +40,6 @@ type RenderedPage struct {
 	// Release is the active theme's release, "" when the page renders with
 	// the fallback.
 	Release string
-	// RootClass is the class of <umono-root>, "" for none.
-	RootClass string
 }
 
 type SitePageService struct {
@@ -77,13 +74,12 @@ func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (R
 	}
 
 	r := s.pageRender(sitePage)
-	output, imageURLs, err := s.contentCompiler.CompilePublic(ctx, sitePage.Content, r.Options()...)
+	root, imageURLs, _, err := s.contentCompiler.RenderRoot(ctx, sitePage.Content, r)
 	if err != nil {
 		return RenderedPage{}, err
 	}
-
-	sitePage.Content = output
-	return RenderedPage{SitePage: sitePage, ImageURLs: imageURLs, Release: r.Release, RootClass: r.RootClass()}, nil
+	sitePage.Content = root
+	return RenderedPage{SitePage: sitePage, ImageURLs: imageURLs, Release: r.Release}, nil
 }
 
 // GetNotFoundPage renders the 404 page for a visitor.
@@ -101,17 +97,12 @@ func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, def
 	}
 
 	r := s.pageRender(page)
-	rendered, imageURLs, err := s.contentCompiler.CompilePublic(ctx, content, r.Options()...)
+	root, imageURLs, _, err := s.contentCompiler.RenderRoot(ctx, content, r)
 	if err != nil {
 		return RenderedPage{}, err
 	}
 
-	return RenderedPage{
-		SitePage:  models.SitePage{Name: title, Content: rendered},
-		ImageURLs: imageURLs,
-		Release:   r.Release,
-		RootClass: r.RootClass(),
-	}, nil
+	return RenderedPage{SitePage: models.SitePage{Name: title, Content: root}, ImageURLs: imageURLs, Release: r.Release}, nil
 }
 
 // GetNotFoundPageSource returns the stored 404 system page, unrendered.

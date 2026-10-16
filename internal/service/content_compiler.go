@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"html"
 	"sort"
 	"strings"
 	"sync"
@@ -14,6 +15,9 @@ import (
 	"github.com/umono-cms/compono/rule"
 	"github.com/umono-cms/umono/internal/models"
 )
+
+// quote is the quotation mark of an attribute value.
+const quote = "\""
 
 var ErrContentCompilerNotConfigured = errors.New("content compiler is not configured")
 
@@ -64,23 +68,35 @@ func (c *ContentCompiler) contextValues(ctx context.Context, source string, glob
 	return c.buildCompileContext(ctx, c.contextKeys(source, globals))
 }
 
-// CompilePublic converts source for a visitor. It returns the output and the
-// image URLs Compono wrote to it, in output order. The diagnostics are not
-// returned, because a visitor's response never carries them.
-func (c *ContentCompiler) CompilePublic(ctx context.Context, source string, extra ...compono.ConvertOption) (string, []string, error) {
+// RenderRoot renders source for a visitor with its PageRender: the Compono
+// output in <umono-root>, with the class of the layout address when the page
+// has one. It returns the image URLs Compono wrote to the output, in output
+// order, and the diagnostics, which a visitor's response never carries. It is
+// the production render that the frozen DOM scenarios call.
+func (c *ContentCompiler) RenderRoot(ctx context.Context, source string, r PageRender) (string, []string, []compono.Diagnostic, error) {
 	globals := *c.globals.Load()
 	values, err := c.contextValues(ctx, source, globals)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	var urls []string
-	output, _, err := c.compile(source, values, globals, append([]compono.ConvertOption{compono.WithURLReporter(func(r compono.URLReport) {
-		urls = append(urls, r.URL)
-	})}, extra...)...)
+	options := append([]compono.ConvertOption{compono.WithURLReporter(func(u compono.URLReport) {
+		urls = append(urls, u.URL)
+	})}, r.Options()...)
+	output, diagnostics, err := c.compile(source, values, globals, options...)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
-	return output, urls, nil
+
+	var b strings.Builder
+	b.WriteString("<umono-root")
+	if class := r.RootClass(); class != "" {
+		b.WriteString(" class=" + quote + html.EscapeString(class) + quote)
+	}
+	b.WriteString(">")
+	b.WriteString(output)
+	b.WriteString("</umono-root>")
+	return b.String(), urls, diagnostics, nil
 }
 
 func (c *ContentCompiler) CompileWithContext(source string, values map[string]any) (string, []compono.Diagnostic, error) {
