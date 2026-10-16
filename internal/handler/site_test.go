@@ -27,6 +27,10 @@ func (f fakePageThemes) PageRender(page models.SitePage) (service.PageRender, er
 	return f.render, nil
 }
 
+func (f fakePageThemes) CheckBinding(page models.SitePage, previous *models.SitePage) error {
+	return nil
+}
+
 func fixtureRender(t *testing.T) service.PageRender {
 	t.Helper()
 	contract, err := os.ReadFile("../theme/testdata/package/contract.toml")
