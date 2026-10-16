@@ -114,7 +114,7 @@ func TestCheckBindingRootRule(t *testing.T) {
 	}{
 		{name: "empty", content: ""},
 		{name: "markdown prefix", content: "# Title\n\n" + fullPageCall},
-		{name: "two layouts", content: fullPageCall + "\n" + "{{ UMONO_LAYOUT site-name = \"S\" home-url = \"/\" menu-label = \"M\" menu = [] content = BODY footer = FOOT }}\n"},
+		{name: "two layouts", content: "{{ UMONO_LAYOUT site-name = \"S\" home-url = \"/\" menu-label = \"M\" menu = [] content = BODY footer = FOOT }}\n\n" + fullPageCall},
 		{name: "text prefix", content: "Hello {{ UMONO_LAYOUT site-name = \"S\" home-url = \"/\" menu-label = \"M\" menu = [] content = BODY footer = FOOT }}\n\n~ BODY\nHi\n\n~ FOOT\nBye\n"},
 		{name: "only markdown", content: "# Only markdown\n"},
 	}
