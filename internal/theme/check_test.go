@@ -105,7 +105,10 @@ func TestCheckInstalledRejectsChangedFile(t *testing.T) {
 }
 
 func TestCheckInstalledRejectsThemeAPI(t *testing.T) {
-	cases := []int{themecore.ThemeAPICurrent() + 1, themecore.ThemeAPIMin() - 1}
+	cases := []int{themecore.ThemeAPICurrent() + 1}
+	if themecore.ThemeAPIMin() > 1 {
+		cases = append(cases, themecore.ThemeAPIMin()-1)
+	}
 	for _, v := range cases {
 		v := v
 		t.Run(fmt.Sprintf("version=%d", v), func(t *testing.T) {
