@@ -76,10 +76,10 @@ func newThemeTestService(t *testing.T, reg *fakeRegistry) (*ThemeService, *gorm.
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Contract{}, &models.SitePage{}); err != nil {
+	if err := db.AutoMigrate(&models.Contract{}, &models.SitePage{}, &models.Option{}); err != nil {
 		t.Fatalf("automigrate: %v", err)
 	}
-	return NewThemeService(writeTestTheme(t), NewContractService(repository.NewContractRepository(db)), reg), db
+	return NewThemeService(writeTestTheme(t), NewContractService(repository.NewContractRepository(db)), repository.NewThemeRepository(db), reg), db
 }
 
 func TestThemeServiceCheckAsksTheRegistryForANewContract(t *testing.T) {
