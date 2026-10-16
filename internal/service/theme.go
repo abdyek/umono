@@ -48,7 +48,8 @@ type ThemeService struct {
 	active    *theme.ActiveSet
 	// activateMu serializes activations, so two of them do not add the same
 	// contract record or overwrite each other's active_themes.
-	activateMu sync.Mutex
+	activateMu         sync.Mutex
+	renderInputChanged func(ctx context.Context)
 }
 
 func NewThemeService(themesDir string, contracts *ContractService, themes *repository.ThemeRepository, registry ContractRegistry) *ThemeService {
@@ -126,10 +127,39 @@ func (s *ThemeService) Activate(ctx context.Context, path string) (ThemeCandidat
 		Contract:   c.Result.Contract,
 		Attributes: c.Result.Attributes,
 	})
+	s.notifyRenderInputChange()
 	return c, nil
 }
 
 // Loaded returns the active theme of the group g loaded into memory.
 func (s *ThemeService) Loaded(g models.ContractGroup) (theme.Loaded, bool) {
 	return s.active.Get(g)
+}
+
+// Deactivate returns the group g to fallback render: its element is removed
+// from active_themes and its theme from memory. The theme directory, the
+// contract record and the bindings of the pages stay. It has no
+// precondition.
+func (s *ThemeService) Deactivate(g models.ContractGroup) error {
+	s.activateMu.Lock()
+	defer s.activateMu.Unlock()
+
+	if err := s.themes.Deactivate(g); err != nil {
+		return err
+	}
+	s.active.Delete(g)
+	s.notifyRenderInputChange()
+	return nil
+}
+
+// OnRenderInputChange sets fn to be called after an activation or a
+// deactivation, which changes how the pages of a group render.
+func (s *ThemeService) OnRenderInputChange(fn func(ctx context.Context)) {
+	s.renderInputChanged = fn
+}
+
+func (s *ThemeService) notifyRenderInputChange() {
+	if s.renderInputChanged != nil {
+		s.renderInputChanged(context.Background())
+	}
 }

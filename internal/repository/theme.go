@@ -70,3 +70,40 @@ func (r *ThemeRepository) Activate(c *models.Contract, t models.ThemeOption) err
 		return tx.Model(&models.Option{}).Where("id = ?", rows[0].ID).Update("value", string(value)).Error
 	})
 }
+
+// Deactivate removes the element of the group g from the active_themes
+// option. Nothing else is written. Without such an element it changes
+// nothing.
+func (r *ThemeRepository) Deactivate(g models.ContractGroup) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var rows []models.Option
+		if err := tx.Where("key = ?", activeThemesKey).Limit(1).Find(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		var themes []models.ThemeOption
+		if err := json.Unmarshal([]byte(rows[0].Value), &themes); err != nil {
+			return err
+		}
+		kept := []models.ThemeOption{}
+		for _, active := range themes {
+			ref, err := models.ParseContractRef(active.ContractID)
+			if err != nil {
+				return err
+			}
+			if ref.Group() != g {
+				kept = append(kept, active)
+			}
+		}
+		if len(kept) == len(themes) {
+			return nil
+		}
+		value, err := json.Marshal(kept)
+		if err != nil {
+			return err
+		}
+		return tx.Model(&models.Option{}).Where("id = ?", rows[0].ID).Update("value", string(value)).Error
+	})
+}

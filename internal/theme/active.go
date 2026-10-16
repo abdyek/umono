@@ -44,3 +44,10 @@ func (a *ActiveSet) Get(g models.ContractGroup) (Loaded, bool) {
 	t, ok := a.themes[g]
 	return t, ok
 }
+
+// Delete removes the active theme of the group g.
+func (a *ActiveSet) Delete(g models.ContractGroup) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	delete(a.themes, g)
+}
