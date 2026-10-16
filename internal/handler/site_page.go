@@ -108,6 +108,16 @@ func (h *SitePageHandler) Delete(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+// SaveNotFoundPage saves the 404 page from its settings screen.
+func (h *SitePageHandler) SaveNotFoundPage(c *fiber.Ctx) error {
+	if err := h.sitePageService.SaveNotFoundPage(c.FormValue("title"), c.FormValue("content")); err != nil {
+		return err
+	}
+
+	c.Set("HX-Trigger", "notFoundPageOptionSaved")
+	return c.SendStatus(fiber.StatusOK)
+}
+
 func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {
 	slug := c.Query("slug")
 	id := c.Query("id")

@@ -38,7 +38,7 @@ func (r *PageDiagnosticRepository) DeleteByPage(pageID uint) error {
 func (r *PageDiagnosticRepository) GetPublished() []models.PublishedDiagnostic {
 	var items []models.PublishedDiagnostic
 	r.db.Table("page_diagnostics").
-		Select("page_diagnostics.page_id, pages.name AS page_name, page_diagnostics.code, page_diagnostics.message, page_diagnostics.source").
+		Select("page_diagnostics.page_id, pages.name AS page_name, pages.system_key, page_diagnostics.code, page_diagnostics.message, page_diagnostics.source").
 		Joins("JOIN pages ON pages.id = page_diagnostics.page_id").
 		Where("pages.enabled = ?", true).
 		Order("pages.name ASC, pages.id ASC, page_diagnostics.id ASC").

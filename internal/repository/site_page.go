@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/umono-cms/umono/internal/models"
 	"gorm.io/gorm"
 )
@@ -17,7 +19,7 @@ func NewSitePageRepository(db *gorm.DB) *SitePageRepository {
 
 func (r *SitePageRepository) GetBySlug(slug string) models.SitePage {
 	var sp models.SitePage
-	r.db.Model(&models.SitePage{}).Where("slug = ?", slug).First(&sp)
+	r.db.Model(&models.SitePage{}).Where("system_key IS NULL").Where("slug = ?", slug).First(&sp)
 	return sp
 }
 
@@ -25,6 +27,22 @@ func (r *SitePageRepository) GetByID(ID uint) models.SitePage {
 	var sp models.SitePage
 	r.db.Model(&models.SitePage{}).First(&sp, ID)
 	return sp
+}
+
+func (r *SitePageRepository) GetBySystemKey(key string) models.SitePage {
+	var sp models.SitePage
+	r.db.Model(&models.SitePage{}).Where("system_key = ?", key).First(&sp)
+	return sp
+}
+
+// UpdateNameAndContent writes the name and the content of the page, empty
+// ones included, and its LastModifiedAt.
+func (r *SitePageRepository) UpdateNameAndContent(id uint, name, content string, modifiedAt time.Time) error {
+	return r.db.Model(&models.SitePage{}).Where("id = ?", id).Updates(map[string]any{
+		"name":             name,
+		"content":          content,
+		"last_modified_at": modifiedAt,
+	}).Error
 }
 
 func (r *SitePageRepository) GetAll() []models.SitePage {
@@ -35,13 +53,13 @@ func (r *SitePageRepository) GetAll() []models.SitePage {
 
 func (r *SitePageRepository) GetPage(offset, limit int) []models.SitePage {
 	var items []models.SitePage
-	r.db.Model(&models.SitePage{}).Order("enabled DESC, last_modified_at DESC, id DESC").Offset(offset).Limit(limit).Find(&items)
+	r.db.Model(&models.SitePage{}).Where("system_key IS NULL").Order("enabled DESC, last_modified_at DESC, id DESC").Offset(offset).Limit(limit).Find(&items)
 	return items
 }
 
 func (r *SitePageRepository) GetEnabled() []models.SitePage {
 	var items []models.SitePage
-	r.db.Model(&models.SitePage{}).Where("enabled = ?", true).Order("slug ASC").Find(&items)
+	r.db.Model(&models.SitePage{}).Where("system_key IS NULL").Where("enabled = ?", true).Order("slug ASC").Find(&items)
 	return items
 }
 

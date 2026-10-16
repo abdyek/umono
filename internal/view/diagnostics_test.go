@@ -197,12 +197,28 @@ func TestPublishedDiagnostics(t *testing.T) {
 		{PageName: "About", PageURL: "/admin/site-pages/7", Source: "", Code: "unknown-component", Message: template.HTML("The component <strong>FOO</strong> is not defined.")},
 		{PageName: "Home", PageURL: "/admin/site-pages/12", Source: "LAYOUT > CARD", Code: "unknown-key", Message: template.HTML("a &lt; b")},
 	}
-	got := PublishedDiagnostics(rows)
+	got := PublishedDiagnostics(rows, "Page Not Found")
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}
 
-	if got := PublishedDiagnostics(nil); got == nil || len(got) != 0 {
+	if got := PublishedDiagnostics(nil, "Page Not Found"); got == nil || len(got) != 0 {
 		t.Fatalf("PublishedDiagnostics(nil) = %#v, want non-nil empty slice", got)
+	}
+}
+
+func TestPublishedDiagnosticsOfNotFoundPage(t *testing.T) {
+	key := models.NotFoundSystemKey
+	rows := []models.PublishedDiagnostic{
+		{PageID: 3, PageName: "", SystemKey: &key, Code: "unknown-component", Message: "m", Source: ""},
+		{PageID: 3, PageName: "Lost", SystemKey: &key, Code: "unknown-component", Message: "m", Source: ""},
+	}
+	want := []PublishedDiagnosticItem{
+		{PageName: "Page Not Found", PageURL: "/admin/settings/404-page", Source: "", Code: "unknown-component", Message: template.HTML("m")},
+		{PageName: "Lost", PageURL: "/admin/settings/404-page", Source: "", Code: "unknown-component", Message: template.HTML("m")},
+	}
+	got := PublishedDiagnostics(rows, "Page Not Found")
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %#v, want %#v", got, want)
 	}
 }

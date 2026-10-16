@@ -22,6 +22,10 @@ var (
 
 var ErrSitePageNotFound = errors.New("site page not found")
 
+// ErrSystemPage is returned when a system page is deleted or saved as an
+// ordinary page.
+var ErrSystemPage = errors.New("system page")
+
 type SitePageService struct {
 	repo            *repository.SitePageRepository
 	optRepo         *repository.OptionRepository
@@ -65,14 +69,12 @@ func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (m
 func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (models.SitePage, []string, error) {
 	title := defaultTitle
 	content := defaultContent
-
-	notFoundPageOpt, err := repository.GetOption[models.NotFoundPageOption](*s.optRepo, "not_found_page_option")
-	if err == nil {
-		if notFoundPageOpt.Title != "" {
-			title = notFoundPageOpt.Title
+	if page := s.repo.GetBySystemKey(models.NotFoundSystemKey); page.ID != 0 {
+		if page.Name != "" {
+			title = page.Name
 		}
-		if notFoundPageOpt.Content != "" {
-			content = notFoundPageOpt.Content
+		if page.Content != "" {
+			content = page.Content
 		}
 	}
 
@@ -87,6 +89,32 @@ func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, def
 	}, imageURLs, nil
 }
 
+// GetNotFoundPageSource returns the stored 404 system page, unrendered.
+func (s *SitePageService) GetNotFoundPageSource() (models.SitePage, error) {
+	page := s.repo.GetBySystemKey(models.NotFoundSystemKey)
+	if page.ID == 0 {
+		return models.SitePage{}, ErrSitePageNotFound
+	}
+	return page, nil
+}
+
+// SaveNotFoundPage saves the name and the content of the 404 system page and
+// recomputes its diagnostics. Empty values make a visitor see the localized
+// defaults.
+func (s *SitePageService) SaveNotFoundPage(name, content string) error {
+	page, err := s.GetNotFoundPageSource()
+	if err != nil {
+		return err
+	}
+	if err := s.repo.UpdateNameAndContent(page.ID, name, content, time.Now()); err != nil {
+		return err
+	}
+	if err := s.RecomputeDiagnostics(context.Background(), page.ID); err != nil {
+		log.Printf("recompute diagnostics of page %d: %v", page.ID, err)
+	}
+	return nil
+}
+
 func (s *SitePageService) GetBySlug(slug string) (models.SitePage, error) {
 	sp := s.repo.GetBySlug(slug)
 	if sp.ID == 0 {
@@ -97,7 +125,7 @@ func (s *SitePageService) GetBySlug(slug string) (models.SitePage, error) {
 
 func (s *SitePageService) GetByID(ID uint) (models.SitePage, error) {
 	sp := s.repo.GetByID(ID)
-	if sp.ID == 0 {
+	if sp.ID == 0 || sp.SystemKey != nil {
 		return models.SitePage{}, ErrSitePageNotFound
 	}
 	return sp, nil
@@ -155,6 +183,9 @@ func (s *SitePageService) Create(sp models.SitePage) (models.SitePage, []error) 
 }
 
 func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) {
+	if s.repo.GetByID(sp.ID).SystemKey != nil {
+		return models.SitePage{}, []error{ErrSystemPage}
+	}
 	errs := []error{}
 
 	if !s.isSlugValid(sp.Slug) {
@@ -184,6 +215,9 @@ func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) 
 }
 
 func (s *SitePageService) Delete(id uint) error {
+	if s.repo.GetByID(id).SystemKey != nil {
+		return ErrSystemPage
+	}
 	if err := s.repo.Delete(id); err != nil {
 		return err
 	}

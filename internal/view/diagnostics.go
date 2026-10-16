@@ -97,17 +97,26 @@ type PublishedDiagnosticItem struct {
 	Message  template.HTML
 }
 
-// PublishedDiagnostics returns the items of the list of published errors.
-func PublishedDiagnostics(rows []models.PublishedDiagnostic) []PublishedDiagnosticItem {
+// PublishedDiagnostics returns the items of the list of published errors. A
+// diagnostic of the 404 page links to its settings screen and shows
+// notFoundTitle when the page has no name.
+func PublishedDiagnostics(rows []models.PublishedDiagnostic, notFoundTitle string) []PublishedDiagnosticItem {
 	items := []PublishedDiagnosticItem{}
 	for _, row := range rows {
-		items = append(items, PublishedDiagnosticItem{
+		item := PublishedDiagnosticItem{
 			PageName: row.PageName,
 			PageURL:  "/admin/site-pages/" + strconv.FormatUint(uint64(row.PageID), 10),
 			Source:   row.Source,
 			Code:     row.Code,
 			Message:  diagnosticMessage(row.Message),
-		})
+		}
+		if row.SystemKey != nil && *row.SystemKey == models.NotFoundSystemKey {
+			item.PageURL = "/admin/settings/404-page"
+			if item.PageName == "" {
+				item.PageName = notFoundTitle
+			}
+		}
+		items = append(items, item)
 	}
 	return items
 }

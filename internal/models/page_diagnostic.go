@@ -19,4 +19,6 @@ type PublishedDiagnostic struct {
 	Code     string
 	Message  string
 	Source   string
+	// SystemKey is the SystemKey of the page.
+	SystemKey *string
 }
