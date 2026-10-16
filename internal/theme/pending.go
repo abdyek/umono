@@ -43,23 +43,22 @@ type checksumsFile struct {
 	Files map[string]string `json:"files"`
 }
 
-// ListPending returns the pending installs under pendingDir, sorted by path,
-// with what differs from the installed theme under themesDir. Directories
-// that are not org/id/version are skipped. Without pendingDir there are none.
-func ListPending(themesDir, pendingDir string) ([]PendingInstall, error) {
-	orgs, err := os.ReadDir(pendingDir)
+// listThemePaths returns the org/id/version directories under root, sorted.
+// Other entries are skipped. Without root there are none.
+func listThemePaths(root string) ([]string, error) {
+	orgs, err := os.ReadDir(root)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	var list []PendingInstall
+	var paths []string
 	for _, org := range orgs {
 		if !org.IsDir() {
 			continue
 		}
-		ids, err := os.ReadDir(filepath.Join(pendingDir, org.Name()))
+		ids, err := os.ReadDir(filepath.Join(root, org.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -67,20 +66,34 @@ func ListPending(themesDir, pendingDir string) ([]PendingInstall, error) {
 			if !id.IsDir() {
 				continue
 			}
-			versions, err := os.ReadDir(filepath.Join(pendingDir, org.Name(), id.Name()))
+			versions, err := os.ReadDir(filepath.Join(root, org.Name(), id.Name()))
 			if err != nil {
 				return nil, err
 			}
 			for _, version := range versions {
 				path := org.Name() + "/" + id.Name() + "/" + version.Name()
-				if !version.IsDir() || !themePathPattern.MatchString(path) {
-					continue
+				if version.IsDir() && themePathPattern.MatchString(path) {
+					paths = append(paths, path)
 				}
-				list = append(list, pendingInstall(themesDir, pendingDir, path))
 			}
 		}
 	}
-	sort.Slice(list, func(i, j int) bool { return list[i].Path < list[j].Path })
+	sort.Strings(paths)
+	return paths, nil
+}
+
+// ListPending returns the pending installs under pendingDir, sorted by path,
+// with what differs from the installed theme under themesDir. Directories
+// that are not org/id/version are skipped. Without pendingDir there are none.
+func ListPending(themesDir, pendingDir string) ([]PendingInstall, error) {
+	paths, err := listThemePaths(pendingDir)
+	if err != nil {
+		return nil, err
+	}
+	var list []PendingInstall
+	for _, path := range paths {
+		list = append(list, pendingInstall(themesDir, pendingDir, path))
+	}
 	return list, nil
 }
 
