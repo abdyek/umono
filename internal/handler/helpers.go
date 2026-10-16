@@ -74,6 +74,8 @@ func translatedValidationError(c *fiber.Ctx, err error) string {
 		return translate(c, "admin.components.errors.invalid_name")
 	case errors.Is(err, service.ErrComponentNameAlreadyExists):
 		return translate(c, "admin.components.errors.name_exists")
+	case errors.Is(err, service.ErrGlobalCallsLayout):
+		return translate(c, "admin.components.errors.calls_layout")
 	case errors.Is(err, service.ErrStorageNameRequired):
 		return translate(c, "settings.storage.errors.name_required")
 	case errors.Is(err, service.ErrStorageEndpointRequired):

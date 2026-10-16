@@ -17,6 +17,7 @@ type ComponentEditorData struct {
 	PageErrorCount int
 	LastModifiedAt string
 	NameErr        string
+	ContentErr     string
 	I18n           any
 }
 

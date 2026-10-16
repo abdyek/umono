@@ -16,6 +16,10 @@ var ErrComponentNotFound = errors.New("component not found")
 var (
 	ErrInvalidComponentName       = errors.New("Invalid name")
 	ErrComponentNameAlreadyExists = errors.New("Name already exists for another component")
+	// ErrGlobalCallsLayout is returned when a global's content calls
+	// UMONO_LAYOUT or gives it as a value. Globals are in the root scope
+	// and see UMONO_LAYOUT, so the call would render a second layout.
+	ErrGlobalCallsLayout = errors.New("a global component cannot call UMONO_LAYOUT")
 )
 
 type ComponentService struct {
@@ -130,6 +134,10 @@ func (s *ComponentService) Create(c models.Component) (models.Component, []error
 		errs = append(errs, ErrNameRequired)
 	}
 
+	if callsLayout(c.Content) {
+		errs = append(errs, ErrGlobalCallsLayout)
+	}
+
 	if len(errs) > 0 {
 		return models.Component{}, errs
 	}
@@ -160,6 +168,10 @@ func (s *ComponentService) Update(c models.Component) (models.Component, []error
 
 	if c.Name == "" {
 		errs = append(errs, ErrNameRequired)
+	}
+
+	if callsLayout(c.Content) {
+		errs = append(errs, ErrGlobalCallsLayout)
 	}
 
 	if len(errs) > 0 {
@@ -220,4 +232,19 @@ func (s *ComponentService) isNameUsed(name string, excluding uint) bool {
 		return false
 	}
 	return true
+}
+
+// callsLayout reports whether source calls UMONO_LAYOUT or gives it as a
+// value. A parameter's default is no call.
+func callsLayout(source string) bool {
+	analysis, err := compono.Analyze([]byte(source))
+	if err != nil {
+		return false
+	}
+	for _, ref := range analysis.Refs {
+		if ref.Name == layoutGlobal && ref.Kind != "default" {
+			return true
+		}
+	}
+	return false
 }
