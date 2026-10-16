@@ -1,0 +1,38 @@
+The page's local CARD is not the contract's CARD: a local frame is never a
+scope, so its link is post LINK.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+~ content = NO_MATTER
+{{ CARD }}
+
+{{ content }}
+'''
+
+[[components]]
+name = "CARD"
+expose = true
+source = '''
+{{ LINK text = "Contract card" url = "/contract" }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post LINK"]
+class = "post--LINK"
+
+[address."post CARD LINK"]
+class = "post--CARD--LINK"
+-- page.comp --
+{{ UMONO_LAYOUT content = TEXT }}
+
+~ TEXT
+{{ CARD }}
+
+~ CARD
+{{ LINK text = "Page card" url = "/page" }}

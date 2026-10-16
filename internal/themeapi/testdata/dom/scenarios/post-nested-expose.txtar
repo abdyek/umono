@@ -1,0 +1,38 @@
+A built-in in a nested exposed component belongs to the innermost one:
+the link of INNER is post INNER LINK, not post OUTER LINK.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+{{ OUTER }}
+'''
+
+[[components]]
+name = "OUTER"
+expose = true
+source = '''
+{{ LINK text = "Outer" url = "/outer" }}
+
+{{ INNER }}
+'''
+
+[[components]]
+name = "INNER"
+expose = true
+source = '''
+{{ LINK text = "Inner" url = "/inner" }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post OUTER LINK"]
+class = "post--OUTER--LINK"
+
+[address."post INNER LINK"]
+class = "post--INNER--LINK"
+-- page.comp --
+{{ UMONO_LAYOUT }}
