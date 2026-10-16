@@ -18,6 +18,22 @@ func NewThemeRepository(db *gorm.DB) *ThemeRepository {
 	return &ThemeRepository{db: db}
 }
 
+// GetActiveThemes returns the active_themes option, empty when it is not set.
+func (r *ThemeRepository) GetActiveThemes() ([]models.ThemeOption, error) {
+	var rows []models.Option
+	if err := r.db.Where("key = ?", activeThemesKey).Limit(1).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	themes := []models.ThemeOption{}
+	if len(rows) == 0 {
+		return themes, nil
+	}
+	if err := json.Unmarshal([]byte(rows[0].Value), &themes); err != nil {
+		return nil, err
+	}
+	return themes, nil
+}
+
 // Activate adds the contract record c when it is new (ID 0) and puts t into
 // the active_themes option in place of the element of its group, or appends
 // it, in one transaction. On success c has its ID.
