@@ -88,3 +88,14 @@ func (s *ContractService) CountPages(id uint) int64 {
 func (s *ContractService) Delete(id uint) error {
 	return s.repo.Delete(id)
 }
+
+// All returns every stored record.
+func (s *ContractService) All() []models.Contract {
+	return s.repo.GetAll()
+}
+
+// CountGroupPages returns the number of pages bound to the records of the
+// group g, disabled ones included.
+func (s *ContractService) CountGroupPages(g models.ContractGroup) int64 {
+	return s.repo.CountGroupPages(g)
+}

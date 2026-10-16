@@ -79,3 +79,18 @@ func (r *ContractRepository) CountPages(id uint) int64 {
 func (r *ContractRepository) Delete(id uint) error {
 	return r.db.Delete(&models.Contract{}, id).Error
 }
+
+// GetAll returns every record, ordered by org, name, major and minor.
+func (r *ContractRepository) GetAll() []models.Contract {
+	var all []models.Contract
+	r.db.Order("org ASC, name ASC, major ASC, minor ASC").Find(&all)
+	return all
+}
+
+// CountGroupPages returns the number of pages bound to the records of the
+// group g, disabled ones included.
+func (r *ContractRepository) CountGroupPages(g models.ContractGroup) int64 {
+	var n int64
+	inGroup(r.db.Model(&models.SitePage{}).Joins("JOIN contracts c ON c.id = pages.contract_id"), "c", g).Count(&n)
+	return n
+}
