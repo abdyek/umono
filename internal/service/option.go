@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/umono-cms/umono/internal/i18n"
-	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 )
 
@@ -42,10 +41,6 @@ func NewOptionService(r *repository.OptionRepository, bundle *i18n.Bundle) *Opti
 		repo:   r,
 		bundle: bundle,
 	}
-}
-
-func (s *OptionService) SaveNotFoundPageOption(option models.NotFoundPageOption) error {
-	return s.repo.SaveNotFoundPageOption(option)
 }
 
 func (s *OptionService) GetLanguage() string {
@@ -168,18 +163,6 @@ func NormalizeSiteURL(value string) (string, error) {
 
 func (s *OptionService) SupportedLanguages() []i18n.LocaleOption {
 	return s.bundle.SupportedLocales()
-}
-
-func (s *OptionService) GetNotFoundPageOption() (string, string) {
-	var title, content string
-
-	notFoundPageOpt, err := repository.GetOption[models.NotFoundPageOption](*s.repo, "not_found_page_option")
-	if err == nil {
-		title = notFoundPageOpt.Title
-		content = notFoundPageOpt.Content
-	}
-
-	return title, content
 }
 
 func parseLocalStorageImageUploadLimitMB(value string) (int, error) {

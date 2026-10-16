@@ -69,14 +69,12 @@ func (s *SitePageService) GetRenderedBySlug(ctx context.Context, slug string) (m
 func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, defaultContent string) (models.SitePage, []string, error) {
 	title := defaultTitle
 	content := defaultContent
-
-	notFoundPageOpt, err := repository.GetOption[models.NotFoundPageOption](*s.optRepo, "not_found_page_option")
-	if err == nil {
-		if notFoundPageOpt.Title != "" {
-			title = notFoundPageOpt.Title
+	if page := s.repo.GetBySystemKey(models.NotFoundSystemKey); page.ID != 0 {
+		if page.Name != "" {
+			title = page.Name
 		}
-		if notFoundPageOpt.Content != "" {
-			content = notFoundPageOpt.Content
+		if page.Content != "" {
+			content = page.Content
 		}
 	}
 
@@ -89,6 +87,32 @@ func (s *SitePageService) GetNotFoundPage(ctx context.Context, defaultTitle, def
 		Name:    title,
 		Content: rendered,
 	}, imageURLs, nil
+}
+
+// GetNotFoundPageSource returns the stored 404 system page, unrendered.
+func (s *SitePageService) GetNotFoundPageSource() (models.SitePage, error) {
+	page := s.repo.GetBySystemKey(models.NotFoundSystemKey)
+	if page.ID == 0 {
+		return models.SitePage{}, ErrSitePageNotFound
+	}
+	return page, nil
+}
+
+// SaveNotFoundPage saves the name and the content of the 404 system page and
+// recomputes its diagnostics. Empty values make a visitor see the localized
+// defaults.
+func (s *SitePageService) SaveNotFoundPage(name, content string) error {
+	page, err := s.GetNotFoundPageSource()
+	if err != nil {
+		return err
+	}
+	if err := s.repo.UpdateNameAndContent(page.ID, name, content, time.Now()); err != nil {
+		return err
+	}
+	if err := s.RecomputeDiagnostics(context.Background(), page.ID); err != nil {
+		log.Printf("recompute diagnostics of page %d: %v", page.ID, err)
+	}
+	return nil
 }
 
 func (s *SitePageService) GetBySlug(slug string) (models.SitePage, error) {

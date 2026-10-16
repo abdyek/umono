@@ -42,7 +42,10 @@ func (h *settingsHandler) Render404Page(c *fiber.Ctx) error {
 		layouts = []string{}
 	}
 
-	title, content := h.optionService.GetNotFoundPageOption()
+	var title, content string
+	if page, err := h.sitePageService.GetNotFoundPageSource(); err == nil {
+		title, content = page.Name, page.Content
+	}
 	defaultTitle, defaultContent := localizedNotFoundDefaults(c)
 
 	previewContent := content

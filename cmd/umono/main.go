@@ -82,6 +82,10 @@ func main() {
 	if err := migration.GlobalParamLine(db); err != nil {
 		log.Fatal("global param line migration err", err)
 	}
+	notFoundPageID, err := migration.NotFoundPage(db)
+	if err != nil {
+		log.Fatal("not found page migration err", err)
+	}
 
 	// TODO: Refactor: move DI another file
 	optionRepo := repository.NewOptionRepository(db)
@@ -126,6 +130,11 @@ func main() {
 	mediaService.OnRenderInputChange(recomputeDiagnostics)
 	if err := sitePageService.FillDiagnosticsOnce(context.Background()); err != nil {
 		log.Printf("fill page diagnostics: %v", err)
+	}
+	if notFoundPageID != 0 {
+		if err := sitePageService.RecomputeDiagnostics(context.Background(), notFoundPageID); err != nil {
+			log.Printf("recompute diagnostics of the 404 page: %v", err)
+		}
 	}
 
 	jobService := service.NewJobService(jobRepo)
@@ -354,7 +363,7 @@ func main() {
 
 	adminProtected.Post("/options/not-found-page-option",
 		middleware.OnlyHTMX(),
-		optionHandler.SaveNotFoundPageOption,
+		sitePageHandler.SaveNotFoundPage,
 	)
 
 	adminProtected.Post("/options/local-storage-image-upload-limit",
