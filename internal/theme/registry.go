@@ -1,0 +1,73 @@
+package theme
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/umono-cms/umono/internal/models"
+)
+
+// RegistryURL is the base URL of umono.dev, the official registry.
+const RegistryURL = "https://umono.dev"
+
+// maxContractSize is themecore's size limit of contract.toml.
+const maxContractSize = 1 << 20
+
+var (
+	// ErrContractNotPublished is returned when the registry has no such contract.
+	ErrContractNotPublished = errors.New("contract is not published on the registry")
+	// ErrContractMismatch is returned when contract.toml differs from the
+	// published contract.
+	ErrContractMismatch = errors.New("contract.toml differs from the published contract")
+	// ErrRegistryUnreachable is returned when the registry cannot answer.
+	ErrRegistryUnreachable = errors.New("registry is unreachable")
+)
+
+// Registry verifies contracts against the registry. The request carries the
+// least information: a GET of the contract's URL with the User-Agent Umono and
+// no query, cookie, site address or Umono version.
+type Registry struct {
+	BaseURL string
+	Client  *http.Client
+}
+
+// NewRegistry returns the registry of umono.dev.
+func NewRegistry() Registry {
+	return Registry{BaseURL: RegistryURL, Client: &http.Client{Timeout: 15 * time.Second}}
+}
+
+// Verify fetches the published contract ref and compares it with src byte
+// for byte.
+func (r Registry) Verify(ctx context.Context, ref models.Contract, src []byte) error {
+	url := fmt.Sprintf("%s/registry/v1/contracts/%s/%s/v%d.%d", r.BaseURL, ref.Org, ref.Name, ref.Major, ref.Minor)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "Umono")
+	resp, err := r.Client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrRegistryUnreachable, err)
+	}
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusNotFound:
+		return fmt.Errorf("%w: %s", ErrContractNotPublished, ref.Ref())
+	default:
+		return fmt.Errorf("%w: status %d", ErrRegistryUnreachable, resp.StatusCode)
+	}
+	published, err := io.ReadAll(io.LimitReader(resp.Body, maxContractSize+1))
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrRegistryUnreachable, err)
+	}
+	if !bytes.Equal(published, src) {
+		return fmt.Errorf("%w: %s", ErrContractMismatch, ref.Ref())
+	}
+	return nil
+}
