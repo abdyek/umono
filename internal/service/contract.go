@@ -70,3 +70,15 @@ func (s *ContractService) Offered(g models.ContractGroup, active []models.ThemeO
 func (s *ContractService) UncoveredPages(theme models.Contract) []models.SitePage {
 	return s.repo.GetPagesAboveMinor(theme.Group(), theme.Minor)
 }
+
+// CountPages returns the number of pages bound to the record id, disabled
+// ones included.
+func (s *ContractService) CountPages(id uint) int64 {
+	return s.repo.CountPages(id)
+}
+
+// Delete deletes the record id. The caller checks the conditions of
+// deletion first.
+func (s *ContractService) Delete(id uint) error {
+	return s.repo.Delete(id)
+}
