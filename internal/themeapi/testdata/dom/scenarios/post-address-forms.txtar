@@ -1,0 +1,38 @@
+The three address forms: the layout address gives <umono-root> its class,
+a built-in in the layout gets "post LINK" and a built-in in an exposed
+contract component gets "post CARD LINK".
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+~ title = ""
+# {{ title }}
+
+{{ LINK text = "Layout" url = "/layout" }}
+
+{{ CARD }}
+'''
+
+[[components]]
+name = "CARD"
+expose = true
+source = '''
+{{ LINK text = "Card" url = "/card" }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post"]
+class = "post"
+
+[address."post LINK"]
+class = "post--LINK"
+
+[address."post CARD LINK"]
+class = "post--CARD--LINK"
+-- page.comp --
+{{ UMONO_LAYOUT title = "Address forms" }}

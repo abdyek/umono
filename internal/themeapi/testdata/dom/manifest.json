@@ -120,6 +120,8 @@
     "elements/markdown/table/example-01.golden": "c55b190a15213c0fd90ebe6d67119bff0dd7d434cdfdb04688af534ffd0cadba",
     "elements/markdown/table/example-02.golden": "c37e27634706de60a843e9b0b77640b7c0dd77188ab07fd631d2235e6bf5391b",
     "elements/markdown/table/example-03.golden": "4107bc565054b6080258a4084f5dcf60f78473a3fa219fa7a8d93bc8f1def075",
-    "elements/markdown/table/example-04.golden": "13f4a07399c30e7cdef206a3602ee9a4704ef0278cb12cfa9a72675eca507d8d"
+    "elements/markdown/table/example-04.golden": "13f4a07399c30e7cdef206a3602ee9a4704ef0278cb12cfa9a72675eca507d8d",
+    "scenarios/post-address-forms.golden": "00ca97ff6351660b87d394d440688e1816f17654c336eb30e1d635bee14eaec4",
+    "scenarios/post-without-attributes.golden": "a7cf073c53f9154e58613a0369bb2d8608902ee72eae552066207fbc3e1cff57"
   }
 }
