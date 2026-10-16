@@ -1,0 +1,201 @@
+package handler
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/template/html/v2"
+	"github.com/umono-cms/themecore"
+	"github.com/umono-cms/umono"
+	"github.com/umono-cms/umono/internal/models"
+	"github.com/umono-cms/umono/internal/repository"
+	"github.com/umono-cms/umono/internal/service"
+	"github.com/umono-cms/umono/internal/theme"
+	"github.com/umono-cms/umono/internal/view"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+)
+
+type fakeThemeRegistry struct{ err error }
+
+func (f *fakeThemeRegistry) Verify(ctx context.Context, ref models.Contract, src []byte) error {
+	return f.err
+}
+
+func writeHandlerTheme(t *testing.T) string {
+	t.Helper()
+	files := map[string][]byte{}
+	for _, name := range []string{"built.toml", "contract.toml", "attributes.toml", "LICENSE"} {
+		b, err := os.ReadFile(filepath.Join("..", "theme", "testdata", "package", name))
+		if err != nil {
+			t.Fatalf("read fixture %s: %v", name, err)
+		}
+		files[name] = b
+	}
+	files["assets/theme.css"] = themecore.FallbackCSS()
+	sum, err := themecore.Checksums(themecore.Package{Files: files})
+	if err != nil {
+		t.Fatalf("themecore.Checksums() error = %v", err)
+	}
+	files["checksums.json"] = sum
+	dir := t.TempDir()
+	for name, b := range files {
+		full := filepath.Join(dir, "acme", "minimal", "0.1.0", filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatalf("os.MkdirAll() error = %v", err)
+		}
+		if err := os.WriteFile(full, b, 0o644); err != nil {
+			t.Fatalf("os.WriteFile() error = %v", err)
+		}
+	}
+	return dir
+}
+
+func newThemesTestApp(t *testing.T, reg service.ContractRegistry) (*fiber.App, *service.ThemeService) {
+	t.Helper()
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("gorm.Open() error = %v", err)
+	}
+	if err := db.AutoMigrate(&models.Contract{}, &models.SitePage{}, &models.Option{}); err != nil {
+		t.Fatalf("db.AutoMigrate() error = %v", err)
+	}
+
+	ts := service.NewThemeService(
+		writeHandlerTheme(t),
+		t.TempDir(),
+		service.NewContractService(repository.NewContractRepository(db)),
+		repository.NewThemeRepository(db),
+		reg,
+	)
+	h := NewSettingsHandler(service.NewSettingsService(), nil, nil, nil, ts)
+
+	engine := html.NewFileSystem(http.FS(umono.Views()), ".html")
+	engine.AddFunc("t", view.Translate)
+
+	app := fiber.New(fiber.Config{Views: engine})
+	app.Get("/admin/settings/themes", h.RenderThemes)
+	app.Post("/admin/settings/themes/activate", h.ActivateTheme)
+	app.Post("/admin/settings/themes/deactivate", h.DeactivateTheme)
+
+	return app, ts
+}
+
+func htmxPost(t *testing.T, app *fiber.App, path string, form url.Values) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("HX-Target", "settings-content")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll() error = %v", err)
+	}
+	return resp.StatusCode, string(body)
+}
+
+func TestThemesPageListsTheGroups(t *testing.T) {
+	app, _ := newThemesTestApp(t, &fakeThemeRegistry{})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/settings/themes", nil)
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("HX-Target", "settings-content")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if got, want := resp.StatusCode, http.StatusOK; got != want {
+		t.Fatalf("resp.StatusCode = %d, want %d", got, want)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll() error = %v", err)
+	}
+	bodyStr := string(body)
+
+	for _, want := range []string{"example/blog v1", "acme/minimal", "0.1.0"} {
+		if !strings.Contains(bodyStr, want) {
+			t.Fatalf("body = %q, want to contain %q", bodyStr, want)
+		}
+	}
+}
+
+func TestThemesActivate(t *testing.T) {
+	app, ts := newThemesTestApp(t, &fakeThemeRegistry{})
+
+	status, body := htmxPost(t, app, "/admin/settings/themes/activate", url.Values{"path": {"acme/minimal/0.1.0"}})
+	if got, want := status, http.StatusOK; got != want {
+		t.Fatalf("status = %d, want %d", got, want)
+	}
+	if !strings.Contains(body, "settings.themes.activated") {
+		t.Fatalf("body = %q, want to contain %q", body, "settings.themes.activated")
+	}
+
+	blog := models.Contract{Org: "example", Name: "blog", Major: 1, Minor: 0}.Group()
+	if _, ok := ts.Loaded(blog); !ok {
+		t.Fatalf("ts.Loaded(blog) = false, want true")
+	}
+}
+
+func TestThemesActivateFailure(t *testing.T) {
+	app, ts := newThemesTestApp(t, &fakeThemeRegistry{err: theme.ErrContractNotPublished})
+
+	status, body := htmxPost(t, app, "/admin/settings/themes/activate", url.Values{"path": {"acme/minimal/0.1.0"}})
+	if got, want := status, http.StatusOK; got != want {
+		t.Fatalf("status = %d, want %d", got, want)
+	}
+	for _, want := range []string{"settings.themes.activate_failed", "not published"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body = %q, want to contain %q", body, want)
+		}
+	}
+
+	blog := models.Contract{Org: "example", Name: "blog", Major: 1, Minor: 0}.Group()
+	if _, ok := ts.Loaded(blog); ok {
+		t.Fatalf("ts.Loaded(blog) = true, want false")
+	}
+}
+
+func TestThemesDeactivate(t *testing.T) {
+	app, ts := newThemesTestApp(t, &fakeThemeRegistry{})
+
+	if _, err := ts.Activate(context.Background(), "acme/minimal/0.1.0"); err != nil {
+		t.Fatalf("ts.Activate() error = %v", err)
+	}
+
+	status, body := htmxPost(t, app, "/admin/settings/themes/deactivate", url.Values{"contract": {"example/blog@v1.0"}})
+	if got, want := status, http.StatusOK; got != want {
+		t.Fatalf("status = %d, want %d", got, want)
+	}
+	if !strings.Contains(body, "settings.themes.deactivated") {
+		t.Fatalf("body = %q, want to contain %q", body, "settings.themes.deactivated")
+	}
+
+	blog := models.Contract{Org: "example", Name: "blog", Major: 1, Minor: 0}.Group()
+	if _, ok := ts.Loaded(blog); ok {
+		t.Fatalf("ts.Loaded(blog) = true, want false")
+	}
+}
+
+func TestThemesDeactivateRejectsABadContract(t *testing.T) {
+	app, _ := newThemesTestApp(t, &fakeThemeRegistry{})
+
+	status, _ := htmxPost(t, app, "/admin/settings/themes/deactivate", url.Values{"contract": {"nope"}})
+	if got, want := status, http.StatusBadRequest; got != want {
+		t.Fatalf("status = %d, want %d", got, want)
+	}
+}
