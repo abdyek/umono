@@ -43,6 +43,11 @@ func contractSource(t *testing.T) []byte {
 
 func writeTestTheme(t *testing.T) string {
 	t.Helper()
+	return writeTestThemeWith(t, nil)
+}
+
+func writeTestThemeWith(t *testing.T, mutate func(files map[string][]byte)) string {
+	t.Helper()
 	files := map[string][]byte{}
 	for _, name := range []string{"built.toml", "contract.toml", "attributes.toml", "LICENSE"} {
 		b, err := os.ReadFile(filepath.Join("..", "theme", "testdata", "package", name))
@@ -52,6 +57,9 @@ func writeTestTheme(t *testing.T) string {
 		files[name] = b
 	}
 	files["assets/theme.css"] = themecore.FallbackCSS()
+	if mutate != nil {
+		mutate(files)
+	}
 	sum, err := themecore.Checksums(themecore.Package{Files: files})
 	if err != nil {
 		t.Fatalf("checksums: %v", err)
@@ -79,7 +87,7 @@ func newThemeTestService(t *testing.T, reg *fakeRegistry) (*ThemeService, *gorm.
 	if err := db.AutoMigrate(&models.Contract{}, &models.SitePage{}, &models.Option{}); err != nil {
 		t.Fatalf("automigrate: %v", err)
 	}
-	return NewThemeService(writeTestTheme(t), NewContractService(repository.NewContractRepository(db)), repository.NewThemeRepository(db), reg), db
+	return NewThemeService(writeTestTheme(t), t.TempDir(), NewContractService(repository.NewContractRepository(db)), repository.NewThemeRepository(db), reg), db
 }
 
 func TestThemeServiceCheckAsksTheRegistryForANewContract(t *testing.T) {
