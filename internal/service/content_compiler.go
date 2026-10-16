@@ -47,13 +47,13 @@ func (c *ContentCompiler) Compile(source string) (string, []compono.Diagnostic, 
 	return c.CompileWithProviderContext(context.Background(), source)
 }
 
-func (c *ContentCompiler) CompileWithProviderContext(ctx context.Context, source string) (string, []compono.Diagnostic, error) {
+func (c *ContentCompiler) CompileWithProviderContext(ctx context.Context, source string, extra ...compono.ConvertOption) (string, []compono.Diagnostic, error) {
 	globals := *c.globals.Load()
 	values, err := c.contextValues(ctx, source, globals)
 	if err != nil {
 		return "", nil, err
 	}
-	return c.compile(source, values, globals)
+	return c.compile(source, values, globals, extra...)
 }
 
 // contextValues returns the context values the conversion of source needs.
@@ -67,16 +67,16 @@ func (c *ContentCompiler) contextValues(ctx context.Context, source string, glob
 // CompilePublic converts source for a visitor. It returns the output and the
 // image URLs Compono wrote to it, in output order. The diagnostics are not
 // returned, because a visitor's response never carries them.
-func (c *ContentCompiler) CompilePublic(ctx context.Context, source string) (string, []string, error) {
+func (c *ContentCompiler) CompilePublic(ctx context.Context, source string, extra ...compono.ConvertOption) (string, []string, error) {
 	globals := *c.globals.Load()
 	values, err := c.contextValues(ctx, source, globals)
 	if err != nil {
 		return "", nil, err
 	}
 	var urls []string
-	output, _, err := c.compile(source, values, globals, compono.WithURLReporter(func(r compono.URLReport) {
+	output, _, err := c.compile(source, values, globals, append([]compono.ConvertOption{compono.WithURLReporter(func(r compono.URLReport) {
 		urls = append(urls, r.URL)
-	}))
+	})}, extra...)...)
 	if err != nil {
 		return "", nil, err
 	}

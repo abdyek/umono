@@ -29,7 +29,7 @@ func TestSystemPageIsNotResolvedBySlug(t *testing.T) {
 		t.Fatalf("GetBySlug err = %v, want %v", err, ErrSitePageNotFound)
 	}
 
-	if _, _, err := svc.GetRenderedBySlug(context.Background(), models.NotFoundSlug); !errors.Is(err, ErrSitePageNotFound) {
+	if _, err := svc.GetRenderedBySlug(context.Background(), models.NotFoundSlug); !errors.Is(err, ErrSitePageNotFound) {
 		t.Fatalf("GetRenderedBySlug err = %v, want %v", err, ErrSitePageNotFound)
 	}
 }

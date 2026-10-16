@@ -331,7 +331,7 @@ func TestSitePageServicePublicRenderHidesDiagnostics(t *testing.T) {
 		t.Fatalf("Create errors: %v", errs)
 	}
 
-	page, _, err := svc.GetRenderedBySlug(context.Background(), "about")
+	page, err := svc.GetRenderedBySlug(context.Background(), "about")
 	if err != nil {
 		t.Fatalf("GetRenderedBySlug: %v", err)
 	}
@@ -342,7 +342,7 @@ func TestSitePageServicePublicRenderHidesDiagnostics(t *testing.T) {
 		t.Fatalf("strings.Contains(page.Content, %q) = %v, want %v", "NOPE", got, want)
 	}
 
-	nf, _, err := svc.GetNotFoundPage(context.Background(), "Not found", "Gone\n\n{{ NOPE }}")
+	nf, err := svc.GetNotFoundPage(context.Background(), "Not found", "Gone\n\n{{ NOPE }}")
 	if err != nil {
 		t.Fatalf("GetNotFoundPage: %v", err)
 	}
@@ -374,7 +374,7 @@ func TestSitePageServicePublicRenderDoesNotUpdateDiagnostics(t *testing.T) {
 		t.Fatalf("LoadGlobalComponent: %v", err)
 	}
 
-	page, _, err := svc.GetRenderedBySlug(context.Background(), "")
+	page, err := svc.GetRenderedBySlug(context.Background(), "")
 	if err != nil {
 		t.Fatalf("GetRenderedBySlug: %v", err)
 	}

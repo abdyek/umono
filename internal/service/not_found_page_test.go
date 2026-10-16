@@ -14,7 +14,7 @@ func TestNotFoundPageRendersTheSystemPage(t *testing.T) {
 	createNotFoundSystemPage(t, db, "# Gone")
 
 	ctx := context.Background()
-	p, _, err := svc.GetNotFoundPage(ctx, "Default", "# Default")
+	p, err := svc.GetNotFoundPage(ctx, "Default", "# Default")
 	if err != nil {
 		t.Fatalf("GetNotFoundPage err = %v, want nil", err)
 	}
@@ -38,7 +38,7 @@ func TestNotFoundPageFallsBackToDefaults(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	p, _, err := svc.GetNotFoundPage(ctx, "Default", "# Default")
+	p, err := svc.GetNotFoundPage(ctx, "Default", "# Default")
 	if err != nil {
 		t.Fatalf("GetNotFoundPage err = %v, want nil", err)
 	}

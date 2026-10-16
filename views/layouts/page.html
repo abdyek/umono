@@ -9,6 +9,6 @@
   <script nonce="{{ .Nonce }}" src="/_umono/umono-root.js" defer></script>
 </head>
 <body>
-  <umono-root>{{ .Content }}</umono-root>
+  <umono-root{{ if .RootClass }} class="{{ .RootClass }}"{{ end }}>{{ .Content }}</umono-root>
 </body>
 </html>

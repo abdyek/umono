@@ -131,6 +131,7 @@ func main() {
 	// themes/ and themes-pending/ are in the project root, on the same file
 	// system, next to umono.db.
 	themeService := service.NewThemeService("themes", "themes-pending", service.NewContractService(repository.NewContractRepository(db)), repository.NewThemeRepository(db), theme.NewRegistry())
+	sitePageService.SetPageThemes(themeService)
 	themeService.OnRenderInputChange(recomputeDiagnostics)
 	if err := themeService.LoadActive(context.Background()); err != nil {
 		log.Printf("error: load active themes: %v", err)
