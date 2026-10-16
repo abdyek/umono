@@ -27,6 +27,13 @@ func (s *ContractService) Base(g models.ContractGroup) (minor uint, ok bool) {
 	return s.repo.GroupBase(g)
 }
 
+// Record returns the stored record of the contract ref, identified by its
+// org, name, major and minor. ok is false when there is none.
+func (s *ContractService) Record(ref models.Contract) (models.Contract, bool) {
+	c := s.repo.GetByIdentity(ref.Org, ref.Name, ref.Major, ref.Minor)
+	return c, c.ID != 0
+}
+
 // Selectable reports whether a theme with the contract can be activated in
 // its group: the contract covers the group's base, or the group has none.
 func (s *ContractService) Selectable(theme models.Contract) bool {
