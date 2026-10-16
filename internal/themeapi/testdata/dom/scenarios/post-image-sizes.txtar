@@ -1,0 +1,22 @@
+sizes goes to every element with a srcset, class to <picture>. An IMAGE
+without a srcset gets its class and no sizes.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+{{ IMAGE media = { url: "/uploads/cover.jpg", width: 1600, height: 900, mime-type: "image/jpeg", variants: [{ url: "/uploads/cover-640.webp", width: 640, height: 360, mime-type: "image/webp" }, { url: "/uploads/cover-1280.webp", width: 1280, height: 720, mime-type: "image/webp" }, { url: "/uploads/cover-640.jpg", width: 640, height: 360, mime-type: "image/jpeg" }] } alt = "Cover" }}
+
+{{ IMAGE media = { url: "/uploads/logo.png", width: 120, height: 60, mime-type: "image/png", variants: [] } alt = "Logo" }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post IMAGE"]
+class = "post--IMAGE"
+sizes = "(min-width: 40rem) 50vw, 100vw"
+-- page.comp --
+{{ UMONO_LAYOUT }}

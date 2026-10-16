@@ -23,10 +23,12 @@ type Manifest struct {
 	Goldens     map[string]string `json:"goldens"`
 }
 
-// RenderCorpus converts every .comp file under dir with Compono and returns
-// the content of its golden, the canonical form of the output and a newline,
-// by the golden's slash path relative to dir: x.comp has the golden x.golden.
-// A diagnostic is an error, because the corpus holds only error-free inputs.
+// RenderCorpus renders every input under dir and returns the content of its
+// golden, the canonical form of the output and a newline, by the golden's
+// slash path relative to dir: x.comp and x.txtar have the golden x.golden. A
+// .comp is converted with Compono; a .txtar is a scenario, rendered with
+// renderScenario. A diagnostic is an error, because the corpus holds only
+// error-free inputs.
 func RenderCorpus(dir string) (map[string]string, error) {
 	c := compono.New()
 	goldens := map[string]string{}
@@ -35,6 +37,23 @@ func RenderCorpus(dir string) (map[string]string, error) {
 			return walkErr
 		}
 		if d.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(d.Name(), ".txtar") {
+			rel, err := filepath.Rel(dir, path)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
+			src, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			golden, err := renderScenario(strings.TrimSuffix(d.Name(), ".txtar"), src)
+			if err != nil {
+				return fmt.Errorf("%s: %w", rel, err)
+			}
+			goldens[strings.TrimSuffix(rel, ".txtar")+".golden"] = golden + "\n"
 			return nil
 		}
 		if !strings.HasSuffix(d.Name(), ".comp") {

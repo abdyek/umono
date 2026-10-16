@@ -1,0 +1,36 @@
+The chain is the render stack, not where the source is written: the page's
+link, passed from the layout to the exposed BODY, is post BODY LINK.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+~ content = NO_MATTER
+{{ LINK text = "Layout" url = "/layout" }}
+
+{{ BODY content = content }}
+'''
+
+[[components]]
+name = "BODY"
+expose = true
+source = '''
+~ content = NO_MATTER
+{{ content }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post LINK"]
+class = "post--LINK"
+
+[address."post BODY LINK"]
+class = "post--BODY--LINK"
+-- page.comp --
+{{ UMONO_LAYOUT content = TEXT }}
+
+~ TEXT
+{{ LINK text = "Page" url = "/page" }}

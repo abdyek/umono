@@ -1,0 +1,26 @@
+A contract component named LINK overrides the built-in in the layout: the
+call is no built-in and gets no attribute.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+{{ LINK }}
+'''
+
+[[components]]
+name = "LINK"
+expose = false
+source = '''
+**Contract link**
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post"]
+class = "post"
+-- page.comp --
+{{ UMONO_LAYOUT }}

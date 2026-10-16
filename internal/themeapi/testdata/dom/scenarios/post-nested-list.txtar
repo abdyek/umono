@@ -1,0 +1,37 @@
+Every LIST of the scope gets the attribute, nested ones included. An
+empty inner LIST renders no element and gets nothing.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+{{ LIST items = [{ text: "A", children: [{ text: "A1" }, { text: "A2" }] }, { text: "B", children: [] }] item = ITEM }}
+'''
+
+[[components]]
+name = "ITEM"
+expose = false
+source = '''
+~ item! = {}
+{{ item.text }}
+
+{{ LIST items = item.children item = CHILD }}
+'''
+
+[[components]]
+name = "CHILD"
+expose = false
+source = '''
+~ item! = {}
+{{ item.text }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post LIST"]
+class = "post--LIST"
+-- page.comp --
+{{ UMONO_LAYOUT }}

@@ -120,6 +120,20 @@
     "elements/markdown/table/example-01.golden": "c55b190a15213c0fd90ebe6d67119bff0dd7d434cdfdb04688af534ffd0cadba",
     "elements/markdown/table/example-02.golden": "c37e27634706de60a843e9b0b77640b7c0dd77188ab07fd631d2235e6bf5391b",
     "elements/markdown/table/example-03.golden": "4107bc565054b6080258a4084f5dcf60f78473a3fa219fa7a8d93bc8f1def075",
-    "elements/markdown/table/example-04.golden": "13f4a07399c30e7cdef206a3602ee9a4704ef0278cb12cfa9a72675eca507d8d"
+    "elements/markdown/table/example-04.golden": "13f4a07399c30e7cdef206a3602ee9a4704ef0278cb12cfa9a72675eca507d8d",
+    "scenarios/page-shared-component.golden": "84ada6f683b7dedd250b20ee87b50b09c625e3bf834fb1dd333320f74f5e0e33",
+    "scenarios/post-address-forms.golden": "00ca97ff6351660b87d394d440688e1816f17654c336eb30e1d635bee14eaec4",
+    "scenarios/post-contract-component-named-like-builtin.golden": "6f97636b6ad025b3f0aaf2f6def6845a851ad09aed76a725365cac034c83c5fc",
+    "scenarios/post-dynamic-chain.golden": "10655e964085275bef93c70a6de7bb68953d706952623c19dee10efcd5ff1adf",
+    "scenarios/post-empty-lists.golden": "f10a61623618bf3dcab68c7d4bf986e33b4de594edfefe5ee144302c1643242e",
+    "scenarios/post-image-sizes.golden": "b3e30353d7103fa19449f872c98aba91ad9a98fdcac5f360bb77dd6a3a0081c4",
+    "scenarios/post-nested-expose.golden": "2ed031011bf4bc9cd204c77ee7dd5d902566abdba2143416967c7ffe5dd7006f",
+    "scenarios/post-nested-list.golden": "932f33226e994d5a3fb5d1356a5dfce0afc572a677a49c2e4c8ca1a2e1ed3672",
+    "scenarios/post-page-local-named-like-builtin.golden": "7edfe387d6bde59f9dd8b4d7fa0d95ed7d3464386d36f0095cea378ffe47e20a",
+    "scenarios/post-page-local-named-like-component.golden": "721c199fdd760292504734f81afb5d41e3af85a9e7e7b912447cc057a3d9f186",
+    "scenarios/post-shared-component.golden": "336f6ecd54d9b92d50e37c51243ce8b3edac3f3cb70cf3571408b6f511a435c7",
+    "scenarios/post-site-global-named-like-component.golden": "4798cee60417f2f6e0e3682bec133dd5256c20a62e42186ad9a94a027f604a2d",
+    "scenarios/post-unexposed-component.golden": "0cf494db33abb2977c11b19166044d38bdec8d31daf4732667f0672d4ea86cf3",
+    "scenarios/post-without-attributes.golden": "a7cf073c53f9154e58613a0369bb2d8608902ee72eae552066207fbc3e1cff57"
   }
 }

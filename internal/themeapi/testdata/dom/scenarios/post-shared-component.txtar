@@ -1,0 +1,35 @@
+An exposed component used by two layouts: its link is post CARD LINK on a
+page bound to post.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+{{ CARD }}
+'''
+
+[[layouts]]
+id = "page"
+source = '''
+{{ CARD }}
+'''
+
+[[components]]
+name = "CARD"
+expose = true
+source = '''
+{{ LINK text = "Card" url = "/card" }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post CARD LINK"]
+class = "post--CARD--LINK"
+
+[address."page CARD LINK"]
+class = "page--CARD--LINK"
+-- page.comp --
+{{ UMONO_LAYOUT }}

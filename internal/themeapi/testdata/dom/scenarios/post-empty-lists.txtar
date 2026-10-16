@@ -1,0 +1,32 @@
+A LIST with no items, one whose items all render empty and one whose items
+partly render empty: the attribute goes only where a list element is
+rendered.
+-- contract.toml --
+schema = "https://umono.dev/schemas/theme-contract/v1"
+id = "test/scenario"
+version = "v1.0"
+
+[[layouts]]
+id = "post"
+source = '''
+{{ LIST items = [] item = ITEM }}
+
+{{ LIST items = [{ text: "" }, { text: "" }] item = ITEM }}
+
+{{ LIST items = [{ text: "A" }, { text: "" }] item = ITEM }}
+'''
+
+[[components]]
+name = "ITEM"
+expose = false
+source = '''
+~ item! = {}
+{{ item.text }}
+'''
+-- attributes.toml --
+schema = "https://umono.dev/schemas/theme-attributes/v1"
+
+[address."post LIST"]
+class = "post--LIST"
+-- page.comp --
+{{ UMONO_LAYOUT }}
