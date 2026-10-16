@@ -1,0 +1,109 @@
+umono/blog@v0.1, page: content and footer whose bodies are a single LINK.
+-- contract.toml --
+schema      = "https://umono.dev/schemas/theme-contract/v1"
+id          = "umono/blog"
+version     = "v0.1"
+description = "A blog with post, post list and free content pages"
+
+[[layouts]]
+id          = "post"
+description = "A single post with its cover and related posts"
+source = '''
+~ site-name! = "" home-url! = "" menu-label! = "" menu! = [] title! = "" published-at! = "" cover! = {} cover-alt! = "" content! = NO_MATTER related-label! = "" related! = [] footer! = NO_MATTER
+{{ SITE_HEADER site-name = site-name home-url = home-url menu-label = menu-label menu = menu }}
+{{ MAIN content = POST(title = title published-at = published-at cover = cover cover-alt = cover-alt content = content related-label = related-label related = related) }}
+{{ FOOTER content = footer }}
+
+~ POST title! = "" published-at! = "" cover! = {} cover-alt! = "" content! = NO_MATTER related-label! = "" related! = []
+{{ ARTICLE content = POST_BODY(title = title published-at = published-at cover = cover cover-alt = cover-alt content = content) }}
+{{ ASIDE content = RELATED(related-label = related-label related = related) }}
+
+~ POST_BODY title! = "" published-at! = "" cover! = {} cover-alt! = "" content! = NO_MATTER
+{{ HEADER content = POST_HEADER(title = title published-at = published-at) }}
+{{ IMAGE media = cover alt = cover-alt }}
+{{ content }}
+
+~ POST_HEADER title! = "" published-at! = ""
+# {{ title }}
+{{ published-at }}
+
+~ RELATED related-label! = "" related! = []
+## {{ related-label }}
+{{ LIST items = related item = RELATED_ITEM }}
+
+~ RELATED_ITEM item! = {}
+{{ LINK text = item.title url = item.url }}
+'''
+
+[[layouts]]
+id          = "post-list"
+description = "A list of post summaries"
+source = '''
+~ site-name! = "" home-url! = "" menu-label! = "" menu! = [] title! = "" posts! = [] more-label! = "" footer! = NO_MATTER
+{{ SITE_HEADER site-name = site-name home-url = home-url menu-label = menu-label menu = menu }}
+{{ MAIN content = POST_LIST(title = title posts = posts more-label = more-label) }}
+{{ FOOTER content = footer }}
+
+~ POST_LIST title! = "" posts! = [] more-label! = ""
+# {{ title }}
+{{ LIST items = posts item = POST_SUMMARY(more-label = more-label) }}
+
+~ POST_SUMMARY item! = {} more-label! = ""
+{{ ARTICLE content = SUMMARY(item = item more-label = more-label) }}
+
+~ SUMMARY item! = {} more-label! = ""
+## {{ LINK text = item.title url = item.url }}
+{{ item.summary }}
+{{ LINK text = more-label url = item.url }}
+'''
+
+[[layouts]]
+id          = "page"
+description = "Free content between the site header and footer"
+source = '''
+~ site-name! = "" home-url! = "" menu-label! = "" menu! = [] content! = NO_MATTER footer! = NO_MATTER
+{{ SITE_HEADER site-name = site-name home-url = home-url menu-label = menu-label menu = menu }}
+{{ MAIN content = content }}
+{{ FOOTER content = footer }}
+'''
+
+[[components]]
+name   = "SITE_HEADER"
+source = '''
+~ site-name! = "" home-url! = "" menu-label! = "" menu! = []
+{{ HEADER content = SITE_HEADER_BODY(site-name = site-name home-url = home-url menu-label = menu-label menu = menu) }}
+
+~ SITE_HEADER_BODY site-name! = "" home-url! = "" menu-label! = "" menu! = []
+{{ LINK text = site-name url = home-url }}
+{{ NAV label = menu-label content = MAIN_MENU(menu = menu) }}
+'''
+
+[[components]]
+name   = "MAIN_MENU"
+expose = true
+source = '''
+~ menu! = []
+{{ LIST items = menu item = MENU_ITEM }}
+
+~ MENU_ITEM item! = {}
+{{ LINK text = item.text url = item.url current = item.current }}
+{{ LIST items = item.children item = MENU_ITEM }}
+'''
+-- page.comp --
+{{ UMONO_LAYOUT
+  site-name = "Umono" home-url = "/" menu-label = "Main menu"
+  menu = [
+    { text: "Home", url: "/", current: "page", children: [] },
+    { text: "Docs", url: "/docs", current: "", children: [
+      { text: "Themes", url: "/docs/themes", current: "", children: [] },
+      { text: "Contracts", url: "/docs/contracts", current: "", children: [] }
+    ] }
+  ]
+  content = BODY footer = FOOTER_BODY
+}}
+
+~ BODY
+{{ LINK text = "Read the docs" url = "/docs" }}
+
+~ FOOTER_BODY
+{{ LINK text = "GitHub" url = "https://github.com/umono-cms/umono" }}
