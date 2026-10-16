@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/umono-cms/umono/internal/models"
+	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/theme"
 )
 
@@ -41,11 +43,22 @@ type ThemeCandidate struct {
 type ThemeService struct {
 	themesDir string
 	contracts *ContractService
+	themes    *repository.ThemeRepository
 	registry  ContractRegistry
+	active    *theme.ActiveSet
+	// activateMu serializes activations, so two of them do not add the same
+	// contract record or overwrite each other's active_themes.
+	activateMu sync.Mutex
 }
 
-func NewThemeService(themesDir string, contracts *ContractService, registry ContractRegistry) *ThemeService {
-	return &ThemeService{themesDir: themesDir, contracts: contracts, registry: registry}
+func NewThemeService(themesDir string, contracts *ContractService, themes *repository.ThemeRepository, registry ContractRegistry) *ThemeService {
+	return &ThemeService{
+		themesDir: themesDir,
+		contracts: contracts,
+		themes:    themes,
+		registry:  registry,
+		active:    theme.NewActiveSet(),
+	}
 }
 
 // Check runs the checks of activation on the installed theme at path, in
@@ -89,4 +102,34 @@ func (s *ThemeService) Check(ctx context.Context, path string) (ThemeCandidate, 
 		return ThemeCandidate{}, fmt.Errorf("%w: %d pages are bound to a newer minor", ErrNotCovered, len(s.contracts.UncoveredPages(ref)))
 	}
 	return ThemeCandidate{Installed: installed, Contract: record, Asked: asked}, nil
+}
+
+// Activate runs the checks of activation on the installed theme at path and
+// activates it: the contract record, when new, and active_themes are written
+// in one transaction, and the theme replaces the active theme of its group in
+// memory with its release and attributes table. The release is never stored.
+func (s *ThemeService) Activate(ctx context.Context, path string) (ThemeCandidate, error) {
+	s.activateMu.Lock()
+	defer s.activateMu.Unlock()
+
+	c, err := s.Check(ctx, path)
+	if err != nil {
+		return ThemeCandidate{}, err
+	}
+	if err := s.themes.Activate(&c.Contract, models.ThemeOption{Path: c.Path, ContractID: c.Contract.Ref()}); err != nil {
+		return ThemeCandidate{}, err
+	}
+	s.active.Set(c.Contract.Group(), theme.Loaded{
+		Path:       c.Path,
+		Release:    c.Release,
+		ContractID: c.Contract.ID,
+		Contract:   c.Result.Contract,
+		Attributes: c.Result.Attributes,
+	})
+	return c, nil
+}
+
+// Loaded returns the active theme of the group g loaded into memory.
+func (s *ThemeService) Loaded(g models.ContractGroup) (theme.Loaded, bool) {
+	return s.active.Get(g)
 }
