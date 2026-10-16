@@ -1,0 +1,165 @@
+<div id="settings-themes-content" class="flex-1 flex overflow-hidden h-full">
+  <div class="flex-1 flex flex-col min-h-0">
+    <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
+      <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "settings.themes.title" }}</h2>
+      <p class="text-sm text-neutral-500">{{ t .I18n "settings.themes.description" }}</p>
+    </header>
+    <div class="flex-1 overflow-y-auto p-6">
+      <div class="mx-auto max-w-5xl space-y-6">
+        {{ if .Message }}
+        <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{{ .Message }}</div>
+        {{ end }}
+        {{ if .Failure }}
+        <div class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{{ .Failure }}</div>
+        {{ end }}
+
+        {{ if not .ThemesPage.Groups }}
+        <p class="text-sm text-neutral-500">{{ t .I18n "settings.themes.empty" }}</p>
+        {{ end }}
+
+        {{ range .ThemesPage.Groups }}
+        {{ $base := .Base }}
+        <section class="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900/40">
+          <div class="flex items-start justify-between gap-4 border-b border-neutral-800 px-5 py-4">
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-neutral-200">{{ .Key }}</h3>
+              <p class="mt-1 text-xs text-neutral-500">
+                {{ t $.I18n "settings.themes.pages" }}: {{ .PageCount }}
+                · {{ t $.I18n "settings.themes.base" }}: {{ if .Base }}{{ .Base }}{{ else }}{{ t $.I18n "settings.themes.no_base" }}{{ end }}
+                · {{ if .Active }}{{ t $.I18n "settings.themes.active" }}: {{ .Active.Path }} ({{ .Active.ContractID }}){{ else }}{{ t $.I18n "settings.themes.no_active" }} · {{ t $.I18n "settings.themes.fallback_render" }}{{ end }}
+              </p>
+              {{ if and .Active .Active.Broken }}
+              <p class="mt-1 text-xs text-red-300">{{ t $.I18n "settings.themes.broken" }} ({{ .Active.Broken }}) · {{ t $.I18n "settings.themes.fallback_render" }}</p>
+              {{ end }}
+            </div>
+            {{ if .Active }}
+            <div class="flex shrink-0 items-center gap-2">
+              {{ if .Active.Broken }}
+              <form hx-post="/admin/settings/themes/retry" hx-target="#settings-content">
+                <input type="hidden" name="contract" value="{{ .Active.ContractID }}">
+                <button type="submit" class="cursor-pointer rounded-xl border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white">{{ t $.I18n "settings.themes.retry" }}</button>
+              </form>
+              {{ end }}
+              <form hx-post="/admin/settings/themes/deactivate" hx-target="#settings-content" hx-confirm="{{ t $.I18n "settings.themes.deactivate_confirm" }}">
+                <input type="hidden" name="contract" value="{{ .Active.ContractID }}">
+                <button type="submit" class="cursor-pointer rounded-xl border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white">{{ t $.I18n "settings.themes.deactivate" }}</button>
+              </form>
+            </div>
+            {{ end }}
+          </div>
+
+          <div class="divide-y divide-neutral-800">
+            {{ if not .Themes }}
+            <p class="px-5 py-4 text-sm text-neutral-500">{{ t $.I18n "settings.themes.no_themes" }}</p>
+            {{ end }}
+            {{ range .Themes }}
+            <div class="flex items-start justify-between gap-4 px-5 py-4">
+              <div class="min-w-0 space-y-1">
+                <p class="text-sm font-medium text-neutral-200">
+                  {{ .Name }}
+                  <span class="font-normal text-neutral-500">{{ .ID }} {{ .Version }} ({{ .ContractVersion }})</span>
+                  {{ if .Active }}
+                  <span class="ml-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-300">{{ t $.I18n "settings.themes.active_badge" }}</span>
+                  {{ end }}
+                </p>
+                {{ if .UncoveredPages }}
+                <p class="text-xs text-amber-300">{{ t $.I18n "settings.themes.unselectable" }}: {{ t $.I18n "settings.themes.uncovered_pages" }} {{ .UncoveredPages }} ({{ $base }})</p>
+                {{ end }}
+                {{ if .ThemeAPI }}
+                <p class="text-xs text-amber-300">{{ t $.I18n "settings.themes.unselectable" }}: Theme API {{ .ThemeAPIVersion }}, {{ t $.I18n "settings.themes.supported" }} {{ $.ThemesPage.ThemeAPIMin }}–{{ $.ThemesPage.ThemeAPICurrent }}</p>
+                {{ end }}
+                {{ with .Pending }}
+                <div class="mt-3 space-y-2 rounded-2xl border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-xs text-neutral-300">
+                  <p class="font-semibold text-sky-200">{{ t $.I18n "settings.themes.pending_title" }}{{ if .Active }} · {{ t $.I18n "settings.themes.active_badge" }}{{ end }}</p>
+                  {{ if .Error }}
+                  <p class="text-red-300">{{ .Error }}</p>
+                  {{ else }}
+                  <p>{{ t $.I18n "settings.themes.built_at" }}: {{ .OldBuiltAt }} → {{ .NewBuiltAt }}</p>
+                  {{ if ne .OldThemeAPI .NewThemeAPI }}<p>Theme API: {{ .OldThemeAPI }} → {{ .NewThemeAPI }}</p>{{ end }}
+                  {{ if ne .OldContract .NewContract }}<p>{{ t $.I18n "settings.themes.contract" }}: {{ .OldContract }} → {{ .NewContract }}</p>{{ end }}
+                  {{ if .Changed }}<p>{{ t $.I18n "settings.themes.files_changed" }}: {{ range $i, $f := .Changed }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}</p>{{ end }}
+                  {{ if .Added }}<p>{{ t $.I18n "settings.themes.files_added" }}: {{ range $i, $f := .Added }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}</p>{{ end }}
+                  {{ if .Removed }}<p>{{ t $.I18n "settings.themes.files_removed" }}: {{ range $i, $f := .Removed }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}</p>{{ end }}
+                  {{ end }}
+                  <div class="flex items-center gap-2 pt-1">
+                    {{ if not .Error }}
+                    <form hx-post="/admin/settings/themes/pending/apply" hx-target="#settings-content" hx-confirm="{{ t $.I18n "settings.themes.apply_confirm" }}">
+                      <input type="hidden" name="path" value="{{ .Path }}">
+                      <button type="submit" class="cursor-pointer rounded-xl bg-purple-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-purple-500">{{ t $.I18n "settings.themes.apply" }}</button>
+                    </form>
+                    {{ end }}
+                    <form hx-post="/admin/settings/themes/pending/reject" hx-target="#settings-content" hx-confirm="{{ t $.I18n "settings.themes.reject_confirm" }}">
+                      <input type="hidden" name="path" value="{{ .Path }}">
+                      <button type="submit" class="cursor-pointer rounded-xl border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white">{{ t $.I18n "settings.themes.reject" }}</button>
+                    </form>
+                  </div>
+                </div>
+                {{ end }}
+              </div>
+              {{ if .Selectable }}
+              <form class="shrink-0" hx-post="/admin/settings/themes/activate" hx-target="#settings-content" hx-confirm="{{ if .Registry }}{{ t $.I18n "settings.themes.activate_confirm_registry" }}{{ else }}{{ t $.I18n "settings.themes.activate_confirm_stored" }}{{ end }}">
+                <input type="hidden" name="path" value="{{ .Path }}">
+                <button type="submit" class="cursor-pointer rounded-xl bg-purple-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-purple-500">{{ t $.I18n "settings.themes.activate" }}</button>
+              </form>
+              {{ end }}
+            </div>
+            {{ end }}
+          </div>
+
+          {{ if .Records }}
+          <div class="border-t border-neutral-800 px-5 py-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500">{{ t $.I18n "settings.themes.records" }}</p>
+            <ul class="mt-2 space-y-2">
+              {{ range .Records }}
+              <li class="flex items-center justify-between gap-4 text-xs text-neutral-400">
+                <span>{{ .Ref }} · {{ t $.I18n "settings.themes.pages" }}: {{ .PageCount }}</span>
+                {{ if .CanDelete }}
+                <form hx-post="/admin/settings/themes/records/delete" hx-target="#settings-content" hx-confirm="{{ t $.I18n "settings.themes.delete_record_confirm" }}">
+                  <input type="hidden" name="contract" value="{{ .Ref }}">
+                  <button type="submit" class="cursor-pointer rounded-xl px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10">{{ t $.I18n "settings.themes.delete_record" }}</button>
+                </form>
+                {{ end }}
+              </li>
+              {{ end }}
+            </ul>
+          </div>
+          {{ end }}
+        </section>
+        {{ end }}
+
+        {{ if .ThemesPage.Pending }}
+        <section class="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900/40">
+          <div class="border-b border-neutral-800 px-5 py-4">
+            <h3 class="text-sm font-semibold text-neutral-200">{{ t .I18n "settings.themes.pending_orphan_title" }}</h3>
+            <p class="mt-1 text-xs text-neutral-500">{{ t .I18n "settings.themes.pending_orphan_description" }}</p>
+          </div>
+          <ul class="divide-y divide-neutral-800">
+            {{ range .ThemesPage.Pending }}
+            <li class="flex items-center justify-between gap-4 px-5 py-4 text-sm text-neutral-300">
+              <span>{{ .Path }}{{ if .Error }} <span class="text-xs text-red-300">({{ .Error }})</span>{{ end }}</span>
+              <form hx-post="/admin/settings/themes/pending/reject" hx-target="#settings-content" hx-confirm="{{ t $.I18n "settings.themes.reject_confirm" }}">
+                <input type="hidden" name="path" value="{{ .Path }}">
+                <button type="submit" class="cursor-pointer rounded-xl border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white">{{ t $.I18n "settings.themes.reject" }}</button>
+              </form>
+            </li>
+            {{ end }}
+          </ul>
+        </section>
+        {{ end }}
+
+        {{ if .ThemesPage.Unreadable }}
+        <section class="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900/40">
+          <div class="border-b border-neutral-800 px-5 py-4">
+            <h3 class="text-sm font-semibold text-neutral-200">{{ t .I18n "settings.themes.unreadable_title" }}</h3>
+          </div>
+          <ul class="divide-y divide-neutral-800">
+            {{ range .ThemesPage.Unreadable }}
+            <li class="px-5 py-4 text-sm text-neutral-300">{{ .Path }} <span class="text-xs text-red-300">({{ .Error }})</span></li>
+            {{ end }}
+          </ul>
+        </section>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+</div>

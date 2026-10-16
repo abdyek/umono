@@ -13,14 +13,16 @@ type settingsHandler struct {
 	optionService   *service.OptionService
 	sitePageService *service.SitePageService
 	storageService  *service.StorageService
+	themeService    *service.ThemeService
 }
 
-func NewSettingsHandler(ss *service.SettingsService, os *service.OptionService, sps *service.SitePageService, sts *service.StorageService) *settingsHandler {
+func NewSettingsHandler(ss *service.SettingsService, os *service.OptionService, sps *service.SitePageService, sts *service.StorageService, ts *service.ThemeService) *settingsHandler {
 	return &settingsHandler{
 		settingsService: ss,
 		optionService:   os,
 		sitePageService: sps,
 		storageService:  sts,
+		themeService:    ts,
 	}
 }
 
@@ -136,7 +138,7 @@ func isSettingsContentSwap(c *fiber.Ctx) bool {
 	}
 
 	switch c.Get("HX-Target") {
-	case "settings-content", "settings-general-content", "settings-404-page-content", "settings-robots-txt-content", "settings-about-content", "settings-storage-content":
+	case "settings-content", "settings-general-content", "settings-404-page-content", "settings-robots-txt-content", "settings-about-content", "settings-storage-content", "settings-themes-content":
 		return true
 	default:
 		return false
