@@ -1,0 +1,106 @@
+package handler
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/umono-cms/umono/internal/models"
+	"github.com/umono-cms/umono/internal/view"
+)
+
+// RenderThemes renders the theme management page.
+func (h *settingsHandler) RenderThemes(c *fiber.Ctx) error {
+	return h.renderThemes(c, "", "")
+}
+
+// renderThemes renders the theme management page with the outcome of an
+// action: message on success, failure on failure.
+func (h *settingsHandler) renderThemes(c *fiber.Ctx, message, failure string) error {
+	partial := "partials/settings-themes"
+	layouts := []string{"layouts/settings", "layouts/admin"}
+	if isSettingsContentSwap(c) {
+		partial = "partials/htmx/settings-themes"
+		layouts = []string{}
+	}
+	list, err := h.themeService.List()
+	if err != nil {
+		return err
+	}
+	return Render(c, partial, fiber.Map{
+		"SettingsUl": h.settingsUl(c, "themes"),
+		"ThemesPage": view.NewThemesPage(list),
+		"Message":    message,
+		"Failure":    failure,
+	}, layouts...)
+}
+
+// failure joins the translated headline of a failed action and its reason.
+func failure(c *fiber.Ctx, key string, err error) string {
+	return translate(c, key) + ": " + err.Error()
+}
+
+// ActivateTheme activates the installed theme at the form's path.
+func (h *settingsHandler) ActivateTheme(c *fiber.Ctx) error {
+	candidate, err := h.themeService.Activate(c.UserContext(), c.FormValue("path"))
+	if err != nil {
+		return h.renderThemes(c, "", failure(c, "settings.themes.activate_failed", err))
+	}
+	note := "settings.themes.verified_stored"
+	if candidate.Asked {
+		note = "settings.themes.verified_registry"
+	}
+	return h.renderThemes(c, translate(c, "settings.themes.activated")+" "+translate(c, note), "")
+}
+
+// DeactivateTheme deactivates the active theme of the group of the form's
+// contract.
+func (h *settingsHandler) DeactivateTheme(c *fiber.Ctx) error {
+	ref, err := models.ParseContractRef(c.FormValue("contract"))
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	if err := h.themeService.Deactivate(ref.Group()); err != nil {
+		return h.renderThemes(c, "", failure(c, "settings.themes.deactivate_failed", err))
+	}
+	return h.renderThemes(c, translate(c, "settings.themes.deactivated"), "")
+}
+
+// RetryTheme reruns the checks of loading for the broken active theme of the
+// group of the form's contract.
+func (h *settingsHandler) RetryTheme(c *fiber.Ctx) error {
+	ref, err := models.ParseContractRef(c.FormValue("contract"))
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	if err := h.themeService.Retry(c.UserContext(), ref.Group()); err != nil {
+		return h.renderThemes(c, "", failure(c, "settings.themes.retry_failed", err))
+	}
+	return h.renderThemes(c, translate(c, "settings.themes.retried"), "")
+}
+
+// ApplyPending uses the new content of the pending install at the form's
+// path.
+func (h *settingsHandler) ApplyPending(c *fiber.Ctx) error {
+	if err := h.themeService.ApplyPending(c.UserContext(), c.FormValue("path")); err != nil {
+		return h.renderThemes(c, "", failure(c, "settings.themes.apply_failed", err))
+	}
+	return h.renderThemes(c, translate(c, "settings.themes.applied"), "")
+}
+
+// RejectPending deletes the pending install at the form's path.
+func (h *settingsHandler) RejectPending(c *fiber.Ctx) error {
+	if err := h.themeService.RejectPending(c.FormValue("path")); err != nil {
+		return h.renderThemes(c, "", failure(c, "settings.themes.reject_failed", err))
+	}
+	return h.renderThemes(c, translate(c, "settings.themes.rejected"), "")
+}
+
+// DeleteContractRecord deletes the stored record of the form's contract.
+func (h *settingsHandler) DeleteContractRecord(c *fiber.Ctx) error {
+	ref, err := models.ParseContractRef(c.FormValue("contract"))
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	if err := h.themeService.DeleteContract(ref); err != nil {
+		return h.renderThemes(c, "", failure(c, "settings.themes.delete_failed", err))
+	}
+	return h.renderThemes(c, translate(c, "settings.themes.record_deleted"), "")
+}

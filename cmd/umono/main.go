@@ -165,7 +165,7 @@ func main() {
 	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
-	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService)
+	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService, themeService)
 	systemHandler := handler.NewSystemHandler(systemService, jobService, sitePageService)
 	optionHandler := handler.NewOptionHandler(optionService)
 
@@ -295,6 +295,7 @@ func main() {
 	adminProtected.Get("/settings", settingsHandler.Index)
 	adminProtected.Get("/settings/general", settingsHandler.RenderGeneral)
 	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
+	adminProtected.Get("/settings/themes", settingsHandler.RenderThemes)
 	adminProtected.Get("/settings/robots-txt", settingsHandler.RenderRobotsTxt)
 	adminProtected.Get("/settings/storage", settingsHandler.RenderStorageIndex)
 	adminProtected.Get("/settings/storage/new", settingsHandler.RenderStorageNew)
@@ -315,6 +316,12 @@ func main() {
 		middleware.OnlyHTMX(),
 		settingsHandler.DeleteStorage,
 	)
+	adminProtected.Post("/settings/themes/activate", middleware.OnlyHTMX(), settingsHandler.ActivateTheme)
+	adminProtected.Post("/settings/themes/deactivate", middleware.OnlyHTMX(), settingsHandler.DeactivateTheme)
+	adminProtected.Post("/settings/themes/retry", middleware.OnlyHTMX(), settingsHandler.RetryTheme)
+	adminProtected.Post("/settings/themes/pending/apply", middleware.OnlyHTMX(), settingsHandler.ApplyPending)
+	adminProtected.Post("/settings/themes/pending/reject", middleware.OnlyHTMX(), settingsHandler.RejectPending)
+	adminProtected.Post("/settings/themes/records/delete", middleware.OnlyHTMX(), settingsHandler.DeleteContractRecord)
 	adminProtected.Get("/settings/about", settingsHandler.RenderAbout)
 	adminProtected.Get("/system", systemHandler.Index)
 	adminProtected.Get("/system/jobs", systemHandler.RenderJobs)

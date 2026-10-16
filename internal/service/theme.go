@@ -412,3 +412,9 @@ func (s *ThemeService) Asset(release, name string) ([]byte, bool) {
 	b, ok := t.Assets[name]
 	return b, ok
 }
+
+// RejectPending deletes the pending install at path, the "Reject" action.
+// The installed theme and the database are not touched.
+func (s *ThemeService) RejectPending(path string) error {
+	return theme.RejectPending(s.pendingDir, path)
+}

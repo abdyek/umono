@@ -20,6 +20,11 @@ func (*SettingsService) MenuItems() []SettingsMenuItem {
 			Partial:  "settings-general",
 		},
 		{
+			TitleKey: "settings.menu.themes",
+			Slug:     "themes",
+			Partial:  "settings-themes",
+		},
+		{
 			TitleKey: "settings.menu.not_found_page",
 			Slug:     "404-page",
 			Partial:  "settings-404-page",
