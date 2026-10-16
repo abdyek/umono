@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -20,6 +21,11 @@ var (
 	// ErrContractChanged is returned when a package's contract.toml differs
 	// from the stored record of the same contract version.
 	ErrContractChanged = errors.New("contract.toml differs from the stored contract of the same version")
+	// ErrNoActiveTheme is returned when a contract group has no active theme.
+	ErrNoActiveTheme = errors.New("the contract group has no active theme")
+	// ErrActiveContractChanged is returned when an active theme's built.toml
+	// names another contract than active_themes.
+	ErrActiveContractChanged = errors.New("the installed theme's contract is not the one active_themes names")
 	// ErrNotCovered is returned when a theme's contract does not cover the
 	// base of its group.
 	ErrNotCovered = errors.New("the theme's contract does not cover the base of its group")
@@ -246,4 +252,100 @@ func (s *ThemeService) ApplyPending(ctx context.Context, path string) error {
 		s.notifyRenderInputChange()
 	}
 	return nil
+}
+
+// LoadActive loads the themes of active_themes into memory at startup. Each
+// one reruns the checks of activation that need no network (loadActive). A
+// theme that fails them is marked broken and logged, and its group renders
+// with the fallback; nothing is written. Only an unreadable active_themes is
+// returned as an error.
+func (s *ThemeService) LoadActive(ctx context.Context) error {
+	s.activateMu.Lock()
+	defer s.activateMu.Unlock()
+
+	themes, err := s.themes.GetActiveThemes()
+	if err != nil {
+		return err
+	}
+	for _, t := range themes {
+		ref, err := models.ParseContractRef(t.ContractID)
+		if err != nil {
+			log.Printf("error: active theme %s: %v", t.Path, err)
+			continue
+		}
+		if err := s.loadActive(ref, t.Path); err != nil {
+			log.Printf("error: active theme %s: %v", t.Path, err)
+		}
+	}
+	return nil
+}
+
+// Retry reruns the checks of loading for the broken active theme of the
+// group g. On success the theme is used again.
+func (s *ThemeService) Retry(ctx context.Context, g models.ContractGroup) error {
+	s.activateMu.Lock()
+	defer s.activateMu.Unlock()
+
+	themes, err := s.themes.GetActiveThemes()
+	if err != nil {
+		return err
+	}
+	for _, t := range themes {
+		ref, err := models.ParseContractRef(t.ContractID)
+		if err != nil || ref.Group() != g {
+			continue
+		}
+		if err := s.loadActive(ref, t.Path); err != nil {
+			return err
+		}
+		s.notifyRenderInputChange()
+		return nil
+	}
+	return ErrNoActiveTheme
+}
+
+// Broken returns the broken active theme of the group g.
+func (s *ThemeService) Broken(g models.ContractGroup) (theme.Broken, bool) {
+	return s.active.Broken(g)
+}
+
+// loadActive runs the checks of activation that need no network on the
+// active theme of ref at path: the package checks, the contract of
+// built.toml against active_themes and contract.toml against the stored
+// record's checksum. The contract and coverage checks are not repeated: the
+// record never changes and no page can be bound above an active theme. It
+// loads the theme or marks it broken.
+func (s *ThemeService) loadActive(ref models.Contract, path string) error {
+	l, err := s.checkActive(ref, path)
+	if err != nil {
+		s.active.SetBroken(ref.Group(), theme.Broken{Path: path, Err: err})
+		return err
+	}
+	s.active.Set(ref.Group(), l)
+	return nil
+}
+
+func (s *ThemeService) checkActive(ref models.Contract, path string) (theme.Loaded, error) {
+	installed, err := theme.CheckInstalled(s.themesDir, path)
+	if err != nil {
+		return theme.Loaded{}, err
+	}
+	if installed.Built.Contract != ref.Ref() {
+		return theme.Loaded{}, fmt.Errorf("%w: %s, not %s", ErrActiveContractChanged, installed.Built.Contract, ref.Ref())
+	}
+	record, ok := s.contracts.Record(ref)
+	if !ok {
+		return theme.Loaded{}, fmt.Errorf("%w: %s", ErrContractNotFound, ref.Ref())
+	}
+	sum := sha256.Sum256(installed.ContractSource)
+	if hex.EncodeToString(sum[:]) != record.Checksum {
+		return theme.Loaded{}, fmt.Errorf("%w: %s", ErrContractChanged, ref.Ref())
+	}
+	return theme.Loaded{
+		Path:       path,
+		Release:    installed.Release,
+		ContractID: record.ID,
+		Contract:   installed.Result.Contract,
+		Attributes: installed.Result.Attributes,
+	}, nil
 }

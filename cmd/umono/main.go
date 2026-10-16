@@ -128,6 +128,13 @@ func main() {
 	}
 	componentService.OnRenderInputChange(recomputeDiagnostics)
 	mediaService.OnRenderInputChange(recomputeDiagnostics)
+	// themes/ and themes-pending/ are in the project root, on the same file
+	// system, next to umono.db.
+	themeService := service.NewThemeService("themes", "themes-pending", service.NewContractService(repository.NewContractRepository(db)), repository.NewThemeRepository(db), theme.NewRegistry())
+	themeService.OnRenderInputChange(recomputeDiagnostics)
+	if err := themeService.LoadActive(context.Background()); err != nil {
+		log.Printf("error: load active themes: %v", err)
+	}
 	if err := sitePageService.FillDiagnosticsOnce(context.Background()); err != nil {
 		log.Printf("fill page diagnostics: %v", err)
 	}
