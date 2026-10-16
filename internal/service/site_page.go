@@ -22,6 +22,10 @@ var (
 
 var ErrSitePageNotFound = errors.New("site page not found")
 
+// ErrSystemPage is returned when a system page is deleted or saved as an
+// ordinary page.
+var ErrSystemPage = errors.New("system page")
+
 type SitePageService struct {
 	repo            *repository.SitePageRepository
 	optRepo         *repository.OptionRepository
@@ -97,7 +101,7 @@ func (s *SitePageService) GetBySlug(slug string) (models.SitePage, error) {
 
 func (s *SitePageService) GetByID(ID uint) (models.SitePage, error) {
 	sp := s.repo.GetByID(ID)
-	if sp.ID == 0 {
+	if sp.ID == 0 || sp.SystemKey != nil {
 		return models.SitePage{}, ErrSitePageNotFound
 	}
 	return sp, nil
@@ -155,6 +159,9 @@ func (s *SitePageService) Create(sp models.SitePage) (models.SitePage, []error) 
 }
 
 func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) {
+	if s.repo.GetByID(sp.ID).SystemKey != nil {
+		return models.SitePage{}, []error{ErrSystemPage}
+	}
 	errs := []error{}
 
 	if !s.isSlugValid(sp.Slug) {
@@ -184,6 +191,9 @@ func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) 
 }
 
 func (s *SitePageService) Delete(id uint) error {
+	if s.repo.GetByID(id).SystemKey != nil {
+		return ErrSystemPage
+	}
 	if err := s.repo.Delete(id); err != nil {
 		return err
 	}
