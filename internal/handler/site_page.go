@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/umono-cms/umono/internal/models"
@@ -110,7 +111,11 @@ func (h *SitePageHandler) Delete(c *fiber.Ctx) error {
 
 // SaveNotFoundPage saves the 404 page from its settings screen.
 func (h *SitePageHandler) SaveNotFoundPage(c *fiber.Ctx) error {
-	if err := h.sitePageService.SaveNotFoundPage(c.FormValue("title"), c.FormValue("content")); err != nil {
+	contractID, layoutID, err := bindingValue(c.FormValue("layout"))
+	if err != nil {
+		return err
+	}
+	if err := h.sitePageService.SaveNotFoundPage(c.FormValue("title"), c.FormValue("content"), contractID, layoutID); err != nil {
 		return err
 	}
 
@@ -143,4 +148,22 @@ func (h *SitePageHandler) RenderNewPageSiteEditor(c *fiber.Ctx) error {
 		"SitePageUl":     sitePageList(h.sitePageService, 0, 0),
 		"ComponentUl":    componentList(h.componentService, 0, 0),
 	}, "layouts/admin")
+}
+
+// bindingValue parses the Layout field's value, "<record ID>:<layout id>",
+// into a binding. An empty value is no binding.
+func bindingValue(v string) (*uint, *string, error) {
+	if v == "" {
+		return nil, nil, nil
+	}
+	id, layout, ok := strings.Cut(v, ":")
+	if !ok || layout == "" {
+		return nil, nil, fiber.ErrBadRequest
+	}
+	n, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, nil, fiber.ErrBadRequest
+	}
+	contractID := uint(n)
+	return &contractID, &layout, nil
 }
