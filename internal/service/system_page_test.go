@@ -144,6 +144,12 @@ func TestSystemPageDiagnosticsArePublished(t *testing.T) {
 	if got, want := d[0].PageID, p.ID; got != want {
 		t.Fatalf("d[0].PageID = %d, want %d", got, want)
 	}
+	if d[0].SystemKey == nil {
+		t.Fatalf("d[0].SystemKey = nil, want non-nil")
+	}
+	if *d[0].SystemKey != models.NotFoundSystemKey {
+		t.Fatalf("*d[0].SystemKey = %q, want %q", *d[0].SystemKey, models.NotFoundSystemKey)
+	}
 }
 
 func TestReservedSlugIsInvalid(t *testing.T) {
