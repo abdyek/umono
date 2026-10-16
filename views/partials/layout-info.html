@@ -1,0 +1,11 @@
+{{ with .Info }}{{ if .Selected }}
+<div class="ml-1 space-y-1 text-xs text-neutral-400">
+  <p>{{ t .I18n "admin.pages.layout.params" }}: {{ range $i, $p := .Params }}{{ if $i }}, {{ end }}<span class="text-neutral-200">{{ $p.Name }}</span> ({{ $p.Type }}{{ if $p.Required }}, {{ t $.Info.I18n "admin.pages.layout.required" }}{{ end }}){{ else }}—{{ end }}</p>
+  {{ if .Old }}
+  <p class="text-amber-300">{{ t .I18n "admin.pages.layout.old_note" }}</p>
+  {{ end }}
+  {{ if .RaisesBase }}
+  <p class="text-sky-300">{{ t .I18n "admin.pages.layout.raises_base" }}: {{ .NewBase }}{{ if .Unselectable }}. {{ t .I18n "admin.pages.layout.unselectable" }}: {{ range $i, $n := .Unselectable }}{{ if $i }}, {{ end }}{{ $n }}{{ end }}{{ end }}</p>
+  {{ end }}
+</div>
+{{ end }}{{ end }}

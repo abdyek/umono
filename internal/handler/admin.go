@@ -15,12 +15,14 @@ import (
 type adminHandler struct {
 	sitePageService  *service.SitePageService
 	componentService *service.ComponentService
+	themeService     *service.ThemeService
 }
 
-func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService) *adminHandler {
+func NewAdminHandler(sps *service.SitePageService, cs *service.ComponentService, ts *service.ThemeService) *adminHandler {
 	return &adminHandler{
 		sitePageService:  sps,
 		componentService: cs,
+		themeService:     ts,
 	}
 }
 
@@ -167,12 +169,14 @@ type sitePageEditor struct {
 	LastModifiedAt string
 	SlugErr        string
 	NameErr        string
+	Layout         view.LayoutField
+	PublicURL      string
 	I18n           any
 }
 
 func (h *adminHandler) buildSitePageEditor(ctx context.Context, page models.SitePage, translator any) sitePageEditor {
-	output, diagnostics := sitePagePreview(ctx, h.sitePageService, page.Content)
-	return sitePageEditor{
+	output, diagnostics := sitePagePreviewBound(ctx, h.sitePageService, page.Content, page.ContractID, page.LayoutID)
+	editor := sitePageEditor{
 		ID:             page.ID,
 		Name:           page.Name,
 		Slug:           page.Slug,
@@ -181,8 +185,13 @@ func (h *adminHandler) buildSitePageEditor(ctx context.Context, page models.Site
 		Diagnostics:    diagnostics,
 		IsEnabled:      page.Enabled,
 		LastModifiedAt: view.RelativeTimeWithTranslator(page.LastModifiedAt, translator),
+		Layout:         layoutField(translator, h.themeService, page, bindingString(page.ContractID, page.LayoutID)),
 		I18n:           translator,
 	}
+	if page.ID != 0 {
+		editor.PublicURL = "/" + page.Slug
+	}
+	return editor
 }
 
 type componentEditor struct {

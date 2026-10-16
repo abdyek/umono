@@ -24,13 +24,19 @@ func NewPreviewHandler(sps *service.SitePageService, cs *service.ComponentServic
 func (h *previewHandler) RenderSitePagePreview(c *fiber.Ctx) error {
 	var req struct {
 		Content string `form:"content"`
+		Layout  string `form:"layout"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
 		return err
 	}
 
-	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, req.Content)
+	contractID, layoutID, err := bindingValue(req.Layout)
+	if err != nil {
+		return err
+	}
+
+	output, diagnostics := sitePagePreviewBound(c.UserContext(), h.sitePageService, req.Content, contractID, layoutID)
 
 	return Render(c, "partials/editor-preview", fiber.Map{
 		"Output":      output,
@@ -58,11 +64,17 @@ func (h *previewHandler) RenderComponentPreview(c *fiber.Ctx) error {
 
 func (h *previewHandler) NotFoundPagePreview(c *fiber.Ctx) error {
 	content := c.FormValue("content")
-	if content == "" {
+	layout := c.FormValue("layout")
+	if content == "" && layout == "" {
 		_, content = localizedNotFoundDefaults(c)
 	}
 
-	output, diagnostics := sitePagePreview(c.UserContext(), h.sitePageService, content)
+	contractID, layoutID, err := bindingValue(layout)
+	if err != nil {
+		return err
+	}
+
+	output, diagnostics := sitePagePreviewBound(c.UserContext(), h.sitePageService, content, contractID, layoutID)
 
 	return Render(c, "partials/editor-preview", fiber.Map{
 		"Output":      output,

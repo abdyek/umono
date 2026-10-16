@@ -1,0 +1,26 @@
+<div class="space-y-2">
+  <label class="text-sm font-medium text-neutral-300 ml-1" for="layout">{{ t .Info.I18n "admin.pages.layout.label" }}</label>
+  <input type="hidden" name="current" value="{{ .Current }}">
+  <select
+    id="layout"
+    name="layout"
+    class="w-full bg-neutral-900/50 border text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-4 transition-all duration-200 {{ if .Error }}border-red-500/50 focus:border-red-500 focus:ring-red-500/10{{ else }}border-neutral-700 focus:border-purple-500/50 focus:ring-purple-500/10{{ end }}"
+    hx-get="/admin/site-pages/layout-info"
+    hx-trigger="change"
+    hx-target="#layout-info"
+    hx-swap="innerHTML"
+    hx-include="[name='current']"
+    hx-disinherit="hx-confirm"
+    hx-on:change="htmx.trigger('#content', 'layout-changed')"
+  >
+    <option value="">{{ t .Info.I18n "admin.pages.layout.none" }}</option>
+    {{ range .Groups }}
+    <optgroup label="{{ .Name }}">
+      {{ range .Options }}
+      <option value="{{ .Value }}"{{ if .Selected }} selected{{ end }}>{{ .Label }}{{ if .Old }} ({{ t $.Info.I18n "admin.pages.layout.old_record" }}){{ end }}</option>
+      {{ end }}
+    </optgroup>
+    {{ end }}
+  </select>
+  <div id="layout-info">{{ template "partials/layout-info" . }}</div>
+</div>

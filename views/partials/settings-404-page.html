@@ -18,7 +18,7 @@
             hx-include="#editor-form"
             hx-swap="none"
             hx-indicator="#editor-submit-button"
-            hx-disabled-elt="#title,#content,#editor-submit-button"
+            hx-disabled-elt="#title,#content,#editor-submit-button,#layout"
             hx-confirm="{{ t .I18n "settings.404_page.confirm" }}"
           >
             <span class="flex items-center gap-2 [.htmx-request_&]:invisible">
@@ -47,6 +47,8 @@
           value="{{ .Title }}"
           placeholder="{{ .DefaultTitle }}"
         >
+        {{ template "partials/layout-field" .Layout }}
+        <div id="not-found-layout-error"></div>
         <label class="text-sm font-medium text-neutral-300 ml-1" for="content">{{ t .I18n "settings.404_page.content" }}</label>
         <textarea 
           class="flex-1 w-full bg-neutral-900/50 border border-neutral-700 text-neutral-200 rounded-xl px-4 py-3 text-lg outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all duration-200 placeholder:text-neutral-600 resize-none" 
@@ -55,7 +57,7 @@
           name="content"
           placeholder="{{ .DefaultContent }}"
           hx-post="/admin/not-found-page/preview"
-          hx-trigger="keyup changed delay:750ms"
+          hx-trigger="keyup changed delay:750ms, layout-changed"
           hx-target="#editor-diagnostics"
           hx-swap="innerHTML"
           hx-indicator="false"

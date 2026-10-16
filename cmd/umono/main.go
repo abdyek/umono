@@ -156,13 +156,14 @@ func main() {
 	adminHandler := handler.NewAdminHandler(
 		sitePageService,
 		componentService,
+		themeService,
 	)
 
 	previewHandler := handler.NewPreviewHandler(sitePageService, componentService)
 	fallbackTheme := theme.NewFallback()
 	siteHandler := handler.NewSiteHandler(sitePageService, optionService, fallbackTheme.Release)
 	themeHandler := handler.NewThemeHandler(fallbackTheme, themeService)
-	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService)
+	sitePageHandler := handler.NewSitePageHandler(sitePageService, componentService, themeService)
 	componentHandler := handler.NewComponentHandler(componentService, sitePageService)
 	mediaHandler := handler.NewMediaHandler(mediaService, storageService, optionService)
 	settingsHandler := handler.NewSettingsHandler(settingsService, optionService, sitePageService, storageService, themeService)
@@ -230,6 +231,10 @@ func main() {
 		adminHandler.RenderSitePageList,
 	)
 
+	adminProtected.Get("/site-pages/layout-info",
+		middleware.OnlyHTMX(),
+		sitePageHandler.LayoutInfo,
+	)
 	adminProtected.Get("/site-pages/:id", adminHandler.RenderAdminSitePage)
 	adminProtected.Get("/site-pages/:id/editor",
 		middleware.OnlyHTMX(),
