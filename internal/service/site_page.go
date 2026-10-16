@@ -26,10 +26,11 @@ var ErrSitePageNotFound = errors.New("site page not found")
 // ordinary page.
 var ErrSystemPage = errors.New("system page")
 
-// PageThemes resolves how a page renders with the themes. ThemeService is
-// one.
+// PageThemes resolves how a page renders with the themes and checks its
+// layout binding before it is saved. ThemeService is one.
 type PageThemes interface {
 	PageRender(page models.SitePage) (PageRender, error)
+	CheckBinding(page models.SitePage, previous *models.SitePage) error
 }
 
 // RenderedPage is a page rendered for a visitor. Content holds <umono-root> with the Compono output.
@@ -184,6 +185,12 @@ func (s *SitePageService) Create(sp models.SitePage) (models.SitePage, []error) 
 		errs = append(errs, ErrNameRequired)
 	}
 
+	if s.pageThemes != nil {
+		if err := s.pageThemes.CheckBinding(sp, nil); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	if len(errs) > 0 {
 		return models.SitePage{}, errs
 	}
@@ -214,6 +221,13 @@ func (s *SitePageService) Update(sp models.SitePage) (models.SitePage, []error) 
 
 	if sp.Name == "" {
 		errs = append(errs, ErrNameRequired)
+	}
+
+	if s.pageThemes != nil {
+		previous := s.repo.GetByID(sp.ID)
+		if err := s.pageThemes.CheckBinding(sp, &previous); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if len(errs) > 0 {
