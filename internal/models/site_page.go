@@ -9,6 +9,9 @@ type SitePage struct {
 	Content        string
 	LastModifiedAt *time.Time
 	Enabled        bool
+	ContractID     *uint     `gorm:"index"`
+	LayoutID       *string   // id of a [[layouts]] entry in the contract record. For example "post"
+	Contract       *Contract `gorm:"foreignKey:ContractID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
 }
 
 func (SitePage) TableName() string {
