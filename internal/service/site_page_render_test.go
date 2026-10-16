@@ -70,8 +70,8 @@ func TestRenderedPageWithActiveTheme(t *testing.T) {
 	if got, want := r.Release, c.Release; got != want {
 		t.Fatalf("r.Release = %q, want %q", got, want)
 	}
-	if got, want := r.RootClass, "layout-post"; got != want {
-		t.Fatalf("r.RootClass = %q, want %q", got, want)
+	if got, want := strings.HasPrefix(r.Content, `<umono-root class="layout-post">`), true; got != want {
+		t.Fatalf("strings.HasPrefix(r.Content, %q) = %v, want %v; r.Content = %q", `<umono-root class="layout-post">`, got, want, r.Content)
 	}
 	if got, want := r.Name, "P"; got != want {
 		t.Fatalf("r.Name = %q, want %q", got, want)
@@ -95,8 +95,8 @@ func TestRenderedPageWithoutActiveTheme(t *testing.T) {
 	if got, want := r.Release, ""; got != want {
 		t.Fatalf("r.Release = %q, want %q", got, want)
 	}
-	if got, want := r.RootClass, ""; got != want {
-		t.Fatalf("r.RootClass = %q, want %q", got, want)
+	if got, want := strings.HasPrefix(r.Content, "<umono-root>"), true; got != want {
+		t.Fatalf("strings.HasPrefix(r.Content, %q) = %v, want %v; r.Content = %q", "<umono-root>", got, want, r.Content)
 	}
 }
 
@@ -115,8 +115,8 @@ func TestRenderedPageWithoutBinding(t *testing.T) {
 	if got, want := r.Release, ""; got != want {
 		t.Fatalf("r.Release = %q, want %q", got, want)
 	}
-	if got, want := r.RootClass, ""; got != want {
-		t.Fatalf("r.RootClass = %q, want %q", got, want)
+	if got, want := strings.HasPrefix(r.Content, "<umono-root>"), true; got != want {
+		t.Fatalf("strings.HasPrefix(r.Content, %q) = %v, want %v; r.Content = %q", "<umono-root>", got, want, r.Content)
 	}
 }
 
@@ -170,8 +170,8 @@ func TestNotFoundPageWithLayout(t *testing.T) {
 	if got, want := r.Release, c.Release; got != want {
 		t.Fatalf("r.Release = %q, want %q", got, want)
 	}
-	if got, want := r.RootClass, "layout-post"; got != want {
-		t.Fatalf("r.RootClass = %q, want %q", got, want)
+	if got, want := strings.HasPrefix(r.Content, `<umono-root class="layout-post">`), true; got != want {
+		t.Fatalf("strings.HasPrefix(r.Content, %q) = %v, want %v; r.Content = %q", `<umono-root class="layout-post">`, got, want, r.Content)
 	}
 	if got, want := r.Name, "Lost"; got != want {
 		t.Fatalf("r.Name = %q, want %q", got, want)
