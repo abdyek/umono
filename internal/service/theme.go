@@ -35,6 +35,12 @@ var (
 	// ErrGroupChanged is returned when the pending install of an active theme
 	// has a contract of another group. The theme is deactivated first.
 	ErrGroupChanged = errors.New("the pending install's contract is in another group; deactivate the theme first")
+	// ErrContractHasThemes is returned when a theme under themes/ has the
+	// contract of a record that is being deleted.
+	ErrContractHasThemes = errors.New("a theme under themes/ has the contract")
+	// ErrContractHasPages is returned when pages are bound to a record that
+	// is being deleted.
+	ErrContractHasPages = errors.New("pages are bound to the contract record")
 )
 
 // ContractRegistry verifies a package's contract.toml against the published
@@ -348,4 +354,37 @@ func (s *ThemeService) checkActive(ref models.Contract, path string) (theme.Load
 		Contract:   installed.Result.Contract,
 		Attributes: installed.Result.Attributes,
 	}, nil
+}
+
+// DeleteContract deletes the stored record of the contract ref, the site
+// owner's "Delete record" action; a record is never deleted otherwise. Right
+// before, it checks again that no theme under themes/, active or not, has the
+// contract and that no page, disabled ones included, is bound to the record.
+// A theme whose built.toml cannot be read refuses the deletion, because its
+// contract is unknown. SQLite does not enforce the foreign key, so the pages
+// are counted here.
+func (s *ThemeService) DeleteContract(ref models.Contract) error {
+	s.activateMu.Lock()
+	defer s.activateMu.Unlock()
+
+	record, ok := s.contracts.Record(ref)
+	if !ok {
+		return fmt.Errorf("%w: %s", ErrContractNotFound, ref.Ref())
+	}
+	installed, err := theme.ListInstalled(s.themesDir)
+	if err != nil {
+		return err
+	}
+	for _, t := range installed {
+		if t.Err != nil {
+			return fmt.Errorf("theme %s: %w", t.Path, t.Err)
+		}
+		if t.Built.Contract == ref.Ref() {
+			return fmt.Errorf("%w: %s", ErrContractHasThemes, t.Path)
+		}
+	}
+	if n := s.contracts.CountPages(record.ID); n > 0 {
+		return fmt.Errorf("%w: %d pages", ErrContractHasPages, n)
+	}
+	return s.contracts.Delete(record.ID)
 }

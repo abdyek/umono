@@ -59,3 +59,16 @@ func (r *ContractRepository) GetPagesAboveMinor(g models.ContractGroup, minor ui
 		Where("c.minor > ?", minor).Order("pages.id ASC").Find(&pages)
 	return pages
 }
+
+// CountPages returns the number of pages bound to the record id, disabled
+// ones included.
+func (r *ContractRepository) CountPages(id uint) int64 {
+	var n int64
+	r.db.Model(&models.SitePage{}).Where("contract_id = ?", id).Count(&n)
+	return n
+}
+
+// Delete deletes the record id.
+func (r *ContractRepository) Delete(id uint) error {
+	return r.db.Delete(&models.Contract{}, id).Error
+}
