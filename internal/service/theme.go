@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/umono-cms/umono/internal/models"
@@ -20,6 +23,12 @@ var (
 	// ErrNotCovered is returned when a theme's contract does not cover the
 	// base of its group.
 	ErrNotCovered = errors.New("the theme's contract does not cover the base of its group")
+	// ErrNotInstalled is returned for a pending install without an installed
+	// theme at its path. It can only be rejected.
+	ErrNotInstalled = errors.New("no theme is installed at the path of the pending install")
+	// ErrGroupChanged is returned when the pending install of an active theme
+	// has a contract of another group. The theme is deactivated first.
+	ErrGroupChanged = errors.New("the pending install's contract is in another group; deactivate the theme first")
 )
 
 // ContractRegistry verifies a package's contract.toml against the published
@@ -39,26 +48,28 @@ type ThemeCandidate struct {
 	Asked bool
 }
 
-// ThemeService activates the themes installed under themesDir.
+// ThemeService activates the themes installed under themesDir and applies the pending installs under pendingDir.
 type ThemeService struct {
-	themesDir string
-	contracts *ContractService
-	themes    *repository.ThemeRepository
-	registry  ContractRegistry
-	active    *theme.ActiveSet
+	themesDir  string
+	pendingDir string
+	contracts  *ContractService
+	themes     *repository.ThemeRepository
+	registry   ContractRegistry
+	active     *theme.ActiveSet
 	// activateMu serializes activations, so two of them do not add the same
 	// contract record or overwrite each other's active_themes.
 	activateMu         sync.Mutex
 	renderInputChanged func(ctx context.Context)
 }
 
-func NewThemeService(themesDir string, contracts *ContractService, themes *repository.ThemeRepository, registry ContractRegistry) *ThemeService {
+func NewThemeService(themesDir, pendingDir string, contracts *ContractService, themes *repository.ThemeRepository, registry ContractRegistry) *ThemeService {
 	return &ThemeService{
-		themesDir: themesDir,
-		contracts: contracts,
-		themes:    themes,
-		registry:  registry,
-		active:    theme.NewActiveSet(),
+		themesDir:  themesDir,
+		pendingDir: pendingDir,
+		contracts:  contracts,
+		themes:     themes,
+		registry:   registry,
+		active:     theme.NewActiveSet(),
 	}
 }
 
@@ -71,6 +82,12 @@ func (s *ThemeService) Check(ctx context.Context, path string) (ThemeCandidate, 
 	if err != nil {
 		return ThemeCandidate{}, err
 	}
+	return s.checkContract(ctx, installed)
+}
+
+// checkContract runs the contract check and the coverage check on a theme
+// that passed the package checks.
+func (s *ThemeService) checkContract(ctx context.Context, installed theme.Installed) (ThemeCandidate, error) {
 	ref, err := models.ParseContractRef(installed.Built.Contract)
 	if err != nil {
 		return ThemeCandidate{}, err
@@ -162,4 +179,71 @@ func (s *ThemeService) notifyRenderInputChange() {
 	if s.renderInputChanged != nil {
 		s.renderInputChanged(context.Background())
 	}
+}
+
+// ApplyPending uses the new content of the pending install at path. The
+// checks of activation run on the pending directory; for a theme that is not
+// active the contract and coverage checks are skipped, because activation
+// runs them. The new contract of an active theme must stay in its group. A
+// changed contract is written to active_themes first, then the pending
+// directory replaces the installed one and the new release and attributes
+// table replace the old ones in memory. When a step fails, the installed
+// theme stays in use.
+func (s *ThemeService) ApplyPending(ctx context.Context, path string) error {
+	s.activateMu.Lock()
+	defer s.activateMu.Unlock()
+
+	installed, err := theme.CheckInstalled(s.pendingDir, path)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(filepath.Join(s.themesDir, filepath.FromSlash(path))); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%w: %s", ErrNotInstalled, path)
+		}
+		return err
+	}
+
+	g, old, active := s.active.ByPath(path)
+	if !active {
+		return theme.Replace(s.themesDir, s.pendingDir, path)
+	}
+
+	ref, err := models.ParseContractRef(installed.Built.Contract)
+	if err != nil {
+		return err
+	}
+	if ref.Group() != g {
+		return fmt.Errorf("%w: %s", ErrGroupChanged, ref.Ref())
+	}
+	c, err := s.checkContract(ctx, installed)
+	if err != nil {
+		return err
+	}
+
+	contractChanged := c.Contract.ID != old.ContractID
+	if contractChanged {
+		if err := s.themes.Activate(&c.Contract, models.ThemeOption{Path: path, ContractID: c.Contract.Ref()}); err != nil {
+			return err
+		}
+	}
+	if err := theme.Replace(s.themesDir, s.pendingDir, path); err != nil {
+		if contractChanged {
+			previous := models.Contract{ID: old.ContractID}
+			_ = s.themes.Activate(&previous, models.ThemeOption{Path: path, ContractID: old.Contract.ID + "@" + old.Contract.Version})
+		}
+		return err
+	}
+
+	s.active.Set(g, theme.Loaded{
+		Path:       path,
+		Release:    c.Release,
+		ContractID: c.Contract.ID,
+		Contract:   c.Result.Contract,
+		Attributes: c.Result.Attributes,
+	})
+	if contractChanged {
+		s.notifyRenderInputChange()
+	}
+	return nil
 }
