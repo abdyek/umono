@@ -194,29 +194,9 @@ func (h *adminHandler) buildSitePageEditor(ctx context.Context, page models.Site
 	return editor
 }
 
-type componentEditor struct {
-	ID             uint
-	Name           string
-	Content        string
-	Output         template.HTML
-	Diagnostics    []view.DiagnosticItem
-	PageErrorCount int
-	LastModifiedAt string
-	NameErr        string
-	I18n           any
-}
-
-func (h *adminHandler) buildComponentEditor(ctx context.Context, comp models.Component, translator any) componentEditor {
+func (h *adminHandler) buildComponentEditor(ctx context.Context, comp models.Component, translator any) view.ComponentEditorData {
 	output, diagnostics := componentPreview(ctx, h.componentService, comp.Name, comp.Content)
-	editor := componentEditor{
-		ID:             comp.ID,
-		Name:           comp.Name,
-		Content:        comp.Content,
-		Output:         output,
-		Diagnostics:    diagnostics,
-		LastModifiedAt: view.RelativeTimeWithTranslator(comp.LastModifiedAt, translator),
-		I18n:           translator,
-	}
+	editor := view.ComponentEditor(comp, output, diagnostics, "", translator)
 	if comp.ID != 0 {
 		editor.PageErrorCount = h.sitePageService.PublishedPageCountOfGlobal(comp.Name)
 	}
