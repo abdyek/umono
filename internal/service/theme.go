@@ -482,12 +482,10 @@ func (s *ThemeService) LoadDev(ctx context.Context) error {
 		return err
 	}
 	s.active.Set(ref.Group(), theme.Loaded{
-		Path:          theme.DevPath,
-		Release:       theme.DevRelease,
-		ContractID:    record.ID,
-		Contract:      r.Contract,
-		Attributes:    r.Attributes,
-		HasAttributes: r.AttributesErr == nil,
+		Path:       theme.DevPath,
+		Release:    theme.DevRelease,
+		ContractID: record.ID,
+		Contract:   r.Contract,
 	})
 	return nil
 }
@@ -508,6 +506,35 @@ func (s *ThemeService) Asset(release, name string) ([]byte, bool) {
 	}
 	b, ok := t.Assets[name]
 	return b, ok
+}
+
+// DevAsset returns assets/name of the theme in development, checked on
+// every request (privileges #4 and #6). theme.css is the Transform output of
+// assets/theme.css. ok is false without a loaded theme in development and
+// for a file that is missing or breaks the rules of assets/. err is a fatal
+// error of the check or, for theme.css, its CSS error.
+func (s *ThemeService) DevAsset(name string) (b []byte, ok bool, err error) {
+	if _, loaded := s.active.ByRelease(theme.DevRelease); !loaded {
+		return nil, false, nil
+	}
+	r, err := theme.CheckDev(s.themesDir, s.devRoot)
+	if err != nil {
+		return nil, false, err
+	}
+	if name == "theme.css" {
+		if r.CSSErr != nil {
+			return nil, false, r.CSSErr
+		}
+		return r.CSS, true, nil
+	}
+	if _, bad := r.AssetErrs["assets/"+name]; bad {
+		return nil, false, nil
+	}
+	b, err = theme.ReadDevAsset(s.themesDir, name)
+	if err != nil {
+		return nil, false, nil
+	}
+	return b, true, nil
 }
 
 // RejectPending deletes the pending install at path, the "Reject" action.

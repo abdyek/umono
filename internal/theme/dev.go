@@ -50,3 +50,20 @@ func CheckDev(themesDir, root string) (themecore.DevResult, error) {
 	}
 	return r, nil
 }
+
+// ReadDevAsset reads assets/name of the theme in development under
+// themesDir. assets/ is a symlink into the theme project, and CheckDev
+// checks that it resolves inside it. name cannot leave assets/, through
+// ".." or a symlink under it.
+func ReadDevAsset(themesDir, name string) ([]byte, error) {
+	dir, err := filepath.EvalSymlinks(filepath.Join(themesDir, filepath.FromSlash(DevPath), "assets"))
+	if err != nil {
+		return nil, err
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	return root.ReadFile(filepath.FromSlash(name))
+}
