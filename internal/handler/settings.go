@@ -140,7 +140,7 @@ func isSettingsContentSwap(c *fiber.Ctx) bool {
 	}
 
 	switch c.Get("HX-Target") {
-	case "settings-content", "settings-general-content", "settings-404-page-content", "settings-robots-txt-content", "settings-about-content", "settings-storage-content", "settings-themes-content":
+	case "settings-content", "settings-general-content", "settings-404-page-content", "settings-robots-txt-content", "settings-about-content", "settings-storage-content", "settings-themes-content", "settings-theme-pages-content":
 		return true
 	default:
 		return false

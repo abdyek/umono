@@ -63,7 +63,7 @@
                   {{ end }}
                 </p>
                 {{ if .UncoveredPages }}
-                <p class="text-xs text-amber-300">{{ t $.I18n "settings.themes.unselectable" }}: {{ t $.I18n "settings.themes.uncovered_pages" }} {{ .UncoveredPages }} ({{ $base }})</p>
+                <p class="text-xs text-amber-300">{{ t $.I18n "settings.themes.unselectable" }}: {{ t $.I18n "settings.themes.uncovered_pages" }} <a href="/admin/settings/themes/pages?contract={{ .Contract }}" hx-get="/admin/settings/themes/pages?contract={{ .Contract }}" hx-target="#settings-content" hx-push-url="/admin/settings/themes/pages?contract={{ .Contract }}" class="underline underline-offset-2 hover:text-amber-200">{{ .UncoveredPages }}</a> ({{ $base }})</p>
                 {{ end }}
                 {{ if .ThemeAPI }}
                 <p class="text-xs text-amber-300">{{ t $.I18n "settings.themes.unselectable" }}: Theme API {{ .ThemeAPIVersion }}, {{ t $.I18n "settings.themes.supported" }} {{ $.ThemesPage.ThemeAPIMin }}–{{ $.ThemesPage.ThemeAPICurrent }}</p>

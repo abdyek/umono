@@ -63,7 +63,7 @@ func (r *ContractRepository) GroupBase(g models.ContractGroup) (minor uint, ok b
 func (r *ContractRepository) GetPagesAboveMinor(g models.ContractGroup, minor uint) []models.SitePage {
 	var pages []models.SitePage
 	inGroup(r.db.Model(&models.SitePage{}).Joins("JOIN contracts c ON c.id = pages.contract_id"), "c", g).
-		Where("c.minor > ?", minor).Order("pages.id ASC").Find(&pages)
+		Preload("Contract").Where("c.minor > ?", minor).Order("pages.id ASC").Find(&pages)
 	return pages
 }
 

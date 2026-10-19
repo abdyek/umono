@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/umono-cms/themecore"
+	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/service"
 	"github.com/umono-cms/umono/internal/theme"
 )
@@ -204,4 +205,35 @@ func builtAt(t time.Time) string {
 
 func contractVersion(major, minor uint) string {
 	return fmt.Sprintf("v%d.%d", major, minor)
+}
+
+// ThemePagesView lists the pages that keep a theme of Contract from being
+// selected: the pages of its group bound to a newer minor.
+type ThemePagesView struct {
+	// Contract is the reference of the theme's contract, for example
+	// "example/blog@v1.0".
+	Contract string
+	Pages    []ThemePageView
+}
+
+// ThemePageView is a page bound to a newer minor. Record is the version of
+// the record it is bound to, for example "v1.3".
+type ThemePageView struct {
+	ID     uint
+	Name   string
+	Slug   string
+	Record string
+}
+
+// NewThemePagesView builds the view of the pages above the minor of ref.
+func NewThemePagesView(ref models.Contract, pages []models.SitePage) ThemePagesView {
+	v := ThemePagesView{Contract: ref.Ref()}
+	for _, p := range pages {
+		pv := ThemePageView{ID: p.ID, Name: p.Name, Slug: p.Slug}
+		if p.Contract != nil {
+			pv.Record = contractVersion(p.Contract.Major, p.Contract.Minor)
+		}
+		v.Pages = append(v.Pages, pv)
+	}
+	return v
 }

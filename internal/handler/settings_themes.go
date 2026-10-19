@@ -32,6 +32,26 @@ func (h *settingsHandler) renderThemes(c *fiber.Ctx, message, failure string) er
 	}, layouts...)
 }
 
+// RenderThemePages lists the pages of a group bound to a newer minor than the
+// contract reference in the query, so the site owner can find what keeps a
+// theme from being selected. A bad reference goes back to the themes screen.
+func (h *settingsHandler) RenderThemePages(c *fiber.Ctx) error {
+	ref, err := models.ParseContractRef(c.Query("contract"))
+	if err != nil {
+		return c.Redirect("/admin/settings/themes", fiber.StatusSeeOther)
+	}
+	partial := "partials/settings-theme-pages"
+	layouts := []string{"layouts/settings", "layouts/admin"}
+	if isSettingsContentSwap(c) {
+		partial = "partials/htmx/settings-theme-pages"
+		layouts = []string{}
+	}
+	return Render(c, partial, fiber.Map{
+		"SettingsUl": h.settingsUl(c, "themes"),
+		"ThemePages": view.NewThemePagesView(ref, h.themeService.UncoveredPages(ref)),
+	}, layouts...)
+}
+
 // failure joins the translated headline of a failed action and its reason.
 func failure(c *fiber.Ctx, key string, err error) string {
 	return translate(c, key) + ": " + err.Error()
