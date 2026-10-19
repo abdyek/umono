@@ -162,10 +162,7 @@ func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret) (*fiber.App, error) {
 	})
 	app.Use(middleware.I18nContext(optionService, bundle))
 
-	app.Use("/static", func(c *fiber.Ctx) error {
-		c.Set("Cache-Control", "public, max-age=31536000, immutable")
-		return c.Next()
-	}, filesystem.New(filesystem.Config{
+	app.Use("/static", staticCacheControl(umono.Version), filesystem.New(filesystem.Config{
 		Root:   http.FS(umono.Public()),
 		Browse: false,
 	}))
@@ -386,4 +383,18 @@ func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret) (*fiber.App, error) {
 
 	app.Get("/:slug?", siteHandler.RenderSitePage)
 	return app, nil
+}
+
+// staticCacheControl sets the cache of /static. A release caches the files
+// for a year: their URLs carry the version, which changes with every
+// release. A local build is always "dev", so the browser revalidates them.
+func staticCacheControl(version string) fiber.Handler {
+	value := "public, max-age=31536000, immutable"
+	if version == "dev" {
+		value = "no-cache"
+	}
+	return func(c *fiber.Ctx) error {
+		c.Set("Cache-Control", value)
+		return c.Next()
+	}
 }
