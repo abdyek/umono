@@ -3,6 +3,7 @@ package theme
 import (
 	"bytes"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -163,5 +164,44 @@ func TestCheckDevSymlinkOutsideRoot(t *testing.T) {
 
 	if _, err := CheckDev(themesDir, root); err == nil {
 		t.Fatalf("CheckDev: want error, got nil")
+	}
+}
+
+func TestReadDevAsset(t *testing.T) {
+	themesDir, root := writeDevTheme(t, nil)
+
+	fontPath := filepath.Join(root, "assets", "fonts", "a.woff2")
+	if err := os.MkdirAll(filepath.Dir(fontPath), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(fontPath), err)
+	}
+	if err := os.WriteFile(fontPath, []byte("wOF2 font"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", fontPath, err)
+	}
+
+	b, err := ReadDevAsset(themesDir, "fonts/a.woff2")
+	if err != nil {
+		t.Fatalf("ReadDevAsset(fonts/a.woff2): %v", err)
+	}
+	if string(b) != "wOF2 font" {
+		t.Fatalf("ReadDevAsset(fonts/a.woff2) = %q, want %q", string(b), "wOF2 font")
+	}
+
+	if _, err := ReadDevAsset(themesDir, "../built.toml"); err == nil {
+		t.Fatalf("ReadDevAsset(../built.toml): want error, got nil")
+	}
+
+	if _, err := ReadDevAsset(themesDir, "missing.png"); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("ReadDevAsset(missing.png): errors.Is(err, fs.ErrNotExist) = false; err = %v", err)
+	}
+
+	outside := filepath.Join(t.TempDir(), "out.png")
+	if err := os.WriteFile(outside, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", outside, err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "assets", "out.png")); err != nil {
+		t.Skipf("symlink: %v", err)
+	}
+	if _, err := ReadDevAsset(themesDir, "out.png"); err == nil {
+		t.Fatalf("ReadDevAsset(out.png): want error, got nil")
 	}
 }
