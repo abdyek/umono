@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -59,7 +60,7 @@ func writeHandlerTheme(t *testing.T) string {
 	return dir
 }
 
-func newThemesTestApp(t *testing.T, reg service.ContractRegistry) (*fiber.App, *service.ThemeService) {
+func newThemesTestAppWithDB(t *testing.T, reg service.ContractRegistry) (*fiber.App, *service.ThemeService, *gorm.DB) {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -84,9 +85,16 @@ func newThemesTestApp(t *testing.T, reg service.ContractRegistry) (*fiber.App, *
 
 	app := fiber.New(fiber.Config{Views: engine})
 	app.Get("/admin/settings/themes", h.RenderThemes)
+	app.Get("/admin/settings/themes/pages", h.RenderThemePages)
 	app.Post("/admin/settings/themes/activate", h.ActivateTheme)
 	app.Post("/admin/settings/themes/deactivate", h.DeactivateTheme)
 
+	return app, ts, db
+}
+
+func newThemesTestApp(t *testing.T, reg service.ContractRegistry) (*fiber.App, *service.ThemeService) {
+	t.Helper()
+	app, ts, _ := newThemesTestAppWithDB(t, reg)
 	return app, ts
 }
 
@@ -105,6 +113,50 @@ func htmxPost(t *testing.T, app *fiber.App, path string, form url.Values) (int, 
 		t.Fatalf("io.ReadAll() error = %v", err)
 	}
 	return resp.StatusCode, string(body)
+}
+
+func htmxGet(t *testing.T, app *fiber.App, path string) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("HX-Target", "settings-content")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll() error = %v", err)
+	}
+	return resp.StatusCode, string(body)
+}
+
+// seedUncoveredPages stores the records example/blog v1.0 and v1.1, a page
+// bound to each and an unbound page. It returns the page bound to v1.1.
+func seedUncoveredPages(t *testing.T, db *gorm.DB) models.SitePage {
+	t.Helper()
+
+	old := models.Contract{Org: "example", Name: "blog", Major: 1, Minor: 0, Source: "old", Checksum: "old"}
+	if result := db.Create(&old); result.Error != nil {
+		t.Fatalf("db.Create() error = %v", result.Error)
+	}
+	newer := models.Contract{Org: "example", Name: "blog", Major: 1, Minor: 1, Source: "new", Checksum: "new"}
+	if result := db.Create(&newer); result.Error != nil {
+		t.Fatalf("db.Create() error = %v", result.Error)
+	}
+
+	if result := db.Create(&models.SitePage{Name: "Old Post", Slug: "old-post", ContractID: &old.ID}); result.Error != nil {
+		t.Fatalf("db.Create() error = %v", result.Error)
+	}
+	newPage := models.SitePage{Name: "New Post", Slug: "new-post", ContractID: &newer.ID}
+	if result := db.Create(&newPage); result.Error != nil {
+		t.Fatalf("db.Create() error = %v", result.Error)
+	}
+	if result := db.Create(&models.SitePage{Name: "Free Page", Slug: "free-page"}); result.Error != nil {
+		t.Fatalf("db.Create() error = %v", result.Error)
+	}
+
+	return newPage
 }
 
 func TestThemesPageListsTheGroups(t *testing.T) {
@@ -197,5 +249,54 @@ func TestThemesDeactivateRejectsABadContract(t *testing.T) {
 	status, _ := htmxPost(t, app, "/admin/settings/themes/deactivate", url.Values{"contract": {"nope"}})
 	if got, want := status, http.StatusBadRequest; got != want {
 		t.Fatalf("status = %d, want %d", got, want)
+	}
+}
+
+func TestThemePagesListsThePagesAboveTheMinor(t *testing.T) {
+	app, _, db := newThemesTestAppWithDB(t, &fakeThemeRegistry{})
+	page := seedUncoveredPages(t, db)
+
+	status, body := htmxGet(t, app, "/admin/settings/themes/pages?contract=example/blog@v1.0")
+	if got, want := status, http.StatusOK; got != want {
+		t.Fatalf("status = %d, want %d", got, want)
+	}
+	for _, want := range []string{"New Post", "/new-post", "v1.1", fmt.Sprintf("/admin/site-pages/%d", page.ID)} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body = %q, want to contain %q", body, want)
+		}
+	}
+	for _, unwanted := range []string{"Old Post", "Free Page"} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("body = %q, want to not contain %q", body, unwanted)
+		}
+	}
+}
+
+func TestThemePagesRedirectsABadContract(t *testing.T) {
+	app, _ := newThemesTestApp(t, &fakeThemeRegistry{})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/settings/themes/pages?contract=nope", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if got, want := resp.StatusCode, http.StatusSeeOther; got != want {
+		t.Fatalf("resp.StatusCode = %d, want %d", got, want)
+	}
+	if got, want := resp.Header.Get("Location"), "/admin/settings/themes"; got != want {
+		t.Fatalf("resp.Header.Get(\"Location\") = %q, want %q", got, want)
+	}
+}
+
+func TestThemesPageLinksTheUncoveredPages(t *testing.T) {
+	app, _, db := newThemesTestAppWithDB(t, &fakeThemeRegistry{})
+	seedUncoveredPages(t, db)
+
+	status, body := htmxGet(t, app, "/admin/settings/themes")
+	if got, want := status, http.StatusOK; got != want {
+		t.Fatalf("status = %d, want %d", got, want)
+	}
+	if !strings.Contains(body, "/admin/settings/themes/pages?contract=") {
+		t.Fatalf("body = %q, want to contain %q", body, "/admin/settings/themes/pages?contract=")
 	}
 }
