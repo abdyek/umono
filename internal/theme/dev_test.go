@@ -11,6 +11,11 @@ import (
 	"github.com/umono-cms/themecore"
 )
 
+// writeDevTheme writes a theme project (root) and its dev directory under
+// themesDir, themes/dev/dev/0.0.0/, as the CLI creates them. built.toml is
+// the package fixture's with the id dev/dev and the version 0.0.0;
+// contract.toml, attributes.toml and assets are symlinks into root. built,
+// when not nil, changes built.toml before it is written.
 func writeDevTheme(t *testing.T, built func(string) string) (themesDir, root string) {
 	t.Helper()
 	root = t.TempDir()

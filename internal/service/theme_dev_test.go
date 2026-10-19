@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/umono-cms/themecore"
 	"github.com/umono-cms/umono/internal/models"
 	"github.com/umono-cms/umono/internal/repository"
 	"github.com/umono-cms/umono/internal/theme"
@@ -41,6 +42,15 @@ func writeDevTheme(t *testing.T, themesDir string, built func(string) string) (r
 	}
 	if err := os.WriteFile(attributesPath, attributesBytes, 0o644); err != nil {
 		t.Fatalf("write %s: %v", attributesPath, err)
+	}
+
+	assetsDir := filepath.Join(root, "assets")
+	if err := os.MkdirAll(assetsDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", assetsDir, err)
+	}
+	cssPath := filepath.Join(assetsDir, "theme.css")
+	if err := os.WriteFile(cssPath, themecore.FallbackSource(), 0o644); err != nil {
+		t.Fatalf("write %s: %v", cssPath, err)
 	}
 
 	builtBytes, err := os.ReadFile(filepath.Join("..", "theme", "testdata", "package", "built.toml"))
