@@ -179,25 +179,6 @@ func (h *SitePageHandler) LayoutInfo(c *fiber.Ctx) error {
 	})
 }
 
-func (h *SitePageHandler) CheckSlug(c *fiber.Ctx) error {
-	slug := c.Query("slug")
-	id := c.Query("id")
-
-	u64ID, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		c.SendStatus(400)
-	}
-
-	err = h.sitePageService.CheckSlug(slug, uint(u64ID))
-	if err != nil {
-		return Render(c, "partials/slug-error", fiber.Map{
-			"SlugErr": translatedValidationError(c, err),
-		})
-	}
-
-	return c.SendString("")
-}
-
 func (h *SitePageHandler) RenderNewPageSiteEditor(c *fiber.Ctx) error {
 	editor := view.SitePageEditor(models.SitePage{}, mustPreviewHTML(""), nil, "", "", c.Locals("I18n"))
 	editor.Layout = layoutField(c.Locals("I18n"), h.themeService, models.SitePage{}, "")

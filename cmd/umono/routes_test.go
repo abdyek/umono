@@ -123,11 +123,6 @@ var skippedRoutes = map[string]string{
 	"/admin/media/pending/:token/preview": "needs a pending upload",
 }
 
-// routeQueries are the query strings of the admin routes that need one.
-var routeQueries = map[string]string{
-	"/admin/site-pages/check-slug": "?slug=new-page&id=0",
-}
-
 // get requests path and follows the redirects. It returns the last status and
 // body.
 func get(t *testing.T, app *fiber.App, path, cookie string, htmx bool) (int, string) {
@@ -210,7 +205,6 @@ func TestAdminRoutesRender(t *testing.T) {
 			t.Errorf("%s: no value for its parameters", route.Path)
 			continue
 		}
-		path += routeQueries[route.Path]
 		status, body := get(t, app, path, cookie, true)
 		checkRender(t, path+" (htmx)", status, body)
 		status, body = get(t, app, path, cookie, false)

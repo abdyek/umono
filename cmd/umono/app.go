@@ -187,11 +187,6 @@ func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret) (*fiber.App, error) {
 	adminProtected.Get("/site-pages/new", sitePageHandler.RenderNewPageSiteEditor)
 	adminProtected.Get("/components/new", componentHandler.RenderComponentEditor)
 
-	adminProtected.Get("/site-pages/check-slug",
-		middleware.OnlyHTMX(),
-		sitePageHandler.CheckSlug,
-	)
-
 	adminProtected.Get("/site-pages/list",
 		middleware.OnlyHTMX(),
 		adminHandler.RenderSitePageList,
