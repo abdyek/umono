@@ -262,6 +262,7 @@ func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret) (*fiber.App, error) {
 	adminProtected.Get("/settings/general", settingsHandler.RenderGeneral)
 	adminProtected.Get("/settings/404-page", settingsHandler.Render404Page)
 	adminProtected.Get("/settings/themes", settingsHandler.RenderThemes)
+	adminProtected.Get("/settings/themes/pages", settingsHandler.RenderThemePages)
 	adminProtected.Get("/settings/robots-txt", settingsHandler.RenderRobotsTxt)
 	adminProtected.Get("/settings/storage", settingsHandler.RenderStorageIndex)
 	adminProtected.Get("/settings/storage/new", settingsHandler.RenderStorageNew)

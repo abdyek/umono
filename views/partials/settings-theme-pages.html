@@ -1,0 +1,31 @@
+<div id="settings-theme-pages-content" class="flex-1 flex overflow-hidden h-full">
+  <div class="flex-1 flex flex-col min-h-0">
+    <header class="px-6 py-4 border-b border-neutral-700/50 bg-neutral-800/20">
+      <h2 class="text-lg font-semibold text-neutral-200">{{ t .I18n "settings.themes.uncovered_title" }}</h2>
+      <p class="text-sm text-neutral-500">{{ t .I18n "settings.themes.uncovered_description" }} {{ .ThemePages.Contract }}</p>
+    </header>
+    <div class="flex-1 overflow-y-auto p-6">
+      <div class="mx-auto max-w-5xl space-y-6">
+        <a href="/admin/settings/themes" hx-get="/admin/settings/themes" hx-target="#settings-content" hx-push-url="/admin/settings/themes" class="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">{{ t .I18n "settings.themes.back" }}</a>
+
+        {{ if not .ThemePages.Pages }}
+        <p class="text-sm text-neutral-500">{{ t .I18n "settings.themes.uncovered_empty" }}</p>
+        {{ else }}
+        <section class="overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900/40">
+          <div class="divide-y divide-neutral-800">
+            {{ range .ThemePages.Pages }}
+            <div class="flex items-center justify-between gap-4 px-5 py-4">
+              <div class="min-w-0">
+                <a href="/admin/site-pages/{{ .ID }}" class="text-sm font-medium text-neutral-200 hover:text-purple-300 transition-colors">{{ .Name }}</a>
+                <span class="ml-2 text-xs text-neutral-500">/{{ .Slug }}</span>
+              </div>
+              <span class="text-xs text-amber-300">{{ t $.I18n "settings.themes.bound_record" }}: {{ .Record }}</span>
+            </div>
+            {{ end }}
+          </div>
+        </section>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+</div>

@@ -173,6 +173,13 @@ func (s *ThemeService) Loaded(g models.ContractGroup) (theme.Loaded, bool) {
 	return s.active.Get(g)
 }
 
+// UncoveredPages returns the pages of the group of ref that are bound to a
+// newer minor than ref. A theme of ref cannot be selected while there are
+// any.
+func (s *ThemeService) UncoveredPages(ref models.Contract) []models.SitePage {
+	return s.contracts.UncoveredPages(ref)
+}
+
 // Deactivate returns the group g to fallback render: its element is removed
 // from active_themes and its theme from memory. The theme directory, the
 // contract record and the bindings of the pages stay. It has no

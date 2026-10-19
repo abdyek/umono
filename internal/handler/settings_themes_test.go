@@ -115,6 +115,8 @@ func htmxPost(t *testing.T, app *fiber.App, path string, form url.Values) (int, 
 	return resp.StatusCode, string(body)
 }
 
+// htmxGet requests path as the settings screens do and returns the status
+// and the body.
 func htmxGet(t *testing.T, app *fiber.App, path string) (int, string) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, path, nil)
