@@ -16,7 +16,9 @@ type ThemesPage struct {
 	Unreadable []UnreadableThemeView
 	// Pending are the pending installs without an installed theme at their
 	// path. They can only be rejected. The others are shown on their theme.
-	Pending         []PendingInstallView
+	Pending []PendingInstallView
+	// Dev is the theme in development in dev mode, nil without the dev mode.
+	Dev             *DevThemeView
 	ThemeAPIMin     int
 	ThemeAPICurrent int
 }
@@ -27,8 +29,11 @@ type ThemeGroupView struct {
 	Key       string
 	PageCount int64
 	// Base is the base version, for example "v1.3", "" without a base.
-	Base    string
-	Active  *ActiveThemeView
+	Base   string
+	Active *ActiveThemeView
+	// Dev tells whether the group's active theme is the theme in
+	// development. Its themes cannot be activated then.
+	Dev     bool
 	Themes  []ThemeView
 	Records []RecordView
 }
@@ -41,6 +46,16 @@ type ActiveThemeView struct {
 	// Broken is the reason the theme failed the checks of loading, "" when
 	// it is loaded.
 	Broken string
+}
+
+// DevThemeView is the theme in development, from the built.toml of the
+// current check.
+type DevThemeView struct {
+	Name            string
+	Contract        string
+	ThemeAPIVersion int
+	// Error is why the theme is not active, "" when it is.
+	Error string
 }
 
 // ThemeView is an installed theme of a group.
@@ -124,7 +139,7 @@ func NewThemesPage(list service.ThemeList) ThemesPage {
 	}
 
 	for _, g := range list.Groups {
-		gv := ThemeGroupView{Key: g.Group.String(), PageCount: g.PageCount}
+		gv := ThemeGroupView{Key: g.Group.String(), PageCount: g.PageCount, Dev: g.Dev}
 		if g.HasBase {
 			gv.Base = contractVersion(g.Group.Major, g.Base)
 		}
@@ -157,12 +172,19 @@ func NewThemesPage(list service.ThemeList) ThemesPage {
 				UncoveredPages:  t.UncoveredPages,
 				ThemeAPI:        t.ThemeAPI,
 				ThemeAPIVersion: t.Built.ThemeAPIVersion,
-				Selectable:      !t.Active && t.UncoveredPages == 0 && !t.ThemeAPI,
+				Selectable:      !t.Active && t.UncoveredPages == 0 && !t.ThemeAPI && !g.Dev,
 				Registry:        !stored[t.Contract.Ref()],
 				Pending:         pending[t.Path],
 			})
 		}
 		page.Groups = append(page.Groups, gv)
+	}
+
+	if d := list.Dev; d != nil {
+		page.Dev = &DevThemeView{Name: d.Built.Name, Contract: d.Built.Contract, ThemeAPIVersion: d.Built.ThemeAPIVersion}
+		if d.Err != nil {
+			page.Dev.Error = d.Err.Error()
+		}
 	}
 
 	for _, u := range list.Unreadable {
