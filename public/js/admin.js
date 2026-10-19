@@ -37,6 +37,10 @@ function applyPreview() {
   template.remove();
 }
 
+// The preview of every editor comes with its diagnostics. applyPreview does
+// nothing after a swap that brought no preview.
+document.addEventListener('htmx:afterSwap', applyPreview);
+
 // selectSourceRange selects a Compono range in the content textarea. Lines and
 // columns start at 1 and columns count code points; the end is exclusive.
 function selectSourceRange(startLine, startColumn, endLine, endColumn) {

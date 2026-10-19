@@ -69,7 +69,6 @@
             hx-swap="innerHTML"
             hx-indicator="false"
             hx-trigger="keyup changed delay:750ms"
-            hx-on::after-swap="applyPreview()"
           >
           <div class="{{ if .NameErr }}flex{{ else }}hidden{{ end }} items-center gap-1.5 ml-1 mt-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2" data-component-name-error>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -96,7 +95,6 @@
           hx-target="#editor-diagnostics"
           hx-swap="innerHTML"
           hx-indicator="false"
-          hx-on::after-swap="applyPreview()"
           >{{ .Content }}</textarea>
         {{ if .ContentErr }}
         <div class="flex items-center gap-1.5 ml-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2">

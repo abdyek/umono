@@ -122,7 +122,6 @@
           hx-target="#editor-diagnostics"
           hx-swap="innerHTML"
           hx-indicator="false"
-          hx-on::after-swap="applyPreview()"
           >{{ .Content }}</textarea>
         <div id="editor-diagnostics" class="max-h-40 overflow-auto">{{ template "partials/editor-diagnostics" .Diagnostics }}</div>
       </div>
