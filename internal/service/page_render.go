@@ -7,6 +7,7 @@ import (
 	"github.com/umono-cms/compono"
 	"github.com/umono-cms/themecore"
 	"github.com/umono-cms/umono/internal/models"
+	"github.com/umono-cms/umono/internal/theme"
 )
 
 // layoutGlobal is the name of the global that renders a page's layout.
@@ -83,10 +84,14 @@ func (s *ThemeService) PageRender(page models.SitePage) (PageRender, error) {
 	var contract themecore.Contract
 	if loaded, ok := s.active.Get(record.Group()); ok {
 		contract = loaded.Contract
-		r.Release = loaded.Release
-		if loaded.HasAttributes {
-			table := loaded.Attributes
-			r.Attributes = &table
+		if loaded.Path == theme.DevPath {
+			r.Release, r.Attributes = s.devRender()
+		} else {
+			r.Release = loaded.Release
+			if loaded.HasAttributes {
+				table := loaded.Attributes
+				r.Attributes = &table
+			}
 		}
 	} else {
 		parsed, err := s.parsedContract(record)
@@ -105,6 +110,21 @@ func (s *ThemeService) PageRender(page models.SitePage) (PageRender, error) {
 		}
 	}
 	return PageRender{}, fmt.Errorf("%w: %s %s", ErrLayoutNotFound, record.Ref(), *page.LayoutID)
+}
+
+// devRender returns the release and the attributes table of the theme in
+// development, checked on every render (privileges #5 and #9). A page
+// renders without injection when attributes.toml fails, and with the
+// fallback on a fatal error of the check.
+func (s *ThemeService) devRender() (string, *themecore.AttributeTable) {
+	r, err := theme.CheckDev(s.themesDir, s.devRoot)
+	if err != nil {
+		return "", nil
+	}
+	if r.AttributesErr != nil {
+		return theme.DevRelease, nil
+	}
+	return theme.DevRelease, &r.Attributes
 }
 
 // parsedContract returns the record parsed with themecore, once per record.

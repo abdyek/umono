@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -305,5 +306,180 @@ func TestActivateDevWithoutDevModeFails(t *testing.T) {
 
 	if _, err := svc.Activate(context.Background(), theme.DevPath); err == nil {
 		t.Fatalf("Activate error = nil, want non-nil")
+	}
+}
+
+// loadedDev returns a service whose theme in development is loaded, and
+// the theme project.
+func loadedDev(t *testing.T) (svc *ThemeService, root string) {
+	t.Helper()
+	svc, _ = newThemeTestService(t, &fakeRegistry{})
+	root = writeDevTheme(t, svc.themesDir, nil)
+	svc.EnableDev(root)
+	if err := svc.LoadDev(context.Background()); err != nil {
+		t.Fatalf("LoadDev: %v", err)
+	}
+	return
+}
+
+// writeFile writes b to path, creating its directory.
+func writeFile(t *testing.T, path string, b []byte) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func TestDevAssetTransformsThemeCSSOnEveryRequest(t *testing.T) {
+	svc, root := loadedDev(t)
+
+	b, ok, err := svc.DevAsset("theme.css")
+	if err != nil {
+		t.Fatalf("DevAsset(theme.css) error = %v, want nil", err)
+	}
+	if !ok {
+		t.Fatalf("DevAsset(theme.css) ok = false, want true")
+	}
+	if !bytes.Equal(b, themecore.FallbackCSS()) {
+		t.Fatalf("DevAsset(theme.css) bytes = %q, want %q", b, themecore.FallbackCSS())
+	}
+
+	writeFile(t, filepath.Join(root, "assets", "theme.css"), []byte(":scope { color: rebeccapurple; }"))
+
+	b, ok, err = svc.DevAsset("theme.css")
+	if err != nil {
+		t.Fatalf("DevAsset(theme.css) error = %v, want nil", err)
+	}
+	if !ok {
+		t.Fatalf("DevAsset(theme.css) ok = false, want true")
+	}
+	if !bytes.Contains(b, []byte("rebeccapurple")) {
+		t.Fatalf("DevAsset(theme.css) bytes = %q, want contains %q", b, "rebeccapurple")
+	}
+}
+
+func TestDevAssetCSSError(t *testing.T) {
+	svc, root := loadedDev(t)
+
+	writeFile(t, filepath.Join(root, "assets", "theme.css"), []byte("html { color: red }"))
+
+	_, ok, err := svc.DevAsset("theme.css")
+	if err == nil {
+		t.Fatalf("DevAsset(theme.css) error = nil, want non-nil")
+	}
+	if ok {
+		t.Fatalf("DevAsset(theme.css) ok = true, want false")
+	}
+}
+
+func TestDevAssetServesAFileAndHidesABadOne(t *testing.T) {
+	svc, root := loadedDev(t)
+
+	writeFile(t, filepath.Join(root, "assets", "fonts", "a.woff2"), []byte("wOF2 font"))
+	writeFile(t, filepath.Join(root, "assets", "bad.png"), []byte("not a png"))
+
+	b, ok, err := svc.DevAsset("fonts/a.woff2")
+	if err != nil {
+		t.Fatalf("DevAsset(fonts/a.woff2) error = %v, want nil", err)
+	}
+	if !ok {
+		t.Fatalf("DevAsset(fonts/a.woff2) ok = false, want true")
+	}
+	if string(b) != "wOF2 font" {
+		t.Fatalf("DevAsset(fonts/a.woff2) bytes = %q, want %q", b, "wOF2 font")
+	}
+
+	for _, name := range []string{"bad.png", "missing.png"} {
+		_, ok, err := svc.DevAsset(name)
+		if err != nil {
+			t.Fatalf("DevAsset(%s) error = %v, want nil", name, err)
+		}
+		if ok {
+			t.Fatalf("DevAsset(%s) ok = true, want false", name)
+		}
+	}
+}
+
+func TestDevAssetWithoutLoadedDevTheme(t *testing.T) {
+	svc, _ := newThemeTestService(t, &fakeRegistry{})
+	root := writeDevTheme(t, svc.themesDir, nil)
+	svc.EnableDev(root)
+
+	_, ok, err := svc.DevAsset("theme.css")
+	if err != nil {
+		t.Fatalf("DevAsset(theme.css) error = %v, want nil", err)
+	}
+	if ok {
+		t.Fatalf("DevAsset(theme.css) ok = true, want false")
+	}
+}
+
+func TestPageRenderCompilesDevAttributesOnEveryRequest(t *testing.T) {
+	svc, root := loadedDev(t)
+
+	record, ok := svc.contracts.Record(devRef(t))
+	if !ok {
+		t.Fatalf("contracts.Record(devRef) ok = false, want true")
+	}
+	layout := "post"
+	page := models.SitePage{ContractID: &record.ID, LayoutID: &layout}
+
+	r, err := svc.PageRender(page)
+	if err != nil {
+		t.Fatalf("PageRender error = %v, want nil", err)
+	}
+	if r.Release != theme.DevRelease {
+		t.Fatalf("r.Release = %q, want %q", r.Release, theme.DevRelease)
+	}
+	if r.RootClass() != "layout-post" {
+		t.Fatalf("r.RootClass() = %q, want %q", r.RootClass(), "layout-post")
+	}
+
+	b, err := os.ReadFile(filepath.Join(root, "attributes.toml"))
+	if err != nil {
+		t.Fatalf("read attributes.toml: %v", err)
+	}
+	writeFile(t, filepath.Join(root, "attributes.toml"), []byte(strings.Replace(string(b), "layout-post", "layout-changed", 1)))
+
+	r, err = svc.PageRender(page)
+	if err != nil {
+		t.Fatalf("PageRender error = %v, want nil", err)
+	}
+	if r.RootClass() != "layout-changed" {
+		t.Fatalf("r.RootClass() = %q, want %q", r.RootClass(), "layout-changed")
+	}
+}
+
+func TestPageRenderFallsBackOnAFatalDevError(t *testing.T) {
+	svc, _ := loadedDev(t)
+
+	record, ok := svc.contracts.Record(devRef(t))
+	if !ok {
+		t.Fatalf("contracts.Record(devRef) ok = false, want true")
+	}
+
+	built := filepath.Join(svc.themesDir, "dev", "dev", "0.0.0", "built.toml")
+	b, err := os.ReadFile(built)
+	if err != nil {
+		t.Fatalf("read %s: %v", built, err)
+	}
+	writeFile(t, built, []byte(strings.Replace(string(b), "theme-api-version = 1", "theme-api-version = 2", 1)))
+
+	layout := "post"
+	r, err := svc.PageRender(models.SitePage{ContractID: &record.ID, LayoutID: &layout})
+	if err != nil {
+		t.Fatalf("PageRender error = %v, want nil", err)
+	}
+	if r.Release != "" {
+		t.Fatalf("r.Release = %q, want %q", r.Release, "")
+	}
+	if r.Attributes != nil {
+		t.Fatalf("r.Attributes = %v, want nil", r.Attributes)
+	}
+	if r.LayoutID != "post" {
+		t.Fatalf("r.LayoutID = %q, want %q", r.LayoutID, "post")
 	}
 }
