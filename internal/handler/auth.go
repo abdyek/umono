@@ -4,7 +4,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/umono-cms/umono/internal/credentials"
-	"github.com/umono-cms/umono/internal/handler/middleware"
 )
 
 type authHandler struct {
@@ -65,5 +64,11 @@ func (h *authHandler) Logout(c *fiber.Ctx) error {
 		return err
 	}
 
-	return middleware.SmartRedirect(c, "/admin/login")
+	// SmartRedirect answers htmx with 401, which is for a request whose
+	// session has expired. A logout succeeded.
+	if c.Get("HX-Request") == "true" {
+		c.Set("HX-Redirect", "/admin/login")
+		return nil
+	}
+	return c.Redirect("/admin/login", fiber.StatusSeeOther)
 }
