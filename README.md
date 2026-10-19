@@ -35,6 +35,17 @@ Runs on **port 9000**:
 air
 ```
 
+### Theme Development Mode
+`umono theme dev` of the [CLI](https://github.com/umono-cms/cli) starts Umono with `UMONO_THEME_DEV`, the absolute path of the theme project. Only then does `themes/dev/dev/0.0.0/` get the privileges of `dev/dev`. A value that is empty, relative or not a directory stops Umono at startup.
+
+In dev mode:
+- `dev/dev` is the active theme of its contract group and is not written to `active_themes`. Its group cannot be activated, deactivated or retried.
+- Its contract record is added from `contract.toml` at startup without asking umono.dev. Its `assets/`, `attributes.toml` and `contract.toml` may be symlinks into the theme project, and only there.
+- It is checked on every request. `/_theme/dev/theme.css` is the canonical CSS of `assets/theme.css`, a CSS error is a 500, and every response under `/_theme/dev/` is `no-store`. A page whose check fails renders with the fallback.
+- The theme management page shows it as the theme in development.
+
+The e2e tests run a second instance in dev mode.
+
 ### End-to-End Tests
 The admin UI is tested in a headless Chromium with [playwright-go](https://github.com/mxschmitt/playwright-go). The tests are in `e2e/` and carry the `e2e` build tag, so `go test ./...` runs without a browser.
 
