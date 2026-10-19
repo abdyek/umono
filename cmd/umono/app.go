@@ -150,6 +150,10 @@ func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret) (*fiber.App, error) {
 	app := fiber.New(fiber.Config{
 		Views:     engine,
 		BodyLimit: service.LocalStorageImageUploadBodyLimitMB * 1024 * 1024,
+		// Request values such as FormValue point into a buffer that the next
+		// request reuses. Services keep some of them in memory, for example
+		// the globals of the content compiler.
+		Immutable: true,
 	})
 
 	app.Use(func(c *fiber.Ctx) error {
