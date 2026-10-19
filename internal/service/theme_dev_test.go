@@ -483,3 +483,202 @@ func TestPageRenderFallsBackOnAFatalDevError(t *testing.T) {
 		t.Fatalf("r.LayoutID = %q, want %q", r.LayoutID, "post")
 	}
 }
+
+// listGroup returns the group g of the list, failing the test without one.
+func listGroup(t *testing.T, list ThemeList, g models.ContractGroup) ThemeGroup {
+	t.Helper()
+	for _, x := range list.Groups {
+		if x.Group == g {
+			return x
+		}
+	}
+	t.Fatalf("group %s not listed", g)
+	return ThemeGroup{}
+}
+
+func TestListShowsTheThemeInDevelopment(t *testing.T) {
+	svc, _ := loadedDev(t)
+
+	list, err := svc.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if list.Dev == nil {
+		t.Fatalf("list.Dev = nil, want non-nil")
+	}
+	if list.Dev.Err != nil {
+		t.Fatalf("list.Dev.Err = %v, want nil", list.Dev.Err)
+	}
+	if list.Dev.Built.Name != "Minimal" {
+		t.Fatalf("list.Dev.Built.Name = %q, want %q", list.Dev.Built.Name, "Minimal")
+	}
+	if !list.Dev.HasGroup {
+		t.Fatalf("list.Dev.HasGroup = false, want true")
+	}
+	if list.Dev.Group != devRef(t).Group() {
+		t.Fatalf("list.Dev.Group = %s, want %s", list.Dev.Group, devRef(t).Group())
+	}
+	if len(list.Unreadable) != 0 {
+		t.Fatalf("len(list.Unreadable) = %d, want 0", len(list.Unreadable))
+	}
+	if g := listGroup(t, list, devRef(t).Group()); !g.Dev {
+		t.Fatalf("listGroup(list, devRef.Group()).Dev = false, want true")
+	}
+}
+
+func TestListShowsTheFatalErrorOfTheThemeInDevelopment(t *testing.T) {
+	svc, _ := loadedDev(t)
+
+	built := filepath.Join(svc.themesDir, "dev", "dev", "0.0.0", "built.toml")
+	b, err := os.ReadFile(built)
+	if err != nil {
+		t.Fatalf("read %s: %v", built, err)
+	}
+	writeFile(t, built, []byte(strings.Replace(string(b), "theme-api-version = 1", "theme-api-version = 2", 1)))
+
+	list, err := svc.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if list.Dev == nil {
+		t.Fatalf("list.Dev = nil, want non-nil")
+	}
+	if !errors.Is(list.Dev.Err, theme.ErrThemeAPI) {
+		t.Fatalf("list.Dev.Err = %v, want theme.ErrThemeAPI", list.Dev.Err)
+	}
+}
+
+func TestListShowsTheLoadingFailureOfTheThemeInDevelopment(t *testing.T) {
+	svc, db := newThemeTestService(t, &fakeRegistry{})
+	root := writeDevTheme(t, svc.themesDir, nil)
+	svc.EnableDev(root)
+
+	if err := db.Create(&models.Contract{Org: "example", Name: "blog", Major: 1, Minor: 0, Source: "s", Checksum: "x"}).Error; err != nil {
+		t.Fatalf("create contract: %v", err)
+	}
+
+	if err := svc.LoadDev(context.Background()); !errors.Is(err, ErrContractChanged) {
+		t.Fatalf("LoadDev error = %v, want ErrContractChanged", err)
+	}
+
+	list, err := svc.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if list.Dev == nil {
+		t.Fatalf("list.Dev = nil, want non-nil")
+	}
+	if !errors.Is(list.Dev.Err, ErrContractChanged) {
+		t.Fatalf("list.Dev.Err = %v, want ErrContractChanged", list.Dev.Err)
+	}
+	if list.Dev.Built.Name != "Minimal" {
+		t.Fatalf("list.Dev.Built.Name = %q, want %q", list.Dev.Built.Name, "Minimal")
+	}
+}
+
+func TestListWithoutDevModeListsDevAsUnreadable(t *testing.T) {
+	svc, _ := newThemeTestService(t, &fakeRegistry{})
+	writeDevTheme(t, svc.themesDir, nil)
+
+	list, err := svc.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if list.Dev != nil {
+		t.Fatalf("list.Dev = %v, want nil", list.Dev)
+	}
+	if len(list.Unreadable) != 1 {
+		t.Fatalf("len(list.Unreadable) = %d, want 1", len(list.Unreadable))
+	}
+	if list.Unreadable[0].Path != theme.DevPath {
+		t.Fatalf("list.Unreadable[0].Path = %q, want %q", list.Unreadable[0].Path, theme.DevPath)
+	}
+}
+
+func TestListDevGroupIgnoresActiveThemes(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newThemeTestService(t, &fakeRegistry{})
+
+	if _, err := svc.Activate(ctx, "acme/minimal/0.1.0"); err != nil {
+		t.Fatalf("Activate: %v", err)
+	}
+
+	root := writeDevTheme(t, svc.themesDir, nil)
+	svc2, _ := restart(t, db, svc.themesDir)
+	if err := svc2.LoadActive(ctx); err != nil {
+		t.Fatalf("LoadActive: %v", err)
+	}
+	svc2.EnableDev(root)
+	if err := svc2.LoadDev(ctx); err != nil {
+		t.Fatalf("LoadDev: %v", err)
+	}
+
+	list, err := svc2.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	g := listGroup(t, list, devRef(t).Group())
+	if !g.Dev {
+		t.Fatalf("g.Dev = false, want true")
+	}
+	if g.Active != nil {
+		t.Fatalf("g.Active = %v, want nil", g.Active)
+	}
+	if len(g.Themes) != 1 {
+		t.Fatalf("len(g.Themes) = %d, want 1", len(g.Themes))
+	}
+	if g.Themes[0].Path != "acme/minimal/0.1.0" {
+		t.Fatalf("g.Themes[0].Path = %q, want %q", g.Themes[0].Path, "acme/minimal/0.1.0")
+	}
+	if g.Themes[0].Active {
+		t.Fatalf("g.Themes[0].Active = true, want false")
+	}
+}
+
+func TestDeleteContractInDevMode(t *testing.T) {
+	svc, db := newThemeTestService(t, &fakeRegistry{})
+
+	// acme/minimal has the same contract; only the theme in development
+	// may keep its record.
+	if err := os.RemoveAll(filepath.Join(svc.themesDir, "acme")); err != nil {
+		t.Fatalf("remove acme: %v", err)
+	}
+
+	root := writeDevTheme(t, svc.themesDir, nil)
+	svc.EnableDev(root)
+	if err := svc.LoadDev(context.Background()); err != nil {
+		t.Fatalf("LoadDev: %v", err)
+	}
+
+	other := models.Contract{Org: "umono", Name: "page", Major: 0, Minor: 1, Source: "s", Checksum: "x"}
+	if err := db.Create(&other).Error; err != nil {
+		t.Fatalf("create other contract: %v", err)
+	}
+
+	dev := devRef(t)
+	if err := svc.DeleteContract(dev); !errors.Is(err, ErrContractHasThemes) {
+		t.Fatalf("DeleteContract(dev) error = %v, want ErrContractHasThemes", err)
+	}
+	if err := svc.DeleteContract(other); err != nil {
+		t.Fatalf("DeleteContract(other): %v", err)
+	}
+
+	list, err := svc.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	g := listGroup(t, list, dev.Group())
+	wantRef := dev.Ref()
+	found := false
+	for _, r := range g.Records {
+		if r.Contract.Ref() == wantRef {
+			if r.CanDelete {
+				t.Fatalf("record CanDelete = true, want false")
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("record with ref %s not in group %s", wantRef, dev.Group())
+	}
+}

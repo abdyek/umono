@@ -83,10 +83,13 @@ type ThemeService struct {
 	// devRoot is the theme project of the dev mode, UMONO_THEME_DEV, "" without
 	// the dev mode.
 	devRoot string
-	// devGroup is the group of the theme in development when devHasGroup.
-	// LoadDev sets them under activateMu.
+	// devGroup is the group of the theme in development and devContract the
+	// reference of its contract when devHasGroup. devErr is why LoadDev
+	// failed. LoadDev sets them once at startup, before Umono serves.
 	devGroup    models.ContractGroup
+	devContract string
 	devHasGroup bool
+	devErr      error
 }
 
 func NewThemeService(themesDir, pendingDir string, contracts *ContractService, themes *repository.ThemeRepository, registry ContractRegistry) *ThemeService {
@@ -400,7 +403,8 @@ func (s *ThemeService) checkActive(ref models.Contract, path string) (theme.Load
 // contract and that no page, disabled ones included, is bound to the record.
 // A theme whose built.toml cannot be read refuses the deletion, because its
 // contract is unknown. SQLite does not enforce the foreign key, so the pages
-// are counted here.
+// are counted here. In dev mode the theme in development has the contract of
+// its startup check.
 func (s *ThemeService) DeleteContract(ref models.Contract) error {
 	s.activateMu.Lock()
 	defer s.activateMu.Unlock()
@@ -414,6 +418,15 @@ func (s *ThemeService) DeleteContract(ref models.Contract) error {
 		return err
 	}
 	for _, t := range installed {
+		if s.devRoot != "" && t.Path == theme.DevPath {
+			if !s.devHasGroup {
+				return fmt.Errorf("theme %s: %w", t.Path, s.devErr)
+			}
+			if s.devContract == ref.Ref() {
+				return fmt.Errorf("%w: %s", ErrContractHasThemes, t.Path)
+			}
+			continue
+		}
 		if t.Err != nil {
 			return fmt.Errorf("theme %s: %w", t.Path, t.Err)
 		}
@@ -441,22 +454,25 @@ func (s *ThemeService) EnableDev(root string) {
 // theme of its group in memory; active_themes is neither read nor written. A
 // failure after the group is known marks the group broken, so it renders
 // with the fallback.
-func (s *ThemeService) LoadDev(ctx context.Context) error {
+func (s *ThemeService) LoadDev(ctx context.Context) (err error) {
 	if s.devRoot == "" {
 		return nil
 	}
 	s.activateMu.Lock()
 	defer s.activateMu.Unlock()
+	defer func() { s.devErr = err }()
 
-	r, err := theme.CheckDev(s.themesDir, s.devRoot)
+	var r themecore.DevResult
+	r, err = theme.CheckDev(s.themesDir, s.devRoot)
 	if err != nil {
 		return err
 	}
-	ref, err := models.ParseContractRef(r.Built.Contract)
+	var ref models.Contract
+	ref, err = models.ParseContractRef(r.Built.Contract)
 	if err != nil {
 		return err
 	}
-	s.devGroup, s.devHasGroup = ref.Group(), true
+	s.devGroup, s.devContract, s.devHasGroup = ref.Group(), ref.Ref(), true
 
 	sum := sha256.Sum256(r.ContractSource)
 	checksum := hex.EncodeToString(sum[:])
@@ -491,7 +507,6 @@ func (s *ThemeService) LoadDev(ctx context.Context) error {
 }
 
 // isDevGroup reports whether g is the group of the theme in development.
-// The caller holds activateMu.
 func (s *ThemeService) isDevGroup(g models.ContractGroup) bool {
 	return s.devHasGroup && s.devGroup == g
 }

@@ -34,9 +34,10 @@ const htmxErrorScript = `["htmx:targetError", "htmx:responseError"].forEach(func
   document.addEventListener(name, function () { console.error(name); });
 })`
 
-func newPage(t *testing.T) *adminPage {
+// newPageAt opens a page in a new browser context of the instance at url.
+func newPageAt(t *testing.T, url string) *adminPage {
 	t.Helper()
-	ctx, err := browser.NewContext(playwright.BrowserNewContextOptions{BaseURL: playwright.String(baseURL)})
+	ctx, err := browser.NewContext(playwright.BrowserNewContextOptions{BaseURL: playwright.String(url)})
 	if err != nil {
 		t.Fatalf("new context: %v", err)
 	}
@@ -89,6 +90,18 @@ func newPage(t *testing.T) *adminPage {
 		_ = ctx.Close()
 	})
 	return p
+}
+
+// newPage opens a page of the instance at baseURL.
+func newPage(t *testing.T) *adminPage {
+	t.Helper()
+	return newPageAt(t, baseURL)
+}
+
+// newDevPage opens a page of the instance in theme dev mode.
+func newDevPage(t *testing.T) *adminPage {
+	t.Helper()
+	return newPageAt(t, devBaseURL)
 }
 
 func (p *adminPage) record(e string) {

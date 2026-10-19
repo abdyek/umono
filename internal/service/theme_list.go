@@ -16,6 +16,8 @@ type ThemeList struct {
 	// names no contract reference.
 	Unreadable []theme.InstalledTheme
 	Pending    []theme.PendingInstall
+	// Dev is the theme in development in dev mode, nil without the dev mode.
+	Dev *DevTheme
 }
 
 // ThemeGroup is a contract group of the list: the union of the stored
@@ -30,6 +32,9 @@ type ThemeGroup struct {
 	HasBase bool
 	// Active is the group's active theme, nil without one.
 	Active *ActiveTheme
+	// Dev tells whether the group's active theme is the theme in
+	// development. active_themes is not read for the group then.
+	Dev bool
 	// Themes are the installed themes of the group, sorted by path.
 	Themes []ListedTheme
 	// Records are the stored records of the group, sorted by minor.
@@ -42,6 +47,19 @@ type ActiveTheme struct {
 	ContractID string
 	// Broken is set when the theme failed the checks of loading.
 	Broken *theme.Broken
+}
+
+// DevTheme is the theme in development. Its information comes from the
+// built.toml of the current check.
+type DevTheme struct {
+	// Built is the built.toml of the current check, empty when it failed.
+	Built themecore.Built
+	// Group is the group of its contract at startup when HasGroup.
+	Group    models.ContractGroup
+	HasGroup bool
+	// Err is why the theme is not active: the failure of loading at startup,
+	// or else the fatal error of the current check.
+	Err error
 }
 
 // ListedTheme is an installed theme of a group. Only coverage and the Theme
@@ -103,6 +121,9 @@ func (s *ThemeService) List() (ThemeList, error) {
 		if err != nil {
 			continue
 		}
+		if s.isDevGroup(ref.Group()) {
+			continue
+		}
 		at := &ActiveTheme{Path: a.Path, ContractID: a.ContractID}
 		if b, ok := s.active.Broken(ref.Group()); ok {
 			at.Broken = &b
@@ -114,6 +135,9 @@ func (s *ThemeService) List() (ThemeList, error) {
 	installedRefs := map[string]bool{}
 	min, current := themecore.ThemeAPIMin(), themecore.ThemeAPICurrent()
 	for _, t := range installed {
+		if s.devRoot != "" && t.Path == theme.DevPath {
+			continue
+		}
 		if t.Err != nil {
 			list.Unreadable = append(list.Unreadable, t)
 			continue
@@ -136,11 +160,18 @@ func (s *ThemeService) List() (ThemeList, error) {
 		})
 	}
 
+	if s.devRoot != "" {
+		list.Dev = s.devTheme()
+		if list.Dev.HasGroup {
+			group(list.Dev.Group).Dev = true
+			installedRefs[s.devContract] = true
+		}
+	}
 	for g, tg := range groups {
 		tg.PageCount = s.contracts.CountGroupPages(g)
 		tg.Base, tg.HasBase = s.contracts.Base(g)
 		for i, r := range tg.Records {
-			tg.Records[i].CanDelete = r.PageCount == 0 && !installedRefs[r.Contract.Ref()] && len(list.Unreadable) == 0
+			tg.Records[i].CanDelete = r.PageCount == 0 && !installedRefs[r.Contract.Ref()] && len(list.Unreadable) == 0 && (list.Dev == nil || list.Dev.HasGroup)
 		}
 		sort.Slice(tg.Themes, func(i, j int) bool { return tg.Themes[i].Path < tg.Themes[j].Path })
 		sort.Slice(tg.Records, func(i, j int) bool { return tg.Records[i].Contract.Minor < tg.Records[j].Contract.Minor })
@@ -148,4 +179,18 @@ func (s *ThemeService) List() (ThemeList, error) {
 	}
 	sort.Slice(list.Groups, func(i, j int) bool { return list.Groups[i].Group.String() < list.Groups[j].Group.String() })
 	return list, nil
+}
+
+// devTheme returns the theme in development as the list shows it.
+func (s *ThemeService) devTheme() *DevTheme {
+	d := &DevTheme{Group: s.devGroup, HasGroup: s.devHasGroup, Err: s.devErr}
+	r, err := theme.CheckDev(s.themesDir, s.devRoot)
+	if err != nil {
+		if d.Err == nil {
+			d.Err = err
+		}
+		return d
+	}
+	d.Built = r.Built
+	return d
 }
