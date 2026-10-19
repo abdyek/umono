@@ -89,6 +89,12 @@ func (s *ContractService) Delete(id uint) error {
 	return s.repo.Delete(id)
 }
 
+// Add adds the new contract record c. A record is never updated. On success
+// c has its ID.
+func (s *ContractService) Add(c *models.Contract) error {
+	return s.repo.Create(c)
+}
+
 // All returns every stored record.
 func (s *ContractService) All() []models.Contract {
 	return s.repo.GetAll()

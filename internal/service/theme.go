@@ -42,6 +42,9 @@ var (
 	// ErrContractHasPages is returned when pages are bound to a record that
 	// is being deleted.
 	ErrContractHasPages = errors.New("pages are bound to the contract record")
+	// ErrDevTheme is returned for an action on the group of the theme in
+	// development: in dev mode it is always the group's active theme.
+	ErrDevTheme = errors.New("the group's active theme is the theme in development")
 )
 
 // ContractRegistry verifies a package's contract.toml against the published
@@ -77,6 +80,13 @@ type ThemeService struct {
 	// ID. A record never changes, so it is parsed once.
 	parsedMu sync.Mutex
 	parsed   map[uint]themecore.Contract
+	// devRoot is the theme project of the dev mode, UMONO_THEME_DEV, "" without
+	// the dev mode.
+	devRoot string
+	// devGroup is the group of the theme in development when devHasGroup.
+	// LoadDev sets them under activateMu.
+	devGroup    models.ContractGroup
+	devHasGroup bool
 }
 
 func NewThemeService(themesDir, pendingDir string, contracts *ContractService, themes *repository.ThemeRepository, registry ContractRegistry) *ThemeService {
@@ -152,6 +162,9 @@ func (s *ThemeService) Activate(ctx context.Context, path string) (ThemeCandidat
 	if err != nil {
 		return ThemeCandidate{}, err
 	}
+	if s.isDevGroup(c.Contract.Group()) {
+		return ThemeCandidate{}, fmt.Errorf("%w: %s", ErrDevTheme, c.Contract.Group())
+	}
 	if err := s.themes.Activate(&c.Contract, models.ThemeOption{Path: c.Path, ContractID: c.Contract.Ref()}); err != nil {
 		return ThemeCandidate{}, err
 	}
@@ -188,6 +201,9 @@ func (s *ThemeService) Deactivate(g models.ContractGroup) error {
 	s.activateMu.Lock()
 	defer s.activateMu.Unlock()
 
+	if s.isDevGroup(g) {
+		return fmt.Errorf("%w: %s", ErrDevTheme, g)
+	}
 	if err := s.themes.Deactivate(g); err != nil {
 		return err
 	}
@@ -309,6 +325,9 @@ func (s *ThemeService) Retry(ctx context.Context, g models.ContractGroup) error 
 	s.activateMu.Lock()
 	defer s.activateMu.Unlock()
 
+	if s.isDevGroup(g) {
+		return fmt.Errorf("%w: %s", ErrDevTheme, g)
+	}
 	themes, err := s.themes.GetActiveThemes()
 	if err != nil {
 		return err
@@ -406,6 +425,77 @@ func (s *ThemeService) DeleteContract(ref models.Contract) error {
 		return fmt.Errorf("%w: %d pages", ErrContractHasPages, n)
 	}
 	return s.contracts.Delete(record.ID)
+}
+
+// EnableDev turns the dev mode on with root, the theme project. Only then
+// does dev/dev get its privileges.
+func (s *ThemeService) EnableDev(root string) {
+	s.devRoot = root
+}
+
+// LoadDev loads the theme in development at startup, after LoadActive. It
+// does nothing without the dev mode. No check needs the network: a stored
+// record of the contract must have contract.toml's checksum, and without one
+// the record is added from contract.toml without asking the registry. The
+// coverage check runs as in production. On success dev/dev is the active
+// theme of its group in memory; active_themes is neither read nor written. A
+// failure after the group is known marks the group broken, so it renders
+// with the fallback.
+func (s *ThemeService) LoadDev(ctx context.Context) error {
+	if s.devRoot == "" {
+		return nil
+	}
+	s.activateMu.Lock()
+	defer s.activateMu.Unlock()
+
+	r, err := theme.CheckDev(s.themesDir, s.devRoot)
+	if err != nil {
+		return err
+	}
+	ref, err := models.ParseContractRef(r.Built.Contract)
+	if err != nil {
+		return err
+	}
+	s.devGroup, s.devHasGroup = ref.Group(), true
+
+	sum := sha256.Sum256(r.ContractSource)
+	checksum := hex.EncodeToString(sum[:])
+	record, ok := s.contracts.Record(ref)
+	switch {
+	case ok && record.Checksum != checksum:
+		err = fmt.Errorf("%w: %s", ErrContractChanged, ref.Ref())
+	case !s.contracts.Selectable(ref):
+		err = fmt.Errorf("%w: %d pages are bound to a newer minor", ErrNotCovered, len(s.contracts.UncoveredPages(ref)))
+	case !ok:
+		record = models.Contract{
+			Org:      ref.Org,
+			Name:     ref.Name,
+			Major:    ref.Major,
+			Minor:    ref.Minor,
+			Source:   string(r.ContractSource),
+			Checksum: checksum,
+		}
+		err = s.contracts.Add(&record)
+	}
+	if err != nil {
+		s.active.SetBroken(ref.Group(), theme.Broken{Path: theme.DevPath, Err: err})
+		return err
+	}
+	s.active.Set(ref.Group(), theme.Loaded{
+		Path:          theme.DevPath,
+		Release:       theme.DevRelease,
+		ContractID:    record.ID,
+		Contract:      r.Contract,
+		Attributes:    r.Attributes,
+		HasAttributes: r.AttributesErr == nil,
+	})
+	return nil
+}
+
+// isDevGroup reports whether g is the group of the theme in development.
+// The caller holds activateMu.
+func (s *ThemeService) isDevGroup(g models.ContractGroup) bool {
+	return s.devHasGroup && s.devGroup == g
 }
 
 // Asset returns the asset name, a path relative to assets/, of the loaded
