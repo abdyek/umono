@@ -35,6 +35,22 @@ Runs on **port 9000**:
 air
 ```
 
+### End-to-End Tests
+The admin UI is tested in a headless Chromium with [playwright-go](https://github.com/mxschmitt/playwright-go). The tests are in `e2e/` and carry the `e2e` build tag, so `go test ./...` runs without a browser.
+
+Install Chromium once, with the playwright-go version in `go.mod`:
+```bash
+go run github.com/mxschmitt/playwright-go/cmd/playwright install --with-deps chromium
+```
+
+Generate the stylesheet, then run the tests:
+```bash
+./bin/tailwindcss -i assets/input.css -o public/css/style.css
+go test -tags e2e ./e2e/
+```
+
+The tests build `./cmd/umono` and start it in a temporary directory with its own `.env`, database and uploads, so your `umono.db`, `uploads/` and `.env` are not touched. Without `style.css` every test fails on its 404.
+
 ### Contributing
 Umono is a small, opinionated project built on the idea of simplicity and clear separation of concerns. I genuinely appreciate any help—whether it's fixing a simple typo, improving the documentation, or tackling a bug.
 
