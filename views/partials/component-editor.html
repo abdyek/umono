@@ -67,7 +67,7 @@
             hx-post="/admin/components/preview"
             hx-target="#editor-diagnostics"
             hx-swap="innerHTML"
-            hx-indicator="false"
+            hx-indicator="this"
             hx-trigger="keyup changed delay:750ms"
           >
           <div class="{{ if .NameErr }}flex{{ else }}hidden{{ end }} items-center gap-1.5 ml-1 mt-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2" data-component-name-error>
@@ -94,7 +94,7 @@
           hx-trigger="keyup changed delay:750ms"
           hx-target="#editor-diagnostics"
           hx-swap="innerHTML"
-          hx-indicator="false"
+          hx-indicator="this"
           >{{ .Content }}</textarea>
         {{ if .ContentErr }}
         <div class="flex items-center gap-1.5 ml-1 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2">

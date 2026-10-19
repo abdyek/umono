@@ -60,7 +60,7 @@
           hx-trigger="keyup changed delay:750ms, layout-changed"
           hx-target="#editor-diagnostics"
           hx-swap="innerHTML"
-          hx-indicator="false"
+          hx-indicator="this"
           hx-disinherit="hx-confirm"
           >{{ .Content }}</textarea>
         <div id="editor-diagnostics" class="max-h-40 overflow-auto">{{ template "partials/editor-diagnostics" .Diagnostics }}</div>

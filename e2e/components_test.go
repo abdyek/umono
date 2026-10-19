@@ -104,9 +104,6 @@ func TestEditAndDeleteGlobal(t *testing.T) {
 	if err := p.Locator("#content").Fill("After edit"); err != nil {
 		t.Fatalf("fill content: %v", err)
 	}
-	// The live preview has hx-indicator="false", which htmx logs as a
-	// selector without matches.
-	p.allowError(`The selector "false" on hx-indicator returned no matches!`)
 	if _, err := p.ExpectResponse("**/admin/components/preview", func() error {
 		return p.Locator("#content").Press(".")
 	}); err != nil {
