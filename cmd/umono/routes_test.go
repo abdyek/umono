@@ -121,8 +121,6 @@ func seedContent(t *testing.T, db *gorm.DB) map[string]string {
 var skippedRoutes = map[string]string{
 	"/admin/login":                        "rendered signed out at the end of the test",
 	"/admin/media/pending/:token/preview": "needs a pending upload",
-	"/admin/components/:id":               "the global component editor is broken (ContentErr is missing in handler.componentEditor)",
-	"/admin/components/:id/editor":        "the global component editor is broken (ContentErr is missing in handler.componentEditor)",
 }
 
 // routeQueries are the query strings of the admin routes that need one.
