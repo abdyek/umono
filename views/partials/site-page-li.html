@@ -4,6 +4,7 @@
     class="flex items-center gap-3 px-3 py-2 rounded-xl {{ if .IsActive }}bg-purple-500/10 border border-purple-500/20 text-purple-300{{ else }}hover:bg-neutral-700/30 transition-colors {{end}}"
     hx-get="/admin/site-pages/{{.ID}}/editor"
     hx-target="#editor-area"
+    hx-swap="outerHTML"
     hx-push-url="/admin/site-pages/{{.ID}}"
     hx-disabled-elt="#content,#name,#slug,#logout-button"
   >
