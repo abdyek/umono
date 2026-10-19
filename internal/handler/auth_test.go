@@ -143,6 +143,39 @@ func TestLogoutDestroysSession(t *testing.T) {
 	}
 }
 
+func TestLogoutRedirectsHTMXWithOK(t *testing.T) {
+	store := testSessionStore()
+	auth := NewAuthHandler(store)
+	app := fiber.New()
+	app.Get("/seed", seedSession(store))
+	app.Post("/logout", auth.Logout)
+
+	cookie := requestSessionCookie(t, app, "/seed")
+
+	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
+	req.Header.Set("HX-Request", "true")
+	req.AddCookie(cookie)
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+	if got := resp.Header.Get("HX-Redirect"); got != "/admin/login" {
+		t.Fatalf("expected HX-Redirect /admin/login, got %q", got)
+	}
+
+	raw, err := store.Storage.Get(cookie.Value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if raw != nil {
+		t.Fatal("expected logout to delete session from storage")
+	}
+}
+
 func setAuthEnv(t *testing.T, username, password string) {
 	t.Helper()
 
