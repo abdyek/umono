@@ -51,6 +51,8 @@ go test -tags e2e ./e2e/
 
 The tests build `./cmd/umono` and start it in a temporary directory with its own `.env`, database and uploads, so your `umono.db`, `uploads/` and `.env` are not touched. Without `style.css` every test fails on its 404.
 
+Set `E2E_ARTIFACTS` to a directory to keep a Playwright trace and a screenshot of each failing test. Open a trace with `go run github.com/mxschmitt/playwright-go/cmd/playwright show-trace <file>`. CI uploads them as the `e2e-artifacts` artifact.
+
 ### Contributing
 Umono is a small, opinionated project built on the idea of simplicity and clear separation of concerns. I genuinely appreciate any help—whether it's fixing a simple typo, improving the documentation, or tackling a bug.
 

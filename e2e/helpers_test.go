@@ -4,12 +4,18 @@ package e2e
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/mxschmitt/playwright-go"
 )
+
+// artifactsDir is where a failing test saves its trace and screenshot. It is
+// empty unless E2E_ARTIFACTS is set.
+var artifactsDir = os.Getenv("E2E_ARTIFACTS")
 
 // adminPage is a page in its own browser context. It records the errors the
 // page reports and fails the test at cleanup for each error that was not
@@ -36,6 +42,11 @@ func newPage(t *testing.T) *adminPage {
 	if err := ctx.AddInitScript(playwright.Script{Content: playwright.String(htmxErrorScript)}); err != nil {
 		t.Fatalf("add init script: %v", err)
 	}
+	if artifactsDir != "" {
+		if err := ctx.Tracing().Start(playwright.TracingStartOptions{Screenshots: playwright.Bool(true), Snapshots: playwright.Bool(true)}); err != nil {
+			t.Fatalf("start tracing: %v", err)
+		}
+	}
 	page, err := ctx.NewPage()
 	if err != nil {
 		t.Fatalf("new page: %v", err)
@@ -43,7 +54,7 @@ func newPage(t *testing.T) *adminPage {
 	p := &adminPage{Page: page, t: t}
 	page.OnConsole(func(msg playwright.ConsoleMessage) {
 		if msg.Type() == "error" {
-			p.record("console: " + msg.Text())
+			p.record(fmt.Sprintf("console: %s (%s)", msg.Text(), msg.Location().URL))
 		}
 	})
 	page.OnPageError(func(err error) {
@@ -55,7 +66,6 @@ func newPage(t *testing.T) *adminPage {
 		}
 	})
 	t.Cleanup(func() {
-		_ = ctx.Close()
 		p.mu.Lock()
 		errs := append([]string(nil), p.errors...)
 		allowed := append([]string(nil), p.allowed...)
@@ -72,6 +82,10 @@ func newPage(t *testing.T) *adminPage {
 				t.Errorf("page error: %s", e)
 			}
 		}
+		if artifactsDir != "" {
+			p.saveArtifacts(ctx)
+		}
+		_ = ctx.Close()
 	})
 	return p
 }
@@ -87,6 +101,26 @@ func (p *adminPage) allowError(substr string) {
 	p.mu.Lock()
 	p.allowed = append(p.allowed, substr)
 	p.mu.Unlock()
+}
+
+// saveArtifacts saves the trace and a screenshot of a failing test to
+// artifactsDir. The trace of a passing test is dropped.
+func (p *adminPage) saveArtifacts(ctx playwright.BrowserContext) {
+	if !p.t.Failed() {
+		_ = ctx.Tracing().Stop()
+		return
+	}
+	name := strings.ReplaceAll(p.t.Name(), "/", "_")
+	if err := os.MkdirAll(artifactsDir, 0o755); err != nil {
+		p.t.Logf("save artifacts: %v", err)
+		return
+	}
+	if _, err := p.Screenshot(playwright.PageScreenshotOptions{Path: playwright.String(filepath.Join(artifactsDir, name+".png")), FullPage: playwright.Bool(true)}); err != nil {
+		p.t.Logf("save screenshot: %v", err)
+	}
+	if err := ctx.Tracing().Stop(filepath.Join(artifactsDir, name+"-trace.zip")); err != nil {
+		p.t.Logf("save trace: %v", err)
+	}
 }
 
 // login signs in from /admin/login and waits for the admin panel.
