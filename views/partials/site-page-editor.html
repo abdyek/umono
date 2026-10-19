@@ -59,7 +59,7 @@
     <form id="editor-form" class="flex-1 flex flex-col overflow-hidden p-6 space-y-4"
         {{ if .ID }}hx-put="/admin/site-pages/{{.ID}}"{{ else }}hx-post="/admin/site-pages"{{ end }}
         hx-target="#editor-area"
-        hx-swap="innerHTML"
+        hx-swap="outerHTML"
         hx-indicator="#editor-submit-button">
         
       <input type="hidden" name="id" value="{{ .ID }}">
