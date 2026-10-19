@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -141,4 +142,39 @@ func (p *adminPage) login() {
 	if err := p.Locator("#logout-button").WaitFor(); err != nil {
 		p.t.Fatalf("wait for the admin panel: %v", err)
 	}
+}
+
+// acceptDialogs accepts the confirm dialogs of hx-confirm.
+func (p *adminPage) acceptDialogs() {
+	p.OnDialog(func(d playwright.Dialog) { _ = d.Accept() })
+}
+
+// createPage creates a page in the page editor and returns the URL of its
+// editor.
+func (p *adminPage) createPage(name, slug, content string, enabled bool) string {
+	p.t.Helper()
+	if _, err := p.Goto("/admin/site-pages/new"); err != nil {
+		p.t.Fatalf("goto /admin/site-pages/new: %v", err)
+	}
+	if err := p.Locator("#name").Fill(name); err != nil {
+		p.t.Fatalf("fill name: %v", err)
+	}
+	if err := p.Locator("#slug").Fill(slug); err != nil {
+		p.t.Fatalf("fill slug: %v", err)
+	}
+	if err := p.Locator("#content").Fill(content); err != nil {
+		p.t.Fatalf("fill content: %v", err)
+	}
+	if enabled {
+		if err := p.Locator("#enabled-checkbox").SetChecked(true, playwright.LocatorSetCheckedOptions{Force: playwright.Bool(true)}); err != nil {
+			p.t.Fatalf("set enabled: %v", err)
+		}
+	}
+	if err := p.Locator("#editor-submit-button").Click(); err != nil {
+		p.t.Fatalf("click submit: %v", err)
+	}
+	if err := p.WaitForURL(regexp.MustCompile(`/admin/site-pages/\d+$`)); err != nil {
+		p.t.Fatalf("wait for new page url: %v", err)
+	}
+	return p.URL()
 }
