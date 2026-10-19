@@ -634,3 +634,51 @@ func TestListDevGroupIgnoresActiveThemes(t *testing.T) {
 		t.Fatalf("g.Themes[0].Active = true, want false")
 	}
 }
+
+func TestDeleteContractInDevMode(t *testing.T) {
+	svc, db := newThemeTestService(t, &fakeRegistry{})
+
+	// acme/minimal has the same contract; only the theme in development
+	// may keep its record.
+	if err := os.RemoveAll(filepath.Join(svc.themesDir, "acme")); err != nil {
+		t.Fatalf("remove acme: %v", err)
+	}
+
+	root := writeDevTheme(t, svc.themesDir, nil)
+	svc.EnableDev(root)
+	if err := svc.LoadDev(context.Background()); err != nil {
+		t.Fatalf("LoadDev: %v", err)
+	}
+
+	other := models.Contract{Org: "umono", Name: "page", Major: 0, Minor: 1, Source: "s", Checksum: "x"}
+	if err := db.Create(&other).Error; err != nil {
+		t.Fatalf("create other contract: %v", err)
+	}
+
+	dev := devRef(t)
+	if err := svc.DeleteContract(dev); !errors.Is(err, ErrContractHasThemes) {
+		t.Fatalf("DeleteContract(dev) error = %v, want ErrContractHasThemes", err)
+	}
+	if err := svc.DeleteContract(other); err != nil {
+		t.Fatalf("DeleteContract(other): %v", err)
+	}
+
+	list, err := svc.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	g := listGroup(t, list, dev.Group())
+	wantRef := dev.Ref()
+	found := false
+	for _, r := range g.Records {
+		if r.Contract.Ref() == wantRef {
+			if r.CanDelete {
+				t.Fatalf("record CanDelete = true, want false")
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("record with ref %s not in group %s", wantRef, dev.Group())
+	}
+}
