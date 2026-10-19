@@ -38,8 +38,6 @@ func TestLoginAndLogout(t *testing.T) {
 	if err := expect.Locator(p.Locator("#logout-button")).ToBeVisible(); err != nil {
 		t.Fatalf("assert logout button visible: %v", err)
 	}
-	// Logout answers 401 with an HX-Redirect header, which the browser logs.
-	p.allowError("status of 401")
 	if err := p.Locator("#logout-button").Click(); err != nil {
 		t.Fatalf("click logout: %v", err)
 	}
