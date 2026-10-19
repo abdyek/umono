@@ -80,6 +80,11 @@ func (r *ContractRepository) Delete(id uint) error {
 	return r.db.Delete(&models.Contract{}, id).Error
 }
 
+// Create adds the contract record c. On success c has its ID.
+func (r *ContractRepository) Create(c *models.Contract) error {
+	return r.db.Create(c).Error
+}
+
 // GetAll returns every record, ordered by org, name, major and minor.
 func (r *ContractRepository) GetAll() []models.Contract {
 	var all []models.Contract

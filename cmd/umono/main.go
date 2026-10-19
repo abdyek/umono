@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	umonocrypto "github.com/umono-cms/crypto"
 	"github.com/umono-cms/umono/internal/credentials"
+	"github.com/umono-cms/umono/internal/theme"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -42,12 +43,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	devRoot, err := devRootFromEnv()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
 	db, err := gorm.Open(sqlite.Open("umono.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("db err", err)
 	}
 
-	app, err := newApp(db, umonoSecret)
+	app, err := newApp(db, umonoSecret, devRoot)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,6 +65,17 @@ func main() {
 	}
 
 	log.Fatal(app.Listen(port))
+}
+
+// devRootFromEnv returns the theme project of the dev mode from
+// UMONO_THEME_DEV, "" when the variable is not set. A set value must be the
+// absolute path of a directory, or Umono does not start.
+func devRootFromEnv() (string, error) {
+	v, ok := os.LookupEnv("UMONO_THEME_DEV")
+	if !ok {
+		return "", nil
+	}
+	return theme.ParseDevRoot(v)
 }
 
 func newUmonoSecretFromEnv() (*umonocrypto.Secret, error) {

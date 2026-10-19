@@ -28,7 +28,7 @@ import (
 
 // newApp migrates db, wires the services and handlers and registers the
 // routes. It does not listen.
-func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret) (*fiber.App, error) {
+func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret, devRoot string) (*fiber.App, error) {
 	if err := db.AutoMigrate(
 		&models.Component{},
 		&models.Contract{},
@@ -100,6 +100,12 @@ func newApp(db *gorm.DB, umonoSecret *umonocrypto.Secret) (*fiber.App, error) {
 	themeService.OnRenderInputChange(recomputeDiagnostics)
 	if err := themeService.LoadActive(context.Background()); err != nil {
 		log.Printf("error: load active themes: %v", err)
+	}
+	if devRoot != "" {
+		themeService.EnableDev(devRoot)
+		if err := themeService.LoadDev(context.Background()); err != nil {
+			log.Printf("error: theme in development: %v", err)
+		}
 	}
 	if err := sitePageService.FillDiagnosticsOnce(context.Background()); err != nil {
 		log.Printf("fill page diagnostics: %v", err)

@@ -56,7 +56,7 @@ func newTestApp(t *testing.T) (*fiber.App, *gorm.DB) {
 		t.Fatalf("new secret: %v", err)
 	}
 
-	app, err := newApp(db, secret)
+	app, err := newApp(db, secret, "")
 	if err != nil {
 		t.Fatalf("new app: %v", err)
 	}

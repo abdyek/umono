@@ -8,6 +8,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/umono-cms/umono/internal/credentials"
+	"github.com/umono-cms/umono/internal/theme"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -283,4 +284,43 @@ func hashForTest(t *testing.T, value string) string {
 	}
 
 	return base64.StdEncoding.EncodeToString(hashed)
+}
+
+func TestDevRootFromEnv(t *testing.T) {
+	t.Run("unset", func(t *testing.T) {
+		t.Setenv("UMONO_THEME_DEV", "x")
+		if err := os.Unsetenv("UMONO_THEME_DEV"); err != nil {
+			t.Fatalf("unsetenv: %v", err)
+		}
+
+		root, err := devRootFromEnv()
+		if root != "" {
+			t.Fatalf("expected empty root, got %q", root)
+		}
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		t.Setenv("UMONO_THEME_DEV", "")
+
+		_, err := devRootFromEnv()
+		if !errors.Is(err, theme.ErrDevRoot) {
+			t.Fatalf("expected %v, got %v", theme.ErrDevRoot, err)
+		}
+	})
+
+	t.Run("directory", func(t *testing.T) {
+		dir := t.TempDir()
+		t.Setenv("UMONO_THEME_DEV", dir)
+
+		root, err := devRootFromEnv()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if root != dir {
+			t.Fatalf("expected root %q, got %q", dir, root)
+		}
+	})
 }
